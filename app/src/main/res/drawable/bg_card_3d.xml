@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 3D Card: subtle gradient overlay + sharp top border for light catch + bottom shadow for depth -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Card background -->
+    <item>
+        <shape>
+            <solid android:color="@color/surface_container_low" />
+            <corners android:radius="@dimen/corner_large" />
+        </shape>
+    </item>
+    <!-- Subtle top light highlight (gives 3D raised feel) -->
+    <item>
+        <shape>
+            <gradient
+                android:angle="90"
+                android:startColor="#0AFFFFFF"
+                android:centerColor="#00000000"
+                android:endColor="#08000000" />
+            <corners android:radius="@dimen/corner_large" />
+        </shape>
+    </item>
+    <!-- Inner border: top=light, bottom=dark for 3D bevel -->
+    <item>
+        <shape>
+            <stroke android:width="1dp" android:color="@color/outline_variant" />
+            <corners android:radius="@dimen/corner_large" />
+            <padding android:left="1dp" android:top="1dp" android:right="1dp" android:bottom="1dp" />
+        </shape>
+    </item>
+</layer-list>

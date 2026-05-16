@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Micro-interaction durations (Material Design 3 motion spec) -->
+    <integer name="anim_press_duration">150</integer>
+    <integer name="anim_release_duration">250</integer>
+    <integer name="anim_transition_short">200</integer>
+    <integer name="anim_transition_medium">300</integer>
+    <integer name="anim_transition_long">400</integer>
+    <integer name="anim_ripple_duration">300</integer>
+</resources>

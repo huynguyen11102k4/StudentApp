@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Army Green (sáng hơn để nổi trên nền tối) -->
+    <color name="army_green">#FFA2B26C</color>
+    <color name="army_green_dark">#FF7D8E4A</color>
+    <color name="army_green_light">#FFC4D290</color>
+
+    <!-- Primary (Material3 mapping — dark) -->
+    <color name="primary">@color/army_green</color>
+    <color name="primary_dark">@color/army_green_dark</color>
+    <color name="primary_container">#FF3A411A</color>
+    <color name="on_primary">#FF1A1C16</color>
+    <color name="on_primary_container">#FFDCE4C5</color>
+
+    <!-- Secondary (dark) -->
+    <color name="secondary">#FFC1D0B4</color>
+    <color name="secondary_container">#FF414D32</color>
+    <color name="on_secondary">#FF2C361E</color>
+    <color name="on_secondary_container">#FFDDE8D0</color>
+
+    <!-- Tertiary (dark) -->
+    <color name="tertiary">#FFA4CCD6</color>
+    <color name="tertiary_container">#FF244B54</color>
+    <color name="on_tertiary">#FF003640</color>
+    <color name="on_tertiary_container">#FFC0E8F2</color>
+
+    <!-- Surface & Background (dark) -->
+    <color name="background">#FF131410</color>
+    <color name="on_background">#FFE4E3DB</color>
+    <color name="surface">#FF1B1C18</color>
+    <color name="on_surface">#FFE4E3DB</color>
+    <color name="surface_variant">#FF44483D</color>
+    <color name="on_surface_variant">#FFC3C7BA</color>
+    <color name="surface_container_lowest">#FF161713</color>
+    <color name="surface_container_low">#FF1E1F1B</color>
+    <color name="surface_container">#FF22231F</color>
+    <color name="surface_container_high">#FF2D2E29</color>
+    <color name="surface_container_highest">#FF383934</color>
+    <color name="surface_dim">#FF131410</color>
+    <color name="inverse_surface">#FFE4E3DB</color>
+    <color name="inverse_on_surface">#FF2F3129</color>
+
+    <!-- Error / Success / Warning (dark — lighter for readability on dark bg) -->
+    <color name="error">#FFFFB4AB</color>
+    <color name="error_container">#FF93000A</color>
+    <color name="on_error">#FF690005</color>
+    <color name="on_error_container">#FFFFDAD6</color>
+    <color name="success">#FF9CD69F</color>
+    <color name="success_container">#FF004D06</color>
+    <color name="on_success">#FF003A03</color>
+    <color name="on_success_container">#FFD7F5D8</color>
+    <color name="warning">#FFFFDF9A</color>
+    <color name="warning_container">#FF6D4800</color>
+    <color name="on_warning">#FF462F00</color>
+    <color name="on_warning_container">#FFFFDEA1</color>
+
+    <!-- Status badges -->
+    <color name="status_online_bg">#FF1F4E25</color>
+    <color name="status_online_text">#FFD7F5D8</color>
+    <color name="status_offline_bg">#FF593700</color>
+    <color name="status_offline_text">#FFFFDDB8</color>
+    <color name="status_processing_bg">#FF123F47</color>
+    <color name="status_processing_text">#FFC0E8F2</color>
+    <color name="status_ready_bg">#FF3A411A</color>
+    <color name="status_ready_text">#FFDCE4C5</color>
+
+    <!-- Outline (dark) -->
+    <color name="outline">#FF8E9286</color>
+    <color name="outline_variant">#FF44483D</color>
+
+    <!-- Divider (dark) -->
+    <color name="divider">#FF2D2E29</color>
+
+    <!-- Text (dark) -->
+    <color name="text_primary">#FFE4E3DB</color>
+    <color name="text_secondary">#FFB9B9B1</color>
+    <color name="text_hint">#FF8B8E85</color>
+    <color name="text_disabled">#FF5D6057</color>
+
+    <!-- Utility -->
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+    <color name="scrim">#B3000000</color>
+
+    <!-- Button (dark) -->
+    <color name="button_primary">@color/army_green</color>
+    <color name="button_primary_pressed">@color/army_green_light</color>
+    <color name="button_secondary_bg">@android:color/transparent</color>
+</resources>

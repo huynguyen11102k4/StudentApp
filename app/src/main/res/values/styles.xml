@@ -1,0 +1,314 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- ============================================================
+         Button Styles
+         ============================================================ -->
+
+    <style name="Button_Primary" parent="Widget.Material3.Button">
+        <item name="backgroundTint">@color/primary</item>
+        <item name="android:textColor">@color/white</item>
+        <item name="cornerRadius">@dimen/corner_medium</item>
+        <item name="android:textSize">@dimen/text_size_label_large</item>
+        <item name="android:minHeight">@dimen/button_height</item>
+        <item name="android:paddingStart">@dimen/spacing_24</item>
+        <item name="android:paddingEnd">@dimen/spacing_24</item>
+    </style>
+
+    <style name="Button_Secondary" parent="Widget.Material3.Button.OutlinedButton">
+        <item name="backgroundTint">@android:color/transparent</item>
+        <item name="android:textColor">@color/primary</item>
+        <item name="strokeColor">@color/primary</item>
+        <item name="cornerRadius">@dimen/corner_medium</item>
+        <item name="android:textSize">@dimen/text_size_label_large</item>
+        <item name="android:minHeight">@dimen/button_height</item>
+    </style>
+
+    <style name="Button_Text" parent="Widget.Material3.Button.TextButton">
+        <item name="android:textColor">@color/primary</item>
+        <item name="android:textSize">@dimen/text_size_label_large</item>
+    </style>
+
+    <!-- M3 Filled Tonal Button: uses primary_container for subtle emphasis -->
+    <style name="Button_FilledTonal" parent="Widget.Material3.Button.TonalButton">
+        <item name="backgroundTint">@color/primary_container</item>
+        <item name="android:textColor">@color/on_primary_container</item>
+        <item name="cornerRadius">@dimen/corner_medium</item>
+        <item name="android:minHeight">@dimen/button_height</item>
+        <item name="android:stateListAnimator">@animator/button_3d_lift</item>
+    </style>
+
+    <!-- M3 Elevated Button: surface_container_low background for contrast against background -->
+    <style name="Button_Elevated" parent="Widget.Material3.Button.ElevatedButton">
+        <item name="backgroundTint">@color/surface_container_low</item>
+        <item name="android:textColor">@color/primary</item>
+        <item name="cornerRadius">@dimen/corner_medium</item>
+        <item name="android:minHeight">@dimen/button_height</item>
+        <item name="android:elevation">@dimen/elevation_level2</item>
+        <item name="android:stateListAnimator">@animator/button_3d_lift</item>
+        <item name="rippleColor">@color/primary_container</item>
+    </style>
+
+    <!-- ============================================================
+         Text Styles  (width/height BUOC BUOC: wrap_content)
+         ============================================================ -->
+
+    <style name="Text_Headline_Small" parent="TextAppearance.Material3.HeadlineSmall">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textColor">@color/text_primary</item>
+    </style>
+    <style name="Text_Headline_Medium" parent="TextAppearance.Material3.HeadlineMedium">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textColor">@color/text_primary</item>
+    </style>
+    <style name="Text_Title_Large" parent="TextAppearance.Material3.TitleLarge">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textColor">@color/text_primary</item>
+    </style>
+    <style name="Text_Title_Medium" parent="TextAppearance.Material3.TitleMedium">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textColor">@color/text_primary</item>
+    </style>
+    <style name="Text_Title_Small" parent="TextAppearance.Material3.TitleSmall">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textColor">@color/text_secondary</item>
+    </style>
+    <style name="Text_Body_Large" parent="TextAppearance.Material3.BodyLarge">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textColor">@color/text_primary</item>
+    </style>
+    <style name="Text_Body_Medium" parent="TextAppearance.Material3.BodyMedium">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textColor">@color/text_primary</item>
+    </style>
+    <style name="Text_Body_Small" parent="TextAppearance.Material3.BodySmall">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textColor">@color/text_secondary</item>
+    </style>
+    <style name="Text_Label_Large" parent="TextAppearance.Material3.LabelLarge">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textColor">@color/primary</item>
+    </style>
+    <style name="Text_Label_Medium" parent="TextAppearance.Material3.LabelMedium">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textColor">@color/text_secondary</item>
+    </style>
+    <style name="Text_Label_Small" parent="TextAppearance.Material3.LabelSmall">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textColor">@color/text_secondary</item>
+    </style>
+
+    <!-- ============================================================
+         Card Styles (3D Depth Hierarchy)
+         ============================================================ -->
+
+    <!-- Elevated Card: lifts on press, subtle shadow for depth -->
+    <style name="CardView_Elevated" parent="Widget.Material3.CardView.Elevated">
+        <item name="cardBackgroundColor">@color/surface_container_low</item>
+        <item name="cardCornerRadius">@dimen/corner_large</item>
+        <item name="cardElevation">@dimen/elevation_level2</item>
+        <item name="contentPadding">@dimen/card_padding</item>
+        <item name="strokeWidth">0dp</item>
+        <item name="android:stateListAnimator">@animator/card_3d_lift</item>
+    </style>
+
+    <!-- Filled Card: flat, uses surface_container for tonal separation -->
+    <style name="CardView_Filled" parent="Widget.Material3.CardView.Filled">
+        <item name="cardBackgroundColor">@color/surface_container</item>
+        <item name="cardCornerRadius">@dimen/corner_large</item>
+        <item name="cardElevation">@dimen/elevation_level0</item>
+        <item name="contentPadding">@dimen/card_padding</item>
+        <item name="strokeColor">@color/outline_variant</item>
+        <item name="strokeWidth">1dp</item>
+    </style>
+
+    <!-- Outlined Card: transparent fill, subtle border -->
+    <style name="CardView_Outlined" parent="Widget.Material3.CardView.Outlined">
+        <item name="cardBackgroundColor">@android:color/transparent</item>
+        <item name="cardCornerRadius">@dimen/corner_large</item>
+        <item name="cardElevation">@dimen/elevation_level0</item>
+        <item name="contentPadding">@dimen/card_padding</item>
+        <item name="strokeColor">@color/outline_variant</item>
+        <item name="strokeWidth">1dp</item>
+    </style>
+
+    <!-- Legacy CardView (kept for backwards compat) -->
+    <style name="CardView" parent="CardView_Elevated" />
+
+    <!-- ============================================================
+         TextInputLayout Style
+         ============================================================ -->
+    <style name="TextInputLayout_Outlined" parent="Widget.Material3.TextInputLayout.OutlinedBox">
+        <item name="boxBackgroundColor">@color/surface</item>
+        <item name="boxStrokeColor">@color/outline</item>
+        <item name="boxStrokeWidth">1dp</item>
+        <item name="boxStrokeWidthFocused">2dp</item>
+        <item name="boxCornerRadiusTopStart">@dimen/corner_small</item>
+        <item name="boxCornerRadiusTopEnd">@dimen/corner_small</item>
+        <item name="boxCornerRadiusBottomStart">@dimen/corner_small</item>
+        <item name="boxCornerRadiusBottomEnd">@dimen/corner_small</item>
+        <item name="hintTextColor">@color/text_hint</item>
+    </style>
+
+    <!-- ============================================================
+         Chip Style
+         ============================================================ -->
+    <style name="Chip_Filter" parent="Widget.Material3.Chip.Filter">
+        <item name="chipBackgroundColor">@color/primary_container</item>
+        <item name="android:textColor">@color/on_primary_container</item>
+        <item name="chipStrokeColor">@color/outline_variant</item>
+        <item name="chipCornerRadius">@dimen/corner_full</item>
+    </style>
+
+    <!-- Status Chip: small chip for PENDING/RESOLVED/REJECTED etc -->
+    <style name="Chip_Status" parent="Widget.Material3.Chip.Suggestion">
+        <item name="chipBackgroundColor">@color/surface_container_high</item>
+        <item name="android:textColor">@color/on_surface_variant</item>
+        <item name="chipStrokeColor">@android:color/transparent</item>
+        <item name="chipCornerRadius">@dimen/corner_full</item>
+        <item name="android:textSize">@dimen/text_size_label_small</item>
+        <item name="chipMinHeight">28dp</item>
+    </style>
+
+    <!-- Status Chip: Pending (amber/warning) -->
+    <style name="Chip_Status_Pending" parent="Chip_Status">
+        <item name="chipBackgroundColor">@color/warning_container</item>
+        <item name="android:textColor">@color/on_warning</item>
+    </style>
+
+    <!-- Status Chip: Success (green) -->
+    <style name="Chip_Status_Success" parent="Chip_Status">
+        <item name="chipBackgroundColor">@color/success_container</item>
+        <item name="android:textColor">@color/on_success_container</item>
+    </style>
+
+    <!-- Status Chip: Error (red) -->
+    <style name="Chip_Status_Error" parent="Chip_Status">
+        <item name="chipBackgroundColor">@color/error_container</item>
+        <item name="android:textColor">@color/on_error_container</item>
+    </style>
+
+    <!-- ============================================================
+         TabLayout Style
+         ============================================================ -->
+    <style name="TabLayout" parent="Widget.Material3.TabLayout">
+        <item name="tabIndicatorColor">@color/primary</item>
+        <item name="tabTextColor">@color/text_secondary</item>
+        <item name="tabSelectedTextColor">@color/primary</item>
+        <item name="tabBackground">@color/surface</item>
+    </style>
+
+    <!-- ============================================================
+         FAB Style
+         ============================================================ -->
+    <style name="FAB_Primary" parent="Widget.Material3.FloatingActionButton.Primary">
+        <item name="backgroundTint">@color/primary</item>
+        <item name="tint">@color/white</item>
+    </style>
+
+    <!-- ============================================================
+         Student App design system aliases
+         ============================================================ -->
+    <style name="Student.PrimaryButton" parent="Button_Primary">
+        <item name="cornerRadius">@dimen/corner_large</item>
+        <item name="android:minHeight">@dimen/button_height_large</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:stateListAnimator">@animator/button_3d_lift</item>
+    </style>
+
+    <style name="Student.SecondaryButton" parent="Button_FilledTonal">
+        <item name="backgroundTint">@color/army_green_soft</item>
+        <item name="android:textColor">@color/primary</item>
+        <item name="cornerRadius">@dimen/corner_large</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <style name="Student.OutlineButton" parent="Button_Secondary">
+        <item name="android:textColor">@color/student_accent</item>
+        <item name="strokeColor">@color/student_accent</item>
+        <item name="cornerRadius">@dimen/corner_large</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <style name="Student.Card" parent="CardView_Elevated">
+        <item name="cardBackgroundColor">@color/surface</item>
+        <item name="cardCornerRadius">@dimen/student_card_radius</item>
+        <item name="cardElevation">@dimen/elevation_level2</item>
+        <item name="strokeColor">@color/divider_soft</item>
+        <item name="strokeWidth">1dp</item>
+    </style>
+
+    <style name="Student.DashboardCard" parent="Widget.Material3.CardView.Elevated">
+        <item name="cardBackgroundColor">@color/surface_container_low</item>
+        <item name="cardCornerRadius">@dimen/student_card_radius_large</item>
+        <item name="cardElevation">@dimen/elevation_level1</item>
+        <item name="strokeWidth">0dp</item>
+        <item name="android:stateListAnimator">@animator/card_3d_lift</item>
+        <item name="rippleColor">@color/primary_container</item>
+    </style>
+
+    <style name="Student.DashboardActionCard" parent="Student.DashboardCard">
+        <item name="cardCornerRadius">@dimen/student_card_radius_large</item>
+        <item name="cardElevation">@dimen/elevation_level2</item>
+    </style>
+
+    <style name="Student.BottomNavigation" parent="Widget.Material3.BottomNavigationView">
+        <item name="backgroundTint">@color/surface</item>
+        <item name="itemIconTint">@color/bottom_nav_item</item>
+        <item name="itemTextColor">@color/bottom_nav_item</item>
+    </style>
+
+    <style name="Student.InputField" parent="TextInputLayout_Outlined">
+        <item name="boxBackgroundColor">@color/surface</item>
+        <item name="boxStrokeColor">@color/outline_variant</item>
+        <item name="boxCornerRadiusTopStart">@dimen/corner_large</item>
+        <item name="boxCornerRadiusTopEnd">@dimen/corner_large</item>
+        <item name="boxCornerRadiusBottomStart">@dimen/corner_large</item>
+        <item name="boxCornerRadiusBottomEnd">@dimen/corner_large</item>
+    </style>
+
+    <style name="Student.Badge" parent="Chip_Status">
+        <item name="chipMinHeight">@dimen/student_badge_height</item>
+        <item name="chipCornerRadius">@dimen/corner_full</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <style name="Student.Badge.Open" parent="Student.Badge">
+        <item name="chipBackgroundColor">@color/status_open_bg</item>
+        <item name="android:textColor">@color/status_open_text</item>
+    </style>
+
+    <style name="Student.Badge.Upcoming" parent="Student.Badge">
+        <item name="chipBackgroundColor">@color/status_upcoming_bg</item>
+        <item name="android:textColor">@color/status_upcoming_text</item>
+    </style>
+
+    <style name="Student.Badge.Closed" parent="Student.Badge">
+        <item name="chipBackgroundColor">@color/status_closed_bg</item>
+        <item name="android:textColor">@color/status_closed_text</item>
+    </style>
+
+    <style name="Student.Badge.Review" parent="Student.Badge">
+        <item name="chipBackgroundColor">@color/status_review_bg</item>
+        <item name="android:textColor">@color/status_review_text</item>
+    </style>
+
+    <!-- Legacy -->
+    <style name="Widget_ExamHub_Button_Primary" parent="Button_Primary" />
+    <style name="Widget_ExamHub_Button_Secondary" parent="Button_Secondary" />
+    <style name="Widget_ExamHub_Button_Text" parent="Button_Text" />
+    <style name="Widget_ExamHub_Card" parent="CardView" />
+    <style name="Widget_ExamHub_TextInputLayout" parent="TextInputLayout_Outlined" />
+    <style name="Widget_ExamHub_Chip" parent="Chip_Filter" />
+    <style name="Widget_ExamHub_TabLayout" parent="TabLayout" />
+</resources>

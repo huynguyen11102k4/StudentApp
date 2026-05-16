@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- === Army Green Palette (Primary #4B5320) ===
+         Color Psychology: Trust · Stability · Focus · Growth · Education
+         Army green signals reliability without being cold (blue) or aggressive (red). -->
+    <color name="army_green">#FF4B5320</color>
+    <color name="army_green_dark">#FF3A411A</color>
+    <color name="army_green_light">#FF6B7A2E</color>
+    <color name="army_green_soft">#FFE9ECE0</color>
+    <color name="student_accent">#FFD97818</color>
+    <color name="student_accent_container">#FFFFE7D1</color>
+    <color name="student_on_accent_container">#FF5B2B00</color>
+
+    <!-- Primary (Material3 mapping) -->
+    <color name="primary">@color/army_green</color>
+    <color name="primary_dark">@color/army_green_dark</color>
+    <color name="primary_container">#FFDCE4C5</color>
+    <color name="on_primary">#FFFFFFFF</color>
+    <color name="on_primary_container">#FF171E05</color>
+
+    <!-- Secondary: Warm muted sage — complements primary without competing -->
+    <color name="secondary">#FF596648</color>
+    <color name="secondary_container">#FFDDE8D0</color>
+    <color name="on_secondary">#FFFFFFFF</color>
+    <color name="on_secondary_container">#FF161F0B</color>
+
+    <!-- Tertiary: Slate teal — technology accent, balances warm greens -->
+    <color name="tertiary">#FF3D636B</color>
+    <color name="tertiary_container">#FFC0E8F2</color>
+    <color name="on_tertiary">#FFFFFFFF</color>
+    <color name="on_tertiary_container">#FF001F26</color>
+
+    <!-- ============================================================
+         Surface Hierarchy (Tonal Elevation — key 3D depth system)
+         Layer 0: background (canvas)
+         Layer 1: surfaceContainerLow → Container → High (cards, sheets)
+         Layer 2: surface (toolbars, dialogs — brightest)
+    ============================================================ -->
+    <color name="background">#FFF5F6F0</color>
+    <color name="on_background">#FF1A1C16</color>
+    <color name="surface">#FFFCFCF9</color>
+    <color name="on_surface">#FF1A1C16</color>
+    <color name="surface_variant">#FFE1E4D7</color>
+    <color name="on_surface_variant">#FF43473C</color>
+    <color name="surface_container_lowest">#FFEEF0E8</color>
+    <color name="surface_container_low">#FFEBEDE5</color>
+    <color name="surface_container">#FFE4E6DE</color>
+    <color name="surface_container_high">#FFDEE0D8</color>
+    <color name="surface_container_highest">#FFD7D9D1</color>
+    <color name="surface_dim">#FFEDEFE7</color>
+    <color name="inverse_surface">#FF2F3129</color>
+    <color name="inverse_on_surface">#FFF2F3EA</color>
+
+    <!-- ============================================================
+         Error: Muted, calm — "attention needed" not "ALARM!"
+         M3 principle: errorContainer = soft background, onErrorContainer = dark text
+    ============================================================ -->
+    <color name="error">#FFBA1A1A</color>
+    <color name="error_container">#FFFFDAD6</color>
+    <color name="on_error">#FFFFFFFF</color>
+    <color name="on_error_container">#FF410002</color>
+
+    <!-- Success: Calm green — achievement without overstimulation -->
+    <color name="success">#FF2E6B2F</color>
+    <color name="success_container">#FFD7F5D8</color>
+    <color name="on_success">#FFFFFFFF</color>
+    <color name="on_success_container">#FF002106</color>
+
+    <!-- Warning: Warm amber — gentle alert -->
+    <color name="warning">#FF8D6100</color>
+    <color name="warning_container">#FFFFDEA1</color>
+    <color name="on_warning">#FFFFFFFF</color>
+    <color name="on_warning_container">#FF2D1B00</color>
+
+    <!-- Outline: Subtle borders that define without distracting -->
+    <color name="outline">#FF74796D</color>
+    <color name="outline_variant">#FFC3C7BA</color>
+
+    <!-- Divider -->
+    <color name="divider">#FFE0E0E0</color>
+    <color name="divider_soft">#FFE9E9E4</color>
+
+    <!-- Text: Warm gray scale — easier on eyes than pure black/white -->
+    <color name="text_primary">#FF1A1C16</color>
+    <color name="text_secondary">#FF5D6057</color>
+    <color name="text_hint">#FF8B8E85</color>
+    <color name="text_disabled">#FFB8BAB2</color>
+
+    <!-- Teacher App semantic status colors -->
+    <color name="status_open_bg">@color/success_container</color>
+    <color name="status_open_text">@color/success</color>
+    <color name="status_upcoming_bg">#FFFFE6CC</color>
+    <color name="status_upcoming_text">#FFC06400</color>
+    <color name="status_closed_bg">@color/error_container</color>
+    <color name="status_closed_text">@color/error</color>
+    <color name="status_review_bg">#FFFFF2C2</color>
+    <color name="status_review_text">@color/warning</color>
+    <color name="status_online_bg">#FFD7F5D8</color>
+    <color name="status_online_text">#FF1B5E20</color>
+    <color name="status_offline_bg">#FFFFE6CC</color>
+    <color name="status_offline_text">#FF8A4B00</color>
+    <color name="status_processing_bg">#FFD2EEF4</color>
+    <color name="status_processing_text">#FF0B5864</color>
+    <color name="status_ready_bg">#FFDCE4C5</color>
+    <color name="status_ready_text">#FF3A411A</color>
+
+    <!-- Utility -->
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+    <color name="scrim">#80000000</color>
+
+    <!-- Button (legacy mapping) -->
+    <color name="button_primary">@color/army_green</color>
+    <color name="button_primary_pressed">@color/army_green_dark</color>
+    <color name="button_secondary_bg">@android:color/transparent</color>
+
+    <!-- Legacy (keep for old code) -->
+    <color name="purple_200">#FFBB86FC</color>
+    <color name="purple_500">#FF6200EE</color>
+    <color name="purple_700">#FF3700B3</color>
+    <color name="teal_200">#FF03DAC5</color>
+    <color name="teal_700">#FF018786</color>
+</resources>

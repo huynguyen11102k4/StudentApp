@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- ============================================================
+         8dp Grid Spacing
+         ============================================================ -->
+    <dimen name="spacing_2">2dp</dimen>
+    <dimen name="spacing_4">4dp</dimen>
+    <dimen name="spacing_6">6dp</dimen>
+    <dimen name="spacing_8">8dp</dimen>
+    <dimen name="spacing_12">12dp</dimen>
+    <dimen name="spacing_16">16dp</dimen>
+    <dimen name="spacing_20">20dp</dimen>
+    <dimen name="spacing_24">24dp</dimen>
+    <dimen name="spacing_32">32dp</dimen>
+    <dimen name="spacing_40">40dp</dimen>
+    <dimen name="spacing_48">48dp</dimen>
+    <dimen name="spacing_56">56dp</dimen>
+    <dimen name="spacing_64">64dp</dimen>
+    <dimen name="spacing_80">80dp</dimen>
+    <dimen name="spacing_112">112dp</dimen>
+
+    <!-- ============================================================
+         Text Sizes
+         ============================================================ -->
+    <dimen name="text_size_caption">12sp</dimen>
+    <dimen name="text_size_label_small">11sp</dimen>
+    <dimen name="text_size_label_medium">12sp</dimen>
+    <dimen name="text_size_label_large">14sp</dimen>
+    <dimen name="text_size_body_small">12sp</dimen>
+    <dimen name="text_size_body_medium">14sp</dimen>
+    <dimen name="text_size_body_large">16sp</dimen>
+    <dimen name="text_size_title_small">14sp</dimen>
+    <dimen name="text_size_title_medium">16sp</dimen>
+    <dimen name="text_size_title_large">22sp</dimen>
+    <dimen name="text_size_headline_small">24sp</dimen>
+    <dimen name="text_size_headline_medium">28sp</dimen>
+    <dimen name="text_size_headline_large">32sp</dimen>
+
+    <!-- ============================================================
+         Component Dimensions
+         ============================================================ -->
+    <dimen name="button_height">48dp</dimen>
+    <dimen name="button_height_large">52dp</dimen>
+    <dimen name="button_min_width">64dp</dimen>
+    <dimen name="icon_size_small">16dp</dimen>
+    <dimen name="icon_size_medium">20dp</dimen>
+    <dimen name="icon_size_large">24dp</dimen>
+    <dimen name="icon_size_xlarge">32dp</dimen>
+    <dimen name="avatar_size_small">32dp</dimen>
+    <dimen name="avatar_size_medium">40dp</dimen>
+    <dimen name="avatar_size_large">64dp</dimen>
+    <dimen name="avatar_size_xlarge">80dp</dimen>
+    <dimen name="app_bar_height">56dp</dimen>
+    <dimen name="tab_height">48dp</dimen>
+
+    <!-- ============================================================
+         Corner Radius
+         ============================================================ -->
+    <dimen name="corner_small">4dp</dimen>
+    <dimen name="corner_medium">8dp</dimen>
+    <dimen name="corner_large">12dp</dimen>
+    <dimen name="corner_xlarge">16dp</dimen>
+    <dimen name="corner_xxlarge">28dp</dimen>
+    <dimen name="corner_full">50dp</dimen>
+
+    <!-- ============================================================
+         Elevation
+         ============================================================ -->
+    <dimen name="elevation_level0">0dp</dimen>
+    <dimen name="elevation_level1">2dp</dimen>
+    <dimen name="elevation_level2">4dp</dimen>
+    <dimen name="elevation_level3">8dp</dimen>
+    <dimen name="elevation_level4">12dp</dimen>
+    <dimen name="elevation_level5">16dp</dimen>
+
+    <!-- 3D Press Lift -->
+    <dimen name="elevation_press_lift">6dp</dimen>
+    <dimen name="elevation_hover_lift">3dp</dimen>
+    <dimen name="elevation_tonal_offset">1dp</dimen>
+
+    <!-- ============================================================
+         Card
+         ============================================================ -->
+    <dimen name="card_padding">16dp</dimen>
+    <dimen name="card_elevation">2dp</dimen>
+    <dimen name="card_radius">12dp</dimen>
+    <dimen name="student_card_radius">16dp</dimen>
+    <dimen name="student_card_radius_large">24dp</dimen>
+    <dimen name="student_card_radius_xlarge">28dp</dimen>
+    <dimen name="student_header_radius">28dp</dimen>
+    <dimen name="student_badge_height">26dp</dimen>
+    <dimen name="dashboard_appbar_height">96dp</dimen>
+    <dimen name="dashboard_bottom_nav_height">80dp</dimen>
+    <dimen name="dashboard_fab_margin_bottom">96dp</dimen>
+    <dimen name="icon_container_size">48dp</dimen>
+    <dimen name="icon_container_radius">18dp</dimen>
+    <dimen name="dashboard_quick_card_min_height">156dp</dimen>
+    <dimen name="screen_bottom_content_padding">120dp</dimen>
+    <dimen name="scan_overlay_margin">40dp</dimen>
+
+    <!-- ============================================================
+         FAB
+         ============================================================ -->
+    <dimen name="fab_size">56dp</dimen>
+    <dimen name="fab_margin">16dp</dimen>
+
+    <!-- ============================================================
+         Input
+         ============================================================ -->
+    <dimen name="input_padding_horizontal">16dp</dimen>
+    <dimen name="input_padding_vertical">12dp</dimen>
+</resources>

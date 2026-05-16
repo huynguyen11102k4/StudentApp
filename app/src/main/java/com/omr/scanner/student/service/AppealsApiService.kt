@@ -1,0 +1,30 @@
+package com.omr.scanner.student.service
+
+import com.omr.scanner.student.model.request.StudentAppealRequest
+import com.omr.scanner.student.model.response.ApiEnvelope
+import com.omr.scanner.student.model.response.AppealSummaryResponse
+import com.omr.scanner.student.model.response.PagedEnvelope
+import com.omr.scanner.student.model.response.StudentAppealCreateResponse
+import retrofit2.http.Body
+import retrofit2.Response
+import retrofit2.http.GET
+import retrofit2.http.Path
+import retrofit2.http.POST
+import retrofit2.http.Query
+
+interface AppealsApiService {
+    @GET("student/appeals")
+    suspend fun getAppeals(
+        @Query("status") status: String? = null,
+        @Query("examId") examId: String? = null,
+        @Query("page") page: String = "1",
+        @Query("limit") limit: String = "20"
+    ): Response<PagedEnvelope<AppealSummaryResponse>>
+
+    @GET("student/appeals/{appealId}")
+    suspend fun getAppealDetail(@Path("appealId") appealId: String): Response<ApiEnvelope<AppealSummaryResponse>>
+
+    @POST("student/appeals")
+    suspend fun createAppeal(@Body request: StudentAppealRequest): Response<ApiEnvelope<StudentAppealCreateResponse>>
+
+}

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <item
+        android:id="@+id/actionSearchExam"
+        android:contentDescription="@string/common_search"
+        android:icon="@drawable/ic_search"
+        android:title="@string/common_search"
+        app:actionViewClass="androidx.appcompat.widget.SearchView"
+        app:showAsAction="always|collapseActionView" />
+
+    <item
+        android:id="@+id/actionExamTypeFilter"
+        android:contentDescription="@string/exam_list_type_filter"
+        android:icon="@drawable/ic_filter_list"
+        android:title="@string/exam_list_type_filter"
+        app:showAsAction="always" />
+</menu>

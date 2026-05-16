@@ -1,0 +1,243 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/nav_graph"
+    app:startDestination="@id/splashFragment">
+
+    <fragment
+        android:id="@+id/splashFragment"
+        android:name="com.omr.scanner.student.ui.splash.SplashFragment"
+        android:label="Splash"
+        tools:layout="@layout/fragment_splash">
+        <action
+            android:id="@+id/action_splash_to_login"
+            app:destination="@id/loginFragment"
+            app:popUpTo="@id/splashFragment"
+            app:popUpToInclusive="true" />
+        <action
+            android:id="@+id/action_splash_to_dashboard"
+            app:destination="@id/dashboardFragment"
+            app:popUpTo="@id/splashFragment"
+            app:popUpToInclusive="true" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/loginFragment"
+        android:name="com.omr.scanner.student.ui.login.LoginFragment"
+        android:label="@string/login_title"
+        tools:layout="@layout/fragment_login">
+        <action
+            android:id="@+id/action_login_to_dashboard"
+            app:destination="@id/dashboardFragment"
+            app:popUpTo="@id/loginFragment"
+            app:popUpToInclusive="true" />
+        <action
+            android:id="@+id/action_login_to_register"
+            app:destination="@id/registerFragment" />
+        <action
+            android:id="@+id/action_login_to_forgot_password"
+            app:destination="@id/forgotPasswordFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/registerFragment"
+        android:name="com.omr.scanner.student.ui.register.RegisterFragment"
+        android:label="@string/register_title"
+        tools:layout="@layout/fragment_register">
+        <argument android:name="prefillEmail" app:argType="string" android:defaultValue="" />
+        <argument android:name="prefillFullName" app:argType="string" android:defaultValue="" />
+        <action
+            android:id="@+id/action_register_to_login"
+            app:destination="@id/loginFragment"
+            app:popUpTo="@id/loginFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/forgotPasswordFragment"
+        android:name="com.omr.scanner.student.ui.forgotpassword.ForgotPasswordFragment"
+        android:label="@string/forgot_password_title"
+        tools:layout="@layout/fragment_forgot_password">
+        <action
+            android:id="@+id/action_forgot_password_to_login"
+            app:destination="@id/loginFragment"
+            app:popUpTo="@id/loginFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/dashboardFragment"
+        android:name="com.omr.scanner.student.ui.dashboard.DashboardFragment"
+        android:label="@string/app_name"
+        tools:layout="@layout/fragment_dashboard">
+        <action android:id="@+id/action_dashboard_to_class_list" app:destination="@id/classListFragment" />
+        <action android:id="@+id/action_dashboard_to_exam_detail" app:destination="@id/examDetailFragment" />
+        <action android:id="@+id/action_dashboard_to_exam_list" app:destination="@id/examListFragment" />
+        <action android:id="@+id/action_dashboard_to_settings" app:destination="@id/settingsFragment" />
+        <action android:id="@+id/action_dashboard_to_notifications" app:destination="@id/notificationsFragment" />
+        <action android:id="@+id/action_dashboard_to_appeals" app:destination="@id/appealsListFragment" />
+        <action android:id="@+id/action_dashboard_to_results" app:destination="@id/resultsListFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/examListFragment"
+        android:name="com.omr.scanner.student.ui.examlist.ExamListFragment"
+        android:label="@string/exam_list_default_title"
+        tools:layout="@layout/fragment_exam_list_full">
+        <argument android:name="gradingType" app:argType="string" android:defaultValue="" />
+        <argument android:name="title" app:argType="string" android:defaultValue="" />
+        <action android:id="@+id/action_exam_list_to_exam_detail" app:destination="@id/examDetailFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/classListFragment"
+        android:name="com.omr.scanner.student.ui.classlist.ClassListFragment"
+        android:label="@string/class_list_title"
+        tools:layout="@layout/fragment_class_list">
+        <action android:id="@+id/action_class_list_to_class_detail" app:destination="@id/classDetailFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/classDetailFragment"
+        android:name="com.omr.scanner.student.ui.classdetail.ClassDetailFragment"
+        android:label="Chi tiết lớp"
+        tools:layout="@layout/fragment_class_detail_student">
+        <argument android:name="classId" app:argType="string" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/examDetailFragment"
+        android:name="com.omr.scanner.student.ui.examdetail.ExamDetailFragment"
+        android:label="@string/exam_detail_title"
+        tools:layout="@layout/fragment_exam_detail">
+        <argument android:name="examId" app:argType="string" />
+        <action android:id="@+id/action_exam_detail_to_camera_ar" app:destination="@id/cameraARFragment" />
+        <action android:id="@+id/action_exam_detail_to_exam_start" app:destination="@id/examStartFragment" />
+        <action android:id="@+id/action_exam_detail_to_appeals_list" app:destination="@id/appealsListFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/examStartFragment"
+        android:name="com.omr.scanner.student.ui.examstart.ExamStartFragment"
+        android:label="Bắt đầu làm bài"
+        tools:layout="@layout/fragment_exam_start">
+        <argument android:name="examId" app:argType="string" />
+        <action android:id="@+id/action_exam_start_to_lock_mode" app:destination="@id/lockModeFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/lockModeFragment"
+        android:name="com.omr.scanner.student.ui.lockmode.LockModeFragment"
+        android:label="Lock mode"
+        tools:layout="@layout/fragment_lock_mode">
+        <argument android:name="examId" app:argType="string" android:defaultValue="" />
+        <argument android:name="sessionId" app:argType="string" android:defaultValue="" />
+        <argument android:name="remainingSeconds" app:argType="integer" android:defaultValue="0" />
+        <argument android:name="isLockedMode" app:argType="boolean" android:defaultValue="false" />
+        <action android:id="@+id/action_lock_mode_to_camera_ar" app:destination="@id/cameraARFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/cameraARFragment"
+        android:name="com.omr.scanner.student.ui.cameraar.CameraARFragment"
+        android:label="@string/camera_ar_title"
+        tools:layout="@layout/fragment_camera_ar">
+        <argument android:name="examId" app:argType="string" android:defaultValue="" />
+        <argument android:name="sessionId" app:argType="string" android:defaultValue="" />
+        <action android:id="@+id/action_camera_ar_to_smart_review" app:destination="@id/smartReviewFragment" />
+        <action android:id="@+id/action_camera_ar_to_manual_crop" app:destination="@id/manualCropFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/manualCropFragment"
+        android:name="com.omr.scanner.student.ui.manualcrop.ManualCropFragment"
+        android:label="@string/manual_crop_title"
+        tools:layout="@layout/fragment_manual_crop">
+        <action android:id="@+id/action_manual_crop_to_smart_review" app:destination="@id/smartReviewFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/smartReviewFragment"
+        android:name="com.omr.scanner.student.ui.smartreview.SmartReviewFragment"
+        android:label="@string/smart_review_title"
+        tools:layout="@layout/fragment_smart_review">
+        <argument android:name="examId" app:argType="string" android:defaultValue="" />
+        <argument android:name="sessionId" app:argType="string" android:defaultValue="" />
+        <argument android:name="studentId" app:argType="string" android:defaultValue="" />
+        <argument android:name="submissionId" app:argType="string" android:defaultValue="" />
+        <action android:id="@+id/action_smart_review_to_camera_ar" app:destination="@id/cameraARFragment" />
+        <action android:id="@+id/action_smart_review_to_results" app:destination="@id/resultsListFragment" />
+        <action android:id="@+id/action_smart_review_to_submission_end" app:destination="@id/submissionEndFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/submissionEndFragment"
+        android:name="com.omr.scanner.student.ui.submissionend.SubmissionEndFragment"
+        android:label="Đã nộp bài"
+        tools:layout="@layout/fragment_submission_end">
+        <action android:id="@+id/action_submission_end_to_results" app:destination="@id/resultsListFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/resultsListFragment"
+        android:name="com.omr.scanner.student.ui.results.ResultsListFragment"
+        android:label="Kết quả"
+        tools:layout="@layout/fragment_results_list">
+        <action android:id="@+id/action_results_list_to_result_detail" app:destination="@id/resultDetailFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/resultDetailFragment"
+        android:name="com.omr.scanner.student.ui.results.ResultDetailFragment"
+        android:label="Chi tiết kết quả"
+        tools:layout="@layout/fragment_result_detail">
+        <argument android:name="sheetId" app:argType="string" />
+        <action android:id="@+id/action_result_detail_to_appeal_detail" app:destination="@id/appealDetailFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/notificationsFragment"
+        android:name="com.omr.scanner.student.ui.notifications.NotificationsFragment"
+        android:label="@string/notifications_title"
+        tools:layout="@layout/fragment_notifications">
+        <action android:id="@+id/action_notifications_to_appeals_list" app:destination="@id/appealsListFragment" />
+        <action android:id="@+id/action_notifications_to_appeal_detail" app:destination="@id/appealDetailFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/appealsListFragment"
+        android:name="com.omr.scanner.student.ui.appeals.AppealsListFragment"
+        android:label="@string/appeals_list_title"
+        tools:layout="@layout/fragment_appeals_list">
+        <argument android:name="examId" app:argType="string" android:defaultValue="" />
+        <action android:id="@+id/action_appeals_list_to_appeal_detail" app:destination="@id/appealDetailFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/appealDetailFragment"
+        android:name="com.omr.scanner.student.ui.appeals.AppealDetailFragment"
+        android:label="@string/appeal_detail_title"
+        tools:layout="@layout/fragment_appeal_detail">
+        <argument android:name="appealId" app:argType="string" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/settingsFragment"
+        android:name="com.omr.scanner.student.ui.settings.SettingsFragment"
+        android:label="@string/settings_title"
+        tools:layout="@layout/fragment_settings">
+        <action android:id="@+id/action_settings_to_profile" app:destination="@id/profileFragment" />
+        <action
+            android:id="@+id/action_settings_to_login"
+            app:destination="@id/loginFragment"
+            app:popUpTo="@id/nav_graph"
+            app:popUpToInclusive="true" />
+        <action android:id="@+id/action_settings_to_notifications" app:destination="@id/notificationsFragment" />
+        <action android:id="@+id/action_settings_to_appeals" app:destination="@id/appealsListFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/profileFragment"
+        android:name="com.omr.scanner.student.ui.profile.ProfileFragment"
+        android:label="@string/profile_title"
+        tools:layout="@layout/fragment_profile" />
+</navigation>

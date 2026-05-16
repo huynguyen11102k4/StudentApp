@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@color/surface"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:padding="@dimen/spacing_12">
+
+    <TextView
+        android:id="@+id/tvQuestion"
+        style="@style/Text_Label_Medium"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:textColor="@color/text_primary" />
+
+    <TextView
+        android:id="@+id/tvStudentAnswer"
+        style="@style/Text_Label_Medium"
+        android:layout_width="48dp"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:textColor="@color/text_primary" />
+
+    <TextView
+        android:id="@+id/tvCorrectAnswer"
+        style="@style/Text_Label_Medium"
+        android:layout_width="48dp"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:textColor="@color/text_secondary" />
+
+    <TextView
+        android:id="@+id/tvStatus"
+        style="@style/Text_Label_Medium"
+        android:layout_width="72dp"
+        android:layout_height="wrap_content"
+        android:gravity="end"
+        android:textColor="@color/primary" />
+</LinearLayout>

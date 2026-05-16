@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="exam_start_title">Bắt đầu làm bài</string>
+    <string name="exam_start_duration_format">%d phút</string>
+    <string name="exam_start_question_count_format">%d câu</string>
+    <string name="exam_start_instruction">Hãy đảm bảo pin, kết nối mạng và không rời ứng dụng trong khi làm bài lock mode.</string>
+    <string name="exam_start_action">Bắt đầu làm bài</string>
+    <string name="exam_start_confirm_title">Bắt đầu làm bài?</string>
+    <string name="exam_start_confirm_message">Sau khi bắt đầu, thời gian làm bài sẽ được tính và phiên làm bài gắn với thiết bị hiện tại.</string>
+    <string name="exam_start_cancel">Hủy</string>
+    <string name="exam_start_confirm">Bắt đầu</string>
+    <string name="exam_start_load_failed">Không thể tải thông tin bài thi</string>
+    <string name="exam_start_session_failed">Không thể bắt đầu làm bài</string>
+    <string name="exam_start_lock_invalid">Phiên làm bài không hợp lệ</string>
+    <string name="exam_start_lock_validate_failed">Không thể xác thực lock mode</string>
+
+    <string name="lock_mode_title">LOCK MODE</string>
+    <string name="lock_mode_timer_default">00:00</string>
+    <string name="lock_mode_timer_label">Thời gian còn lại</string>
+    <string name="lock_mode_instruction">Không thoát ứng dụng, tắt màn hình hoặc chuyển sang ứng dụng khác trong khi làm bài.</string>
+    <string name="lock_mode_kiosk_device_owner">Kiosk mode đã bật bằng Device Owner.</string>
+    <string name="lock_mode_kiosk_screen_pinned">Đã bật screen pinning. Nếu Android yêu cầu, hãy xác nhận ghim màn hình.</string>
+    <string name="lock_mode_kiosk_unavailable">Không thể bật kiosk mode: %s</string>
+    <string name="lock_mode_kiosk_activity_unavailable">Không thể bật kiosk mode trên activity hiện tại</string>
+    <string name="lock_mode_queue_format">Đang chờ đồng bộ %d vi phạm</string>
+    <string name="lock_mode_time_expired">Đã hết thời gian làm bài</string>
+    <string name="lock_mode_open_camera">Quét phiếu OMR</string>
+    <string name="lock_mode_submit">Nộp bài</string>
+    <string name="lock_mode_submit_hint_title">Nộp bài</string>
+    <string name="lock_mode_submit_hint_message">Bạn cần quét phiếu và xem lại đáp án trước khi nộp bài.</string>
+    <string name="lock_mode_submit_hint_close">Đóng</string>
+    <string name="lock_mode_submit_hint_open_camera">Mở camera</string>
+    <string name="lock_mode_violation_failed">Không thể ghi nhận vi phạm</string>
+    <string name="lock_mode_violation_queued">Đã lưu vi phạm offline, sẽ đồng bộ khi có mạng</string>
+    <string name="lock_mode_heartbeat_failed">Không thể gửi heartbeat</string>
+
+    <string name="smart_review_submit_confirm_title">Xác nhận nộp bài?</string>
+    <string name="smart_review_submit_confirm_message">Sau khi nộp bài, bạn không thể chỉnh sửa đáp án trong phiên này.</string>
+    <string name="smart_review_submit_confirm_review">Xem lại</string>
+    <string name="smart_review_submit_confirm_submit">Nộp bài</string>
+    <string name="smart_review_submitted">Đã nộp bài</string>
+    <string name="smart_review_storage_permission_required">Cần quyền lưu trữ để tải ảnh vào thư viện</string>
+    <string name="smart_review_missing_exam">Thiếu thông tin kỳ thi để mở camera</string>
+    <string name="smart_review_missing_image">Chưa có ảnh kết quả để tải xuống</string>
+    <string name="smart_review_download_success">Đã tải ảnh kết quả vào thư viện</string>
+    <string name="smart_review_create_image_file_failed">Không thể tạo file ảnh</string>
+    <string name="smart_review_write_image_file_failed">Không thể ghi file ảnh</string>
+    <string name="smart_review_create_gallery_dir_failed">Không thể tạo thư mục OMR trong thư viện</string>
+
+    <string name="submission_end_title">Đã nộp bài</string>
+    <string name="submission_end_description">Bài làm của bạn đã được gửi. Kết quả sẽ xuất hiện khi hệ thống xử lý xong.</string>
+    <string name="submission_end_results">Xem kết quả</string>
+    <string name="submission_end_home">Về trang chủ</string>
+    <string name="submission_end_content_description">Đã nộp bài</string>
+
+    <string name="dashboard_results_action">Xem kết quả</string>
+    <string name="class_detail_student_title">Chi tiết lớp</string>
+    <string name="results_title">Kết quả</string>
+    <string name="results_empty">Chưa có kết quả</string>
+    <string name="result_detail_title">Chi tiết kết quả</string>
+    <string name="result_detail_image_description">Ảnh kết quả</string>
+    <string name="result_detail_create_appeal">Tạo khiếu nại</string>
+    <string name="result_detail_default_title">Kết quả</string>
+    <string name="result_detail_appeal_dialog_title">Tạo khiếu nại</string>
+    <string name="result_detail_appeal_reason_hint">Lý do khiếu nại</string>
+    <string name="result_detail_appeal_question_hint">Câu hỏi liên quan (tùy chọn)</string>
+    <string name="result_detail_appeal_message_hint">Ghi chú cho câu hỏi</string>
+    <string name="result_detail_appeal_send">Gửi</string>
+    <string name="results_load_failed">Không thể tải kết quả</string>
+    <string name="result_detail_load_failed">Không thể tải chi tiết kết quả</string>
+    <string name="result_detail_create_appeal_failed">Không thể tạo khiếu nại</string>
+    <string name="result_detail_missing_sheet">Thiếu mã bài chấm</string>
+    <string name="result_detail_reason_required">Vui lòng nhập lý do khiếu nại</string>
+    <string name="result_item_default_exam">Bài thi</string>
+    <string name="result_answer_question_format">Câu %d</string>
+    <string name="result_answer_correct">Đúng</string>
+    <string name="result_answer_wrong">Sai</string>
+    <string name="result_answer_pending">Chưa có</string>
+
+    <string name="smart_review_detection_title">Kiểm tra ảnh nhận dạng</string>
+    <string name="smart_review_student_name_format">Tên học sinh: %1$s</string>
+    <string name="smart_review_student_code_format">Số báo danh: %1$s</string>
+    <string name="smart_review_class_code_format">Mã lớp: %1$s</string>
+    <string name="smart_review_exam_code_format">Mã đề: %1$s</string>
+    <string name="smart_review_null_value">Chưa có</string>
+    <string name="smart_review_image_description">Ảnh OMR đã khoanh các ô hệ thống nhận dạng là đã tô</string>
+    <string name="smart_review_no_image">Chưa có ảnh nhận dạng</string>
+    <string name="smart_review_retake">Chụp lại</string>
+    <string name="smart_review_submit_action">Nộp bài</string>
+    <string name="smart_review_download_image">Tải ảnh kết quả</string>
+</resources>
