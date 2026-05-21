@@ -69,7 +69,7 @@
     <string name="results_load_failed">Không thể tải kết quả</string>
     <string name="result_detail_load_failed">Không thể tải chi tiết kết quả</string>
     <string name="result_detail_create_appeal_failed">Không thể tạo khiếu nại</string>
-    <string name="result_detail_missing_sheet">Thiếu mã bài chấm</string>
+    <string name="result_detail_missing_sheet">Thiếu mã bài làm</string>
     <string name="result_detail_reason_required">Vui lòng nhập lý do khiếu nại</string>
     <string name="result_item_default_exam">Bài thi</string>
     <string name="result_answer_question_format">Câu %d</string>

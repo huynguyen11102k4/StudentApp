@@ -4,7 +4,7 @@ plugins {
 }
 
 android {
-    namespace = "com.omr.scanner.student"
+    namespace = "com.examhub.student"
     compileSdk {
         version = release(36) {
             minorApiLevel = 1
@@ -12,7 +12,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.omr.scanner.student"
+        applicationId = "com.examhub.student"
         minSdk = 24
         targetSdk = 36
         versionCode = 1

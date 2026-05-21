@@ -35,7 +35,7 @@ com.omr.scanner.core.auth
 com.omr.scanner.core.network
 com.omr.scanner.core.omr
 com.omr.scanner.core.ui
-com.omr.scanner.student.*
+com.examhub.student.*
 com.omr.scanner.teacher.*
 ```
 

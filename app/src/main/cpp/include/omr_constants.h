@@ -252,6 +252,7 @@ struct OmrResult {
     ScoreResult score_result;
 
     // Debug image
+    std::string dewarped_image_base64;
     std::string debug_image_base64;
 
     // Quality

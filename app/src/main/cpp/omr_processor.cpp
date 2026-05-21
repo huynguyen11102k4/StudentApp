@@ -49,6 +49,123 @@ bool answerKeyContainsMultipleCorrectAnswers(const std::map<int, std::string>& a
     return false;
 }
 
+int countAnswerOptions(const std::string& answer) {
+    bool seen[26] = {false};
+    int count = 0;
+    for (char c : answer) {
+        char upper = c;
+        if (upper >= 'a' && upper <= 'z') {
+            upper = static_cast<char>(upper - 'a' + 'A');
+        }
+        if (upper >= 'A' && upper <= 'Z' && !seen[upper - 'A']) {
+            seen[upper - 'A'] = true;
+            count++;
+        }
+    }
+    return count;
+}
+
+std::string normalizedAnswerSet(const std::string& answer) {
+    std::vector<char> chars;
+    for (char c : answer) {
+        char upper = c;
+        if (upper >= 'a' && upper <= 'z') {
+            upper = static_cast<char>(upper - 'a' + 'A');
+        }
+        if (upper >= 'A' && upper <= 'Z') {
+            chars.push_back(upper);
+        }
+    }
+    std::sort(chars.begin(), chars.end());
+    chars.erase(std::unique(chars.begin(), chars.end()), chars.end());
+
+    std::string result;
+    for (size_t i = 0; i < chars.size(); i++) {
+        if (i > 0) result += ',';
+        result += chars[i];
+    }
+    return result;
+}
+
+AnswerReadResult buildAnswerResult(
+    int questionNumber,
+    const std::vector<float>& densities,
+    const std::string& selectionMode,
+    float densityThreshold,
+    float diffThreshold
+) {
+    int top1Idx = -1;
+    int top2Idx = -1;
+    float top1Val = -1.0f;
+    float top2Val = -1.0f;
+
+    for (size_t i = 0; i < densities.size(); i++) {
+        if (densities[i] > top1Val) {
+            top2Val = top1Val;
+            top2Idx = top1Idx;
+            top1Val = densities[i];
+            top1Idx = static_cast<int>(i);
+        } else if (densities[i] > top2Val) {
+            top2Val = densities[i];
+            top2Idx = static_cast<int>(i);
+        }
+    }
+
+    AnswerReadResult ar;
+    ar.question_number = questionNumber;
+    ar.flag = 0;
+
+    if (selectionMode == "multiple") {
+        if (top1Val < densityThreshold) {
+            ar.answer = "";
+            return ar;
+        }
+
+        const float relativeThreshold = std::max(densityThreshold, top1Val - diffThreshold);
+        std::string multiAnswer;
+        for (size_t i = 0; i < densities.size(); i++) {
+            if (densities[i] >= relativeThreshold) {
+                if (!multiAnswer.empty()) multiAnswer += ',';
+                multiAnswer += static_cast<char>('A' + i);
+            } else if (densities[i] >= densityThreshold) {
+                ar.flag = 1;
+            }
+        }
+        ar.answer = multiAnswer;
+        return ar;
+    }
+
+    if (top1Val >= densityThreshold) {
+        ar.answer = std::string(1, static_cast<char>('A' + top1Idx));
+        if (top2Idx >= 0 && (top1Val - top2Val) < diffThreshold) {
+            ar.flag = 1;
+        }
+    } else {
+        ar.answer = "";
+    }
+    return ar;
+}
+
+std::string encodeJpegBase64(const cv::Mat& image, int quality) {
+    std::vector<uchar> buf;
+    cv::imencode(".jpg", image, buf, { cv::IMWRITE_JPEG_QUALITY, quality });
+
+    static const char* base64Chars =
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    std::string base64;
+    base64.reserve(((buf.size() + 2) / 3) * 4);
+    for (size_t i = 0; i < buf.size(); i += 3) {
+        uint32_t n = static_cast<uint32_t>(buf[i]) << 16;
+        if (i + 1 < buf.size()) n |= static_cast<uint32_t>(buf[i + 1]) << 8;
+        if (i + 2 < buf.size()) n |= static_cast<uint32_t>(buf[i + 2]);
+        base64 += base64Chars[(n >> 18) & 0x3F];
+        base64 += base64Chars[(n >> 12) & 0x3F];
+        base64 += (i + 1 < buf.size()) ? base64Chars[(n >> 6) & 0x3F] : '=';
+        base64 += (i + 2 < buf.size()) ? base64Chars[n & 0x3F] : '=';
+    }
+    return base64;
+}
+
 } // namespace
 
 // ─── Static layout cache ───────────────────────────────────────────
@@ -199,6 +316,14 @@ OmrResult OmrProcessor::processWithConfig(
                                std::to_string(detectedMarkers.size()) + " (need >= 4)";
         return result;
     }
+    if (detectedMarkers.size() < anchorPoints.size()) {
+        result.warnings.push_back(
+            "PARTIAL_MARKER_HOMOGRAPHY:" + std::to_string(detectedMarkers.size()) +
+            "/" + std::to_string(anchorPoints.size())
+        );
+        LOGI("OMR_DEWARP partial-marker mode enabled detected=%zu expected=%zu",
+             detectedMarkers.size(), anchorPoints.size());
+    }
 
     // ── Step 4: Align/Warp image ──────────────────────────────
     cv::Mat warped = alignImage(image, detectedMarkers, anchorPoints, result);
@@ -271,6 +396,7 @@ OmrResult OmrProcessor::processWithConfig(
     }
 
     std::vector<AnswerZoneConfig> answerZonesForRead = answerZones;
+    std::string effectiveSelectionMode = answerZones.empty() ? "single" : answerZones[0].selection_mode;
     if (!answerKeys.empty()) {
         std::string examCode = result.id_result.exam_code;
         auto keyIt = answerKeys.find(examCode);
@@ -281,7 +407,10 @@ OmrResult OmrProcessor::processWithConfig(
             for (auto& zone : answerZonesForRead) {
                 zone.selection_mode = "multiple";
             }
+            effectiveSelectionMode = "multiple";
             LOGI("OMR_READER selected: multiple mode from answer key");
+        } else if (!answerZonesForRead.empty()) {
+            effectiveSelectionMode = answerZonesForRead[0].selection_mode;
         }
     }
 
@@ -311,13 +440,17 @@ OmrResult OmrProcessor::processWithConfig(
         // Try to find answer key matching exam_code
         std::string examCode = result.id_result.exam_code;
         auto keyIt = answerKeys.find(examCode);
+        if (keyIt == answerKeys.end() && examCode.empty() && answerKeys.size() == 1) {
+            keyIt = answerKeys.begin();
+            LOGI("OMR_SCORING selected: single answer key because template has no exam_code field key='%s'", keyIt->first.c_str());
+        }
 
         if (keyIt != answerKeys.end()) {
             LOGI("OMR_SCORING selected: answerKey exam_code='%s' questions=%zu", examCode.c_str(), keyIt->second.size());
             result.score_result = scoreAnswers(
                 result.answers,
                 keyIt->second,
-                answerZones.empty() ? "single" : answerZones[0].selection_mode
+                effectiveSelectionMode
             );
             result.scored = true;
             LOGI(
@@ -340,12 +473,19 @@ OmrResult OmrProcessor::processWithConfig(
     // ── Step 8: Debug image (if enabled) ──────────────────────
     if (options_.enable_debug_image) {
         LOGI("OMR_DEBUG selected: generate debug image returnBase64=%d", options_.return_debug_base64);
+        if (options_.return_debug_base64 && !warpedGray.empty()) {
+            result.dewarped_image_base64 = encodeJpegBase64(warpedGray, DEBUG_JPEG_QUALITY);
+        }
+
         // Determine which answer key to pass for debug coloring
         const std::map<int, std::string>* correctKeyForDebug = nullptr;
         const std::map<int, std::string>* activeKey = nullptr;
         if (!answerKeys.empty()) {
             std::string examCode = result.id_result.exam_code;
             auto keyIt = answerKeys.find(examCode);
+            if (keyIt == answerKeys.end() && examCode.empty() && answerKeys.size() == 1) {
+                keyIt = answerKeys.begin();
+            }
             if (keyIt != answerKeys.end()) {
                 activeKey = &keyIt->second;
                 correctKeyForDebug = activeKey;
@@ -361,25 +501,7 @@ OmrResult OmrProcessor::processWithConfig(
 
         if (!debugImg.empty()) {
             if (options_.return_debug_base64) {
-                // Encode to JPEG base64
-                std::vector<uchar> buf;
-                cv::imencode(".jpg", debugImg, buf,
-                            { cv::IMWRITE_JPEG_QUALITY, DEBUG_JPEG_QUALITY });
-                // base64 encode
-                static const char* base64_chars =
-                    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-                std::string base64;
-                base64.reserve(((buf.size() + 2) / 3) * 4);
-                for (size_t i = 0; i < buf.size(); i += 3) {
-                    uint32_t n = static_cast<uint32_t>(buf[i]) << 16;
-                    if (i + 1 < buf.size()) n |= static_cast<uint32_t>(buf[i + 1]) << 8;
-                    if (i + 2 < buf.size()) n |= static_cast<uint32_t>(buf[i + 2]);
-                    base64 += base64_chars[(n >> 18) & 0x3F];
-                    base64 += base64_chars[(n >> 12) & 0x3F];
-                    base64 += (i + 1 < buf.size()) ? base64_chars[(n >> 6) & 0x3F] : '=';
-                    base64 += (i + 2 < buf.size()) ? base64_chars[n & 0x3F] : '=';
-                }
-                result.debug_image_base64 = base64;
+                result.debug_image_base64 = encodeJpegBase64(debugImg, DEBUG_JPEG_QUALITY);
             } else {
                 // Store file path (caller handles writing)
                 result.debug_image_base64 = "debug_image_generated";
@@ -633,15 +755,9 @@ bool OmrProcessor::parseTemplateJson(
         }
     }
 
-    // Fallback defaults for ID zone
+    // Empty/missing items mean this template has no readable ID fields.
     if (idZone.items.empty()) {
-        LOGI("Using default ID zone config");
-        idZone.bounding_box = cv::Rect2f(389, 80, 418, 288);
-        idZone.items = {
-            {"student_id", true, 8},
-            {"class_code", true, 5},
-            {"exam_code",  true, 3}
-        };
+        LOGI("Template has no ID zone items; ID reading will be skipped");
     }
 
     // ─── Parse answer_zones ───────────────────────────────────
@@ -850,6 +966,11 @@ cv::Mat OmrProcessor::alignImage(
         anchors.size(),
         dewarpInfo.reason.c_str()
     );
+    if (dewarpInfo.max_euclidean_error >= DEWARP_MODERATE_PX) {
+        result.warnings.push_back(
+            "HOMOGRAPHY_HIGH_RESIDUAL:" + std::to_string(static_cast<int>(std::round(dewarpInfo.max_euclidean_error)))
+        );
+    }
 
     std::vector<cv::Point2f> usedCorners;
     cv::Mat warped;
@@ -883,6 +1004,11 @@ IdReadResult OmrProcessor::readIdZone(
 ) {
     IdReadResult result;
     result.id_ok = false;
+
+    if (idZone.items.empty()) {
+        result.id_ok = true;
+        return result;
+    }
 
     // Compute layout
     std::vector<BubbleCell> cells;
@@ -956,7 +1082,9 @@ IdReadResult OmrProcessor::readIdZone(
     }
 
     // Check if ID is valid (has at least some digits)
-    if (!result.student_id.empty() && result.student_id.find_first_not_of("?") != std::string::npos) {
+    if ((!result.student_id.empty() && result.student_id.find_first_not_of("?") != std::string::npos) ||
+        (!result.class_code.empty() && result.class_code.find_first_not_of("?") != std::string::npos) ||
+        (!result.exam_code.empty() && result.exam_code.find_first_not_of("?") != std::string::npos)) {
         result.id_ok = true;
     }
 
@@ -975,6 +1103,11 @@ IdReadResult OmrProcessor::readIdZoneCached(
 ) {
     IdReadResult result;
     result.id_ok = false;
+
+    if (idZone.items.empty()) {
+        result.id_ok = true;
+        return result;
+    }
 
     if (cells.empty()) {
         // Fallback to full computation
@@ -1021,7 +1154,9 @@ IdReadResult OmrProcessor::readIdZoneCached(
         else if (item.type == "exam_code") result.exam_code = value;
     }
 
-    if (!result.student_id.empty() && result.student_id.find_first_not_of("?") != std::string::npos) {
+    if ((!result.student_id.empty() && result.student_id.find_first_not_of("?") != std::string::npos) ||
+        (!result.class_code.empty() && result.class_code.find_first_not_of("?") != std::string::npos) ||
+        (!result.exam_code.empty() && result.exam_code.find_first_not_of("?") != std::string::npos)) {
         result.id_ok = true;
     }
 
@@ -1066,51 +1201,13 @@ std::vector<AnswerReadResult> OmrProcessor::readAnswerZones(
                 densities.push_back(d);
             }
 
-            // Find top 1 and top 2
-            int top1Idx = -1, top2Idx = -1;
-            float top1Val = -1.0f, top2Val = -1.0f;
-
-            for (size_t i = 0; i < densities.size(); i++) {
-                if (densities[i] > top1Val) {
-                    top2Val = top1Val;
-                    top2Idx = top1Idx;
-                    top1Val = densities[i];
-                    top1Idx = static_cast<int>(i);
-                } else if (densities[i] > top2Val) {
-                    top2Val = densities[i];
-                    top2Idx = static_cast<int>(i);
-                }
-            }
-
-            AnswerReadResult ar;
-            ar.question_number = qIdx;
-            ar.flag = 0;
-
-            if (zone.selection_mode == "multiple") {
-                // Select all above threshold
-                std::string multiAnswer;
-                for (size_t i = 0; i < densities.size(); i++) {
-                    if (densities[i] >= options_.density_threshold) {
-                        if (!multiAnswer.empty()) multiAnswer += ',';
-                        multiAnswer += static_cast<char>('A' + i);
-                    }
-                }
-                ar.answer = multiAnswer;
-            } else {
-                // Single selection
-                if (top1Val >= options_.density_threshold) {
-                    ar.answer = std::string(1, static_cast<char>('A' + top1Idx));
-
-                    // Check for ambiguity
-                    if (top2Idx >= 0 && (top1Val - top2Val) < options_.diff_threshold) {
-                        ar.flag = 1;  // ambiguous / possible erasure
-                    }
-                } else {
-                    ar.answer = "";  // No answer detected
-                }
-            }
-
-            allResults.push_back(ar);
+            allResults.push_back(buildAnswerResult(
+                qIdx,
+                densities,
+                zone.selection_mode,
+                options_.density_threshold,
+                options_.diff_threshold
+            ));
         }
     }
 
@@ -1158,37 +1255,13 @@ std::vector<AnswerReadResult> OmrProcessor::readAnswerZonesCached(
                 densities.push_back(readBubbleDensity(warpedGray, cell.cx, cell.cy, cell.radius));
             }
 
-            int top1Idx = -1, top2Idx = -1;
-            float top1Val = -1.0f, top2Val = -1.0f;
-            for (size_t i = 0; i < densities.size(); i++) {
-                if (densities[i] > top1Val) { top2Val = top1Val; top2Idx = top1Idx; top1Val = densities[i]; top1Idx = static_cast<int>(i); }
-                else if (densities[i] > top2Val) { top2Val = densities[i]; top2Idx = static_cast<int>(i); }
-            }
-
-            AnswerReadResult ar;
-            ar.question_number = qIdx;
-            ar.flag = 0;
-
-            if (zone.selection_mode == "multiple") {
-                std::string multiAnswer;
-                for (size_t i = 0; i < densities.size(); i++) {
-                    if (densities[i] >= options_.density_threshold) {
-                        if (!multiAnswer.empty()) multiAnswer += ',';
-                        multiAnswer += static_cast<char>('A' + i);
-                    }
-                }
-                ar.answer = multiAnswer;
-            } else {
-                if (top1Val >= options_.density_threshold) {
-                    ar.answer = std::string(1, static_cast<char>('A' + top1Idx));
-                    if (top2Idx >= 0 && (top1Val - top2Val) < options_.diff_threshold) {
-                        ar.flag = 1;
-                    }
-                } else {
-                    ar.answer = "";
-                }
-            }
-            allResults.push_back(ar);
+            allResults.push_back(buildAnswerResult(
+                qIdx,
+                densities,
+                zone.selection_mode,
+                options_.density_threshold,
+                options_.diff_threshold
+            ));
         }
     }
 
@@ -1398,41 +1471,14 @@ ScoreResult OmrProcessor::scoreAnswers(
 bool OmrProcessor::checkAnswerMatch(
     const std::string& studentAnswer,
     const std::string& correctAnswer,
-    const std::string& /*selectionMode*/
+    const std::string& selectionMode
 ) {
-    // Normalize: uppercase, trim
-    auto normalize = [](const std::string& s) -> std::string {
-        std::string result;
-        for (char c : s) {
-            if (c >= 'a' && c <= 'z') result += static_cast<char>(c - 'a' + 'A');
-            else if (c != ' ' && c != '\t') result += c;
-        }
-        return result;
-    };
-
-    std::string sa = normalize(studentAnswer);
-    std::string ca = normalize(correctAnswer);
-
+    std::string sa = normalizedAnswerSet(studentAnswer);
+    std::string ca = normalizedAnswerSet(correctAnswer);
     if (sa.empty() || ca.empty()) return false;
 
-    // For single: exact match
-    // For multiple with comma separator: sort and compare
-    if (sa.find(',') != std::string::npos || ca.find(',') != std::string::npos) {
-        // Split, sort, rejoin
-        auto splitSort = [](const std::string& s) -> std::string {
-            std::vector<char> chars;
-            for (char c : s) {
-                if (c >= 'A' && c <= 'Z') chars.push_back(c);
-            }
-            std::sort(chars.begin(), chars.end());
-            std::string result;
-            for (size_t i = 0; i < chars.size(); i++) {
-                if (i > 0) result += ',';
-                result += chars[i];
-            }
-            return result;
-        };
-        return splitSort(sa) == splitSort(ca);
+    if (selectionMode != "multiple" && countAnswerOptions(ca) == 1 && countAnswerOptions(sa) > 1) {
+        return false;
     }
 
     return sa == ca;
@@ -1750,6 +1796,9 @@ std::string OmrProcessor::resultToJson(const OmrResult& result) {
         << "\"mean_brightness\":" << result.mean_brightness;
 
     // Debug image (optional — may be large)
+    if (!result.dewarped_image_base64.empty()) {
+        oss << ",\"dewarped_image_base64\":\"" << escapeJson(result.dewarped_image_base64) << "\"";
+    }
     if (!result.debug_image_base64.empty()) {
         oss << ",\"debug_image_base64\":\"" << escapeJson(result.debug_image_base64) << "\"";
     }

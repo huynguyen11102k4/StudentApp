@@ -46,7 +46,7 @@
       "client_info": {
         "mobilesdk_app_id": "1:685380102892:android:319bd878b9cbe0ce5093c9",
         "android_client_info": {
-          "package_name": "com.omr.scanner.student"
+          "package_name": "com.examhub.student"
         }
       },
       "oauth_client": [
@@ -54,7 +54,7 @@
           "client_id": "685380102892-ndig7mdb3v0852r84jjj8eos249dnk8l.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
-            "package_name": "com.omr.scanner.student",
+            "package_name": "com.examhub.student",
             "certificate_hash": "685843f7970dfdc5375193556bfb7fba580da9da"
           }
         },

@@ -71,9 +71,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="@dimen/spacing_48"
-                app:hintEnabled="false"
-                app:startIconDrawable="@drawable/ic_user"
-                app:startIconTint="@color/text_secondary">
+                app:hintEnabled="false">
 
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/etFullName"
@@ -92,9 +90,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="@dimen/spacing_16"
-                app:hintEnabled="false"
-                app:startIconDrawable="@drawable/ic_email"
-                app:startIconTint="@color/text_secondary">
+                app:hintEnabled="false">
 
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/etEmail"
@@ -102,6 +98,25 @@
                     android:layout_height="wrap_content"
                     android:hint="@string/register_email_hint"
                     android:inputType="textEmailAddress"
+                    android:paddingVertical="@dimen/spacing_16"
+                    android:textAppearance="@style/Text_Body_Large" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <!-- Student Code (optional) -->
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/tilStudentCode"
+                style="@style/Student.InputField"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/spacing_16"
+                app:hintEnabled="false">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etStudentCode"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="@string/register_student_code_hint"
+                    android:inputType="text"
                     android:paddingVertical="@dimen/spacing_16"
                     android:textAppearance="@style/Text_Body_Large" />
             </com.google.android.material.textfield.TextInputLayout>
@@ -115,9 +130,7 @@
                 android:layout_marginTop="@dimen/spacing_16"
                 app:endIconMode="password_toggle"
                 app:endIconTint="@color/text_secondary"
-                app:hintEnabled="false"
-                app:startIconDrawable="@drawable/ic_lock"
-                app:startIconTint="@color/text_secondary">
+                app:hintEnabled="false">
 
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/etPassword"
@@ -138,9 +151,7 @@
                 android:layout_marginTop="@dimen/spacing_16"
                 app:endIconMode="password_toggle"
                 app:endIconTint="@color/text_secondary"
-                app:hintEnabled="false"
-                app:startIconDrawable="@drawable/ic_lock"
-                app:startIconTint="@color/text_secondary">
+                app:hintEnabled="false">
 
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/etConfirmPassword"
@@ -160,6 +171,56 @@
                 android:layout_height="@dimen/button_height_large"
                 android:layout_marginTop="@dimen/spacing_48"
                 android:text="@string/register_button" />
+
+            <LinearLayout
+                android:id="@+id/registerOtpContent"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/spacing_48"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/register_otp_title"
+                    android:textAppearance="@style/Text_Headline_Small"
+                    android:textColor="@color/text_primary" />
+
+                <TextView
+                    android:id="@+id/tvOtpSubtitle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/spacing_4"
+                    android:text="@string/register_otp_subtitle"
+                    android:textAppearance="@style/Text_Body_Medium"
+                    android:textColor="@color/text_secondary" />
+
+                <LinearLayout
+                    android:id="@+id/otpContainer"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/spacing_24"
+                    android:gravity="center"
+                    android:orientation="horizontal" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnVerifyOtp"
+                    style="@style/Student.PrimaryButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="@dimen/button_height_large"
+                    android:layout_marginTop="@dimen/spacing_24"
+                    android:text="@string/register_verify_otp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnResendOtp"
+                    style="@style/Button_Text"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center_horizontal"
+                    android:layout_marginTop="@dimen/spacing_12"
+                    android:text="@string/register_resend_otp" />
+            </LinearLayout>
 
             <ProgressBar
                 android:id="@+id/progressBar"

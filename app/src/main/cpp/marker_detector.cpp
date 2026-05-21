@@ -17,6 +17,8 @@ namespace omr {
 
 namespace {
 
+constexpr size_t MIN_MARKERS_FOR_FAST_DEWARP = 10;
+
 bool hasAllMarkers(const std::map<int, cv::Point2f>& markers, const std::vector<int>& ids) {
     for (int id : ids) {
         if (markers.find(id) == markers.end()) return false;
@@ -317,40 +319,25 @@ std::vector<DetectedMarker> MarkerDetector::detectMarkers(const cv::Mat& grayImg
 
     std::vector<DetectedMarker> result = runDetector(grayImg, "raw");
 
-    if (result.size() < 12) {
+    if (result.size() < MIN_MARKERS_FOR_FAST_DEWARP) {
         cv::Mat normalized;
         cv::normalize(grayImg, normalized, 0, 255, cv::NORM_MINMAX);
         appendUniqueMarkers(result, runDetector(normalized, "normalized"), "normalized");
     }
 
-    if (result.size() < 12) {
-        cv::Mat equalized;
-        cv::equalizeHist(grayImg, equalized);
-        appendUniqueMarkers(result, runDetector(equalized, "equalized"), "equalized");
-    }
-
-    if (result.size() < 12) {
+    if (result.size() < MIN_MARKERS_FOR_FAST_DEWARP) {
         cv::Mat brightened = applyGamma(grayImg, 0.65);
         appendUniqueMarkers(result, runDetector(brightened, "gamma_bright"), "gamma_bright");
     }
 
-    if (result.size() < 12) {
+    if (result.size() < MIN_MARKERS_FOR_FAST_DEWARP) {
         cv::Mat claheImg;
         auto clahe = cv::createCLAHE(3.0, cv::Size(8, 8));
         clahe->apply(grayImg, claheImg);
         appendUniqueMarkers(result, runDetector(claheImg, "clahe"), "clahe");
     }
 
-    if (result.size() < 12) {
-        cv::Mat denoised;
-        cv::bilateralFilter(grayImg, denoised, 7, 35.0, 35.0);
-        cv::Mat enhanced;
-        auto clahe = cv::createCLAHE(4.0, cv::Size(4, 4));
-        clahe->apply(denoised, enhanced);
-        appendUniqueMarkers(result, runDetector(enhanced, "bilateral_clahe"), "bilateral_clahe");
-    }
-
-    if (result.size() < 12) {
+    if (result.size() < MIN_MARKERS_FOR_FAST_DEWARP) {
         cv::Mat blurred;
         cv::GaussianBlur(grayImg, blurred, cv::Size(0, 0), 1.0);
         cv::Mat sharpened;
@@ -358,7 +345,7 @@ std::vector<DetectedMarker> MarkerDetector::detectMarkers(const cv::Mat& grayImg
         appendUniqueMarkers(result, runDetector(sharpened, "sharpen"), "sharpen");
     }
 
-    if (result.size() < 12) {
+    if (result.size() < MIN_MARKERS_FOR_FAST_DEWARP) {
         cv::Mat binary;
         cv::adaptiveThreshold(grayImg, binary, 255,
                               cv::ADAPTIVE_THRESH_GAUSSIAN_C,
@@ -366,7 +353,7 @@ std::vector<DetectedMarker> MarkerDetector::detectMarkers(const cv::Mat& grayImg
         appendUniqueMarkers(result, runDetector(binary, "adaptive_binary"), "adaptive_binary");
     }
 
-    if (result.size() < 12) {
+    if (result.size() < MIN_MARKERS_FOR_FAST_DEWARP) {
         cv::Mat binary;
         cv::adaptiveThreshold(grayImg, binary, 255,
                               cv::ADAPTIVE_THRESH_MEAN_C,
@@ -400,10 +387,20 @@ DewarpInfo MarkerDetector::determineDewarpMethod(
     }
 
     std::map<int, cv::Point2f> detectedMap = buildBestDetectedMap(detectedMarkers, expectedAnchors);
+    std::map<int, cv::Point2f> expectedMap = buildExpectedMap(expectedAnchors);
+    std::vector<cv::Point2f> srcPts;
+    std::vector<cv::Point2f> dstPts;
+    for (const auto& ap : expectedAnchors) {
+        auto detectedIt = detectedMap.find(ap.id);
+        auto expectedIt = expectedMap.find(ap.id);
+        if (detectedIt == detectedMap.end() || expectedIt == expectedMap.end()) continue;
+        srcPts.push_back(detectedIt->second);
+        dstPts.push_back(expectedIt->second);
+    }
 
-    if (!hasAllMarkers(detectedMap, {1, 2, 3, 4})) {
+    if (srcPts.size() < 4) {
         info.method = DewarpMethod::NONE;
-        info.reason = "Missing one or more corner markers 1,2,3,4";
+        info.reason = "Not enough matched markers for homography";
         info.max_euclidean_error = std::numeric_limits<float>::max();
         info.avg_euclidean_error = std::numeric_limits<float>::max();
         LOGI("Dewarp selection: method=%d residualAvg=inf residualMax=inf matched=0 reason=%s",
@@ -411,24 +408,13 @@ DewarpInfo MarkerDetector::determineDewarpMethod(
         return info;
     }
 
-    std::map<int, cv::Point2f> expectedMap = buildExpectedMap(expectedAnchors);
-    std::vector<cv::Point2f> cornerSrc = {
-        detectedMap[1],
-        detectedMap[2],
-        detectedMap[3],
-        detectedMap[4]
-    };
-    std::vector<cv::Point2f> cornerDst = {
-        expectedMap[1],
-        expectedMap[2],
-        expectedMap[3],
-        expectedMap[4]
-    };
-
-    cv::Mat globalH = cv::getPerspectiveTransform(cornerSrc, cornerDst);
+    bool hasAllCorners = hasAllMarkers(detectedMap, {1, 2, 3, 4});
+    cv::Mat globalH = hasAllCorners && srcPts.size() == 4
+        ? cv::getPerspectiveTransform(srcPts, dstPts)
+        : cv::findHomography(srcPts, dstPts, cv::RANSAC, 8.0);
     if (globalH.empty()) {
         info.method = DewarpMethod::NONE;
-        info.reason = "Failed to compute global perspective from corner markers";
+        info.reason = "Failed to compute global homography from matched markers";
         info.max_euclidean_error = std::numeric_limits<float>::max();
         info.avg_euclidean_error = std::numeric_limits<float>::max();
         LOGI("Dewarp selection: method=%d residualAvg=inf residualMax=inf matched=0 reason=%s",
@@ -507,26 +493,34 @@ cv::Mat MarkerDetector::dewarpPerspective(
         LOGI("Expected anchor id=%d pos=(%.2f, %.2f)", ap.id, ap.abs_x, ap.abs_y);
     }
 
-    const std::vector<int> cornerIds = {1, 2, 3, 4};
     std::vector<cv::Point2f> srcPts;
     std::vector<cv::Point2f> dstPts;
 
-    for (int cid : cornerIds) {
-        auto detectedIt = detectedMap.find(cid);
-        auto expectedIt = expectedMap.find(cid);
+    for (const auto& ap : expectedAnchors) {
+        auto detectedIt = detectedMap.find(ap.id);
+        auto expectedIt = expectedMap.find(ap.id);
         if (detectedIt == detectedMap.end() || expectedIt == expectedMap.end()) {
-            LOGE("Global perspective missing corner marker id=%d", cid);
-            return cv::Mat();
+            continue;
         }
 
         srcPts.push_back(detectedIt->second);
         dstPts.push_back(expectedIt->second);
-        logPointPair("GlobalPerspective", cid, detectedIt->second, expectedIt->second);
+        logPointPair("GlobalHomography", ap.id, detectedIt->second, expectedIt->second);
     }
 
     usedCorners = srcPts;
 
-    cv::Mat globalH = cv::getPerspectiveTransform(srcPts, dstPts);
+    if (srcPts.size() < 4) {
+        LOGE("Global homography needs at least 4 matched markers, found %zu", srcPts.size());
+        return cv::Mat();
+    }
+
+    cv::Mat globalH = cv::findHomography(srcPts, dstPts, cv::RANSAC, 8.0);
+    if (globalH.empty()) {
+        LOGE("Global homography failed with %zu matched markers", srcPts.size());
+        return cv::Mat();
+    }
+
     cv::Mat warped;
     cv::warpPerspective(src, warped, globalH,
                         cv::Size(static_cast<int>(PAGE_WIDTH), static_cast<int>(PAGE_HEIGHT)),

@@ -75,21 +75,15 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/spacing_16"
             android:gravity="center_vertical"
             android:orientation="horizontal">
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnCopyCode"
-                style="@style/Student.SecondaryButton"
+            <TextView
+                style="@style/Text_Label_Medium"
                 android:layout_width="0dp"
-                android:layout_height="@dimen/button_height"
+                android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:ellipsize="end"
-                android:maxLines="1"
-                android:text="@string/class_list_join_code_sample"
-                android:textAllCaps="false"
-                app:icon="@drawable/ic_copy" />
+                android:text="@string/class_detail_student_list" />
 
             <ImageView
                 android:layout_width="@dimen/icon_size_large"
