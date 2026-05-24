@@ -4,8 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.examhub.student.model.ApiException
 import com.examhub.student.model.ApiResult
-import com.examhub.student.model.request.GoogleLoginRequest
-import com.examhub.student.model.request.LoginRequest
+import com.examhub.student.model.request.auth.GoogleLoginRequest
+import com.examhub.student.model.request.auth.LoginRequest
 import com.examhub.student.repository.AuthRepository
 import com.examhub.student.service.FcmTokenRegistrar
 import kotlinx.coroutines.flow.MutableSharedFlow

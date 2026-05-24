@@ -1,12 +1,12 @@
 package com.examhub.student.service
 
-import com.examhub.student.model.request.LockHeartbeatRequest
-import com.examhub.student.model.request.LockValidateSessionRequest
-import com.examhub.student.model.request.LockViolationRequest
-import com.examhub.student.model.response.ApiEnvelope
-import com.examhub.student.model.response.LockHeartbeatResponse
-import com.examhub.student.model.response.LockValidateSessionResponse
-import com.examhub.student.model.response.LockViolationResponse
+import com.examhub.student.model.request.lock.LockHeartbeatRequest
+import com.examhub.student.model.request.lock.LockValidateSessionRequest
+import com.examhub.student.model.request.lock.LockViolationRequest
+import com.examhub.student.model.response.common.ApiEnvelope
+import com.examhub.student.model.response.lock.LockHeartbeatResponse
+import com.examhub.student.model.response.lock.LockValidateSessionResponse
+import com.examhub.student.model.response.lock.LockViolationResponse
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.POST

@@ -6,9 +6,9 @@ import androidx.lifecycle.viewModelScope
 import com.google.gson.Gson
 import com.examhub.student.R
 import com.examhub.student.model.ApiResult
-import com.examhub.student.model.request.LockHeartbeatRequest
-import com.examhub.student.model.request.LockViolationRequest
-import com.examhub.student.model.response.UserResponse
+import com.examhub.student.model.request.lock.LockHeartbeatRequest
+import com.examhub.student.model.request.lock.LockViolationRequest
+import com.examhub.student.model.response.profile.UserResponse
 import com.examhub.student.repository.LockModeRepository
 import com.examhub.student.service.NetworkStatusProvider
 import com.examhub.student.service.OfflineCacheManager

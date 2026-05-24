@@ -1,9 +1,9 @@
 package com.examhub.student.service
 
-import com.examhub.student.model.request.SyncPushRequest
-import com.examhub.student.model.response.ApiEnvelope
-import com.examhub.student.model.response.SyncPullResponse
-import com.examhub.student.model.response.SyncPushEnvelope
+import com.examhub.student.model.request.sync.SyncPushRequest
+import com.examhub.student.model.response.common.ApiEnvelope
+import com.examhub.student.model.response.sync.SyncPullResponse
+import com.examhub.student.model.response.sync.SyncPushEnvelope
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.GET

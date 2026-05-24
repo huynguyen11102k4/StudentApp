@@ -10,7 +10,7 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
 import com.examhub.student.R
 import com.examhub.student.databinding.FragmentExamStartBinding
-import com.examhub.student.model.response.MobileExamDetailResponse
+import com.examhub.student.model.response.exam.MobileExamDetailResponse
 import com.examhub.student.ui.applySystemWindowInsets
 import com.examhub.student.ui.collectOnStarted
 import kotlinx.coroutines.launch

@@ -12,7 +12,7 @@ import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.examhub.student.BuildConfig
 import com.examhub.student.R
 import com.examhub.student.databinding.FragmentDashboardBinding
-import com.examhub.student.model.response.UserResponse
+import com.examhub.student.model.response.profile.UserResponse
 import com.examhub.student.ui.add3DTouch
 import com.examhub.student.ui.applySystemWindowInsets
 import com.examhub.student.ui.collectOnStarted

@@ -1,7 +1,7 @@
 package com.examhub.student.service
 
-import com.examhub.student.model.request.RefreshTokenRequest
-import com.examhub.student.model.response.RefreshTokenResponse
+import com.examhub.student.model.request.auth.RefreshTokenRequest
+import com.examhub.student.model.response.auth.RefreshTokenResponse
 import okhttp3.Authenticator
 import okhttp3.Route
 import okhttp3.Response

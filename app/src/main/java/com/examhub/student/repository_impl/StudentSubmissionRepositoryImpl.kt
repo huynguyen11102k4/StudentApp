@@ -3,10 +3,10 @@ package com.examhub.student.repository_impl
 import com.google.gson.Gson
 import com.examhub.student.model.ApiException
 import com.examhub.student.model.ApiResult
-import com.examhub.student.model.request.PresignSubmissionImageRequest
-import com.examhub.student.model.request.StudentSubmitRequest
-import com.examhub.student.model.response.PresignSubmissionImageResponse
-import com.examhub.student.model.response.StudentSubmitResponse
+import com.examhub.student.model.request.submission.PresignSubmissionImageRequest
+import com.examhub.student.model.request.submission.StudentSubmitRequest
+import com.examhub.student.model.response.submission.PresignSubmissionImageResponse
+import com.examhub.student.model.response.submission.StudentSubmitResponse
 import com.examhub.student.repository.StudentSubmissionRepository
 import com.examhub.student.service.StudentSubmissionApiService
 import kotlinx.coroutines.Dispatchers

@@ -4,9 +4,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.examhub.student.model.ApiException
 import com.examhub.student.model.ApiResult
-import com.examhub.student.model.request.OtpRequest
-import com.examhub.student.model.request.OtpVerifyRequest
-import com.examhub.student.model.request.StudentRegisterRequest
+import com.examhub.student.model.request.auth.OtpRequest
+import com.examhub.student.model.request.auth.OtpVerifyRequest
+import com.examhub.student.model.request.auth.StudentRegisterRequest
 import com.examhub.student.repository.AuthRepository
 import com.examhub.student.service.FcmTokenRegistrar
 import kotlinx.coroutines.flow.MutableSharedFlow

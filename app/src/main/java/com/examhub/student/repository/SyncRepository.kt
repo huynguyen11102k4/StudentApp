@@ -1,9 +1,9 @@
 package com.examhub.student.repository
 
 import com.examhub.student.model.ApiResult
-import com.examhub.student.model.request.SyncPushRequest
-import com.examhub.student.model.response.SyncPullResponse
-import com.examhub.student.model.response.SyncPushEnvelope
+import com.examhub.student.model.request.sync.SyncPushRequest
+import com.examhub.student.model.response.sync.SyncPullResponse
+import com.examhub.student.model.response.sync.SyncPushEnvelope
 import kotlinx.coroutines.flow.Flow
 
 interface SyncRepository {

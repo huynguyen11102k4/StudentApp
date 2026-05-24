@@ -2,10 +2,10 @@ package com.examhub.student.repository_impl
 
 import com.google.gson.Gson
 import com.examhub.student.model.ApiResult
-import com.examhub.student.model.request.StudentAppealRequest
-import com.examhub.student.model.response.AppealSummaryResponse
-import com.examhub.student.model.response.PagedEnvelope
-import com.examhub.student.model.response.StudentAppealCreateResponse
+import com.examhub.student.model.request.appeal.StudentAppealRequest
+import com.examhub.student.model.response.appeal.AppealSummaryResponse
+import com.examhub.student.model.response.common.PagedEnvelope
+import com.examhub.student.model.response.common.StudentAppealCreateResponse
 import com.examhub.student.repository.AppealsRepository
 import com.examhub.student.service.AppealsApiService
 import kotlinx.coroutines.flow.Flow

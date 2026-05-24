@@ -7,7 +7,7 @@ import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import com.google.android.material.snackbar.Snackbar
 import com.examhub.student.databinding.FragmentClassDetailStudentBinding
-import com.examhub.student.model.response.MobileClassResponse
+import com.examhub.student.model.response.classroom.MobileClassResponse
 import com.examhub.student.ui.applySystemWindowInsets
 import com.examhub.student.ui.collectOnStarted
 import kotlinx.coroutines.launch

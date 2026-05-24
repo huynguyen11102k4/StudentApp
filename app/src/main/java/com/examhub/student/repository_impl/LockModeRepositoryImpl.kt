@@ -2,12 +2,12 @@ package com.examhub.student.repository_impl
 
 import com.google.gson.Gson
 import com.examhub.student.model.ApiResult
-import com.examhub.student.model.request.LockHeartbeatRequest
-import com.examhub.student.model.request.LockValidateSessionRequest
-import com.examhub.student.model.request.LockViolationRequest
-import com.examhub.student.model.response.LockHeartbeatResponse
-import com.examhub.student.model.response.LockValidateSessionResponse
-import com.examhub.student.model.response.LockViolationResponse
+import com.examhub.student.model.request.lock.LockHeartbeatRequest
+import com.examhub.student.model.request.lock.LockValidateSessionRequest
+import com.examhub.student.model.request.lock.LockViolationRequest
+import com.examhub.student.model.response.lock.LockHeartbeatResponse
+import com.examhub.student.model.response.lock.LockValidateSessionResponse
+import com.examhub.student.model.response.lock.LockViolationResponse
 import com.examhub.student.repository.LockModeRepository
 import com.examhub.student.service.LockModeApiService
 import com.examhub.student.service.ViolationQueueManager

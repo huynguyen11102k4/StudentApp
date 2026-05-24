@@ -1,10 +1,10 @@
 package com.examhub.student.service
 
-import com.examhub.student.model.request.StudentAppealRequest
-import com.examhub.student.model.response.ApiEnvelope
-import com.examhub.student.model.response.AppealSummaryResponse
-import com.examhub.student.model.response.PagedEnvelope
-import com.examhub.student.model.response.StudentAppealCreateResponse
+import com.examhub.student.model.request.appeal.StudentAppealRequest
+import com.examhub.student.model.response.common.ApiEnvelope
+import com.examhub.student.model.response.appeal.AppealSummaryResponse
+import com.examhub.student.model.response.common.PagedEnvelope
+import com.examhub.student.model.response.common.StudentAppealCreateResponse
 import retrofit2.http.Body
 import retrofit2.Response
 import retrofit2.http.GET

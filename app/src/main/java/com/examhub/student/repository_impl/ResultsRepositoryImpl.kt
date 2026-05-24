@@ -2,9 +2,9 @@ package com.examhub.student.repository_impl
 
 import com.google.gson.Gson
 import com.examhub.student.model.ApiResult
-import com.examhub.student.model.response.PagedEnvelope
-import com.examhub.student.model.response.StudentResultDetailResponse
-import com.examhub.student.model.response.StudentResultSummaryResponse
+import com.examhub.student.model.response.common.PagedEnvelope
+import com.examhub.student.model.response.result.StudentResultDetailResponse
+import com.examhub.student.model.response.result.StudentResultSummaryResponse
 import com.examhub.student.repository.ResultsRepository
 import com.examhub.student.service.ResultsApiService
 import kotlinx.coroutines.flow.Flow

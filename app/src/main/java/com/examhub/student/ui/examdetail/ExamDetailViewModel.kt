@@ -6,9 +6,10 @@ import com.google.gson.Gson
 import com.examhub.student.data.model.Exam
 import com.examhub.student.data.model.ExamSubmissionItem
 import com.examhub.student.model.ApiResult
-import com.examhub.student.model.request.LockValidateSessionRequest
-import com.examhub.student.model.response.MobileExamDetailResponse
-import com.examhub.student.model.response.StartExamSessionResponse
+import com.examhub.student.model.request.lock.LockValidateSessionRequest
+import com.examhub.student.model.response.exam.MobileExamDetailResponse
+import com.examhub.student.model.response.common.StartExamSessionResponse
+import com.examhub.student.model.response.template.OmrTemplateResponse
 import com.examhub.student.repository.AppealsRepository
 import com.examhub.student.repository.ExamRepository
 import com.examhub.student.repository.LockModeRepository
@@ -243,7 +244,7 @@ class ExamDetailViewModel(
         )
     }
 
-    private fun com.examhub.student.model.response.OmrTemplateResponse.toCacheMap(): Map<String, Any?> {
+    private fun com.examhub.student.model.response.template.OmrTemplateResponse.toCacheMap(): Map<String, Any?> {
         return buildMap {
             gridConfig?.let { put("gridConfig", it) }
             anchorPoints?.let { put("anchor_points", it) }

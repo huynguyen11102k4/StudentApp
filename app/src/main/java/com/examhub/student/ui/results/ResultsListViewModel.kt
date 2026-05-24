@@ -5,7 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.examhub.student.R
 import com.examhub.student.model.ApiResult
-import com.examhub.student.model.response.StudentResultSummaryResponse
+import com.examhub.student.model.response.result.StudentResultSummaryResponse
 import com.examhub.student.repository.ResultsRepository
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow

@@ -2,9 +2,9 @@ package com.examhub.student.repository_impl
 
 import com.google.gson.Gson
 import com.examhub.student.model.ApiResult
-import com.examhub.student.model.request.SyncPushRequest
-import com.examhub.student.model.response.SyncPullResponse
-import com.examhub.student.model.response.SyncPushEnvelope
+import com.examhub.student.model.request.sync.SyncPushRequest
+import com.examhub.student.model.response.sync.SyncPullResponse
+import com.examhub.student.model.response.sync.SyncPushEnvelope
 import com.examhub.student.repository.SyncRepository
 import com.examhub.student.service.SyncApiService
 import kotlinx.coroutines.flow.Flow

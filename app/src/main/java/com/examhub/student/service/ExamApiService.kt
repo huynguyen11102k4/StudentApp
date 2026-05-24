@@ -1,12 +1,12 @@
 package com.examhub.student.service
 
-import com.examhub.student.model.response.ApiEnvelope
-import com.examhub.student.model.response.MobileExamDetailResponse
-import com.examhub.student.model.response.MobileExamSummaryResponse
-import com.examhub.student.model.response.OmrTemplateResponse
-import com.examhub.student.model.response.PagedEnvelope
-import com.examhub.student.model.response.StartExamSessionResponse
-import com.examhub.student.model.response.QuestionMetadataResponse
+import com.examhub.student.model.response.common.ApiEnvelope
+import com.examhub.student.model.response.exam.MobileExamDetailResponse
+import com.examhub.student.model.response.exam.MobileExamSummaryResponse
+import com.examhub.student.model.response.template.OmrTemplateResponse
+import com.examhub.student.model.response.common.PagedEnvelope
+import com.examhub.student.model.response.common.StartExamSessionResponse
+import com.examhub.student.model.response.exam.QuestionMetadataResponse
 import retrofit2.http.POST
 import retrofit2.Response
 import retrofit2.http.GET

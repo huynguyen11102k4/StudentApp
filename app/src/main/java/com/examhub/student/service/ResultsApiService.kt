@@ -1,9 +1,9 @@
 package com.examhub.student.service
 
-import com.examhub.student.model.response.ApiEnvelope
-import com.examhub.student.model.response.PagedEnvelope
-import com.examhub.student.model.response.StudentResultDetailResponse
-import com.examhub.student.model.response.StudentResultSummaryResponse
+import com.examhub.student.model.response.common.ApiEnvelope
+import com.examhub.student.model.response.common.PagedEnvelope
+import com.examhub.student.model.response.result.StudentResultDetailResponse
+import com.examhub.student.model.response.result.StudentResultSummaryResponse
 import retrofit2.Response
 import retrofit2.http.GET
 import retrofit2.http.Path

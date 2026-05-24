@@ -1,10 +1,10 @@
 package com.examhub.student.repository
 
 import com.examhub.student.model.ApiResult
-import com.examhub.student.model.request.StudentAppealRequest
-import com.examhub.student.model.response.AppealSummaryResponse
-import com.examhub.student.model.response.PagedEnvelope
-import com.examhub.student.model.response.StudentAppealCreateResponse
+import com.examhub.student.model.request.appeal.StudentAppealRequest
+import com.examhub.student.model.response.appeal.AppealSummaryResponse
+import com.examhub.student.model.response.common.PagedEnvelope
+import com.examhub.student.model.response.common.StudentAppealCreateResponse
 import kotlinx.coroutines.flow.Flow
 
 interface AppealsRepository {

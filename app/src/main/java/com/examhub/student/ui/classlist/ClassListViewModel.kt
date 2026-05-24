@@ -4,7 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.examhub.student.data.model.SchoolClass
 import com.examhub.student.model.ApiResult
-import com.examhub.student.model.request.JoinClassRequest
+import com.examhub.student.model.request.classroom.JoinClassRequest
+import com.examhub.student.model.response.classroom.MobileClassResponse
 import com.examhub.student.repository.ClassRepository
 import com.examhub.student.service.OfflineCacheManager
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -95,7 +96,7 @@ class ClassListViewModel(
         }
     }
 
-    private fun com.examhub.student.model.response.MobileClassResponse.resolvedInternalClassCode(): String {
+    private fun com.examhub.student.model.response.classroom.MobileClassResponse.resolvedInternalClassCode(): String {
         return classInfo?.classCode.orEmpty()
     }
 

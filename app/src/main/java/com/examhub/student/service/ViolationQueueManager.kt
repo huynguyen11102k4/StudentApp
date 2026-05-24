@@ -3,7 +3,7 @@ package com.examhub.student.service
 import android.content.Context
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
-import com.examhub.student.model.request.LockViolationRequest
+import com.examhub.student.model.request.lock.LockViolationRequest
 import java.util.UUID
 
 class ViolationQueueManager(

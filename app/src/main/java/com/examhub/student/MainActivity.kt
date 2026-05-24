@@ -20,7 +20,7 @@ import com.examhub.student.databinding.ActivityMainBinding
 import com.examhub.student.kiosk.KioskModeController
 import com.examhub.student.kiosk.KioskModeState
 import com.examhub.student.model.ApiResult
-import com.examhub.student.model.request.LockViolationRequest
+import com.examhub.student.model.request.lock.LockViolationRequest
 import com.examhub.student.repository.LockModeRepository
 import com.examhub.student.service.AuthEvent
 import com.examhub.student.service.FcmTokenRegistrar

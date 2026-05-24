@@ -2,11 +2,11 @@ package com.examhub.student.repository_impl
 
 import com.google.gson.Gson
 import com.examhub.student.model.ApiResult
-import com.examhub.student.model.response.NotificationMarkAllReadResponse
-import com.examhub.student.model.response.NotificationReadResponse
-import com.examhub.student.model.response.NotificationResponse
-import com.examhub.student.model.response.NotificationUnreadCountResponse
-import com.examhub.student.model.response.PagedEnvelope
+import com.examhub.student.model.response.notification.NotificationMarkAllReadResponse
+import com.examhub.student.model.response.notification.NotificationReadResponse
+import com.examhub.student.model.response.notification.NotificationResponse
+import com.examhub.student.model.response.notification.NotificationUnreadCountResponse
+import com.examhub.student.model.response.common.PagedEnvelope
 import com.examhub.student.repository.NotificationRepository
 import com.examhub.student.service.NotificationApiService
 import kotlinx.coroutines.flow.Flow

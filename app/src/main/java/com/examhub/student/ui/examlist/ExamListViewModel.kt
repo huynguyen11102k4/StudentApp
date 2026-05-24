@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.examhub.student.data.model.Exam
 import com.examhub.student.model.ApiResult
+import com.examhub.student.model.response.exam.MobileExamSummaryResponse
 import com.examhub.student.repository.ExamRepository
 import com.examhub.student.repository.ResultsRepository
 import com.examhub.student.service.OfflineCacheManager
@@ -83,7 +84,7 @@ class ExamListViewModel(
         }
     }
 
-    private fun com.examhub.student.model.response.MobileExamSummaryResponse.hasSubmittedStatus(): Boolean {
+    private fun com.examhub.student.model.response.exam.MobileExamSummaryResponse.hasSubmittedStatus(): Boolean {
         val normalized = listOfNotNull(status, submissionStatus)
             .joinToString(" ")
             .uppercase()

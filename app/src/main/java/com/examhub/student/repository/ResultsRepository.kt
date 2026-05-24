@@ -1,9 +1,9 @@
 package com.examhub.student.repository
 
 import com.examhub.student.model.ApiResult
-import com.examhub.student.model.response.PagedEnvelope
-import com.examhub.student.model.response.StudentResultDetailResponse
-import com.examhub.student.model.response.StudentResultSummaryResponse
+import com.examhub.student.model.response.common.PagedEnvelope
+import com.examhub.student.model.response.result.StudentResultDetailResponse
+import com.examhub.student.model.response.result.StudentResultSummaryResponse
 import kotlinx.coroutines.flow.Flow
 
 interface ResultsRepository {

@@ -3,8 +3,8 @@ package com.examhub.student.ui.settings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.examhub.student.model.ApiResult
-import com.examhub.student.model.request.ChangePasswordRequest
-import com.examhub.student.model.response.UserResponse
+import com.examhub.student.model.request.auth.ChangePasswordRequest
+import com.examhub.student.model.response.profile.UserResponse
 import com.examhub.student.repository.AuthRepository
 import com.examhub.student.service.FcmTokenRegistrar
 import com.examhub.student.service.NotificationPreferenceManager

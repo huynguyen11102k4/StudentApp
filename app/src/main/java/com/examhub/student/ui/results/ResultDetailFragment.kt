@@ -15,7 +15,7 @@ import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
 import com.examhub.student.R
 import com.examhub.student.databinding.FragmentResultDetailBinding
-import com.examhub.student.model.response.StudentResultDetailResponse
+import com.examhub.student.model.response.result.StudentResultDetailResponse
 import com.examhub.student.ui.applySystemWindowInsets
 import com.examhub.student.ui.collectOnStarted
 import kotlinx.coroutines.launch

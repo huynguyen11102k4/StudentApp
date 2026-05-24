@@ -5,7 +5,9 @@ import androidx.lifecycle.viewModelScope
 import com.examhub.student.data.model.Exam
 import com.examhub.student.data.model.SchoolClass
 import com.examhub.student.model.ApiResult
-import com.examhub.student.model.response.UserResponse
+import com.examhub.student.model.response.classroom.MobileClassResponse
+import com.examhub.student.model.response.exam.MobileExamSummaryResponse
+import com.examhub.student.model.response.profile.UserResponse
 import com.examhub.student.repository.AuthRepository
 import com.examhub.student.repository.ClassRepository
 import com.examhub.student.repository.ExamRepository
@@ -130,7 +132,7 @@ class DashboardViewModel(
         loadDashboard()
     }
 
-    private fun com.examhub.student.model.response.MobileClassResponse.resolvedInternalClassCode(): String {
+    private fun com.examhub.student.model.response.classroom.MobileClassResponse.resolvedInternalClassCode(): String {
         return classInfo?.classCode.orEmpty()
     }
 
@@ -144,7 +146,7 @@ class DashboardViewModel(
         }
     }
 
-    private fun com.examhub.student.model.response.MobileExamSummaryResponse.hasSubmittedStatus(): Boolean {
+    private fun com.examhub.student.model.response.exam.MobileExamSummaryResponse.hasSubmittedStatus(): Boolean {
         val normalized = listOfNotNull(status, submissionStatus)
             .joinToString(" ")
             .uppercase()

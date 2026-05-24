@@ -1,11 +1,11 @@
 package com.examhub.student.repository
 
 import com.examhub.student.model.ApiResult
-import com.examhub.student.model.response.NotificationMarkAllReadResponse
-import com.examhub.student.model.response.NotificationReadResponse
-import com.examhub.student.model.response.NotificationResponse
-import com.examhub.student.model.response.NotificationUnreadCountResponse
-import com.examhub.student.model.response.PagedEnvelope
+import com.examhub.student.model.response.notification.NotificationMarkAllReadResponse
+import com.examhub.student.model.response.notification.NotificationReadResponse
+import com.examhub.student.model.response.notification.NotificationResponse
+import com.examhub.student.model.response.notification.NotificationUnreadCountResponse
+import com.examhub.student.model.response.common.PagedEnvelope
 import kotlinx.coroutines.flow.Flow
 
 interface NotificationRepository {

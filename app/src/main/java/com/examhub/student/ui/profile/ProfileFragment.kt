@@ -14,7 +14,7 @@ import com.google.android.material.snackbar.Snackbar
 import com.examhub.student.BuildConfig
 import com.examhub.student.R
 import com.examhub.student.databinding.FragmentProfileBinding
-import com.examhub.student.model.response.UserResponse
+import com.examhub.student.model.response.profile.UserResponse
 import com.examhub.student.ui.applySystemWindowInsets
 import com.examhub.student.ui.collectOnStarted
 import kotlinx.coroutines.flow.collect

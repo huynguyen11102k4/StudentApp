@@ -3,8 +3,8 @@ package com.examhub.student.ui.profile
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.examhub.student.model.ApiResult
-import com.examhub.student.model.request.UpdateProfileRequest
-import com.examhub.student.model.response.UserResponse
+import com.examhub.student.model.request.profile.UpdateProfileRequest
+import com.examhub.student.model.response.profile.UserResponse
 import com.examhub.student.repository.AuthRepository
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow

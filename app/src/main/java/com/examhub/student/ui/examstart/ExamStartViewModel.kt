@@ -7,10 +7,10 @@ import com.google.gson.Gson
 import com.examhub.student.R
 import com.examhub.student.data.model.Exam
 import com.examhub.student.model.ApiResult
-import com.examhub.student.model.request.LockValidateSessionRequest
-import com.examhub.student.model.response.MobileExamDetailResponse
-import com.examhub.student.model.response.StartExamSessionResponse
-import com.examhub.student.model.response.UserResponse
+import com.examhub.student.model.request.lock.LockValidateSessionRequest
+import com.examhub.student.model.response.exam.MobileExamDetailResponse
+import com.examhub.student.model.response.common.StartExamSessionResponse
+import com.examhub.student.model.response.profile.UserResponse
 import com.examhub.student.repository.ExamRepository
 import com.examhub.student.repository.LockModeRepository
 import com.examhub.student.service.OfflineCacheManager

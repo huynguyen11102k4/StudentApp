@@ -6,7 +6,7 @@ import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.examhub.student.databinding.ItemResultBinding
-import com.examhub.student.model.response.StudentResultSummaryResponse
+import com.examhub.student.model.response.result.StudentResultSummaryResponse
 import com.examhub.student.R
 import java.text.SimpleDateFormat
 import java.util.Locale

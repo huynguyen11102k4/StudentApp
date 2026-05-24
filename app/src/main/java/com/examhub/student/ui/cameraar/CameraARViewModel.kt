@@ -6,8 +6,8 @@ import android.util.Base64
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.examhub.student.model.ApiResult
-import com.examhub.student.model.request.LockHeartbeatRequest
-import com.examhub.student.model.request.LockViolationRequest
+import com.examhub.student.model.request.lock.LockHeartbeatRequest
+import com.examhub.student.model.request.lock.LockViolationRequest
 import com.examhub.student.omr.OmrProcessor
 import com.examhub.student.omr.OmrReviewStore
 import com.examhub.student.repository.LockModeRepository

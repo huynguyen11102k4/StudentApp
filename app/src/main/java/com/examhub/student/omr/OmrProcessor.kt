@@ -7,8 +7,8 @@ import com.google.gson.JsonElement
 import com.examhub.student.OmrEngine
 import com.examhub.student.OmrEngineOptions
 import com.examhub.student.data.model.Answer
-import com.examhub.student.model.response.AnswerKeysResponse
-import com.examhub.student.model.response.UserResponse
+import com.examhub.student.model.response.exam.AnswerKeysResponse
+import com.examhub.student.model.response.profile.UserResponse
 import com.examhub.student.service.OfflineCacheManager
 import com.examhub.student.service.TokenManager
 import kotlinx.coroutines.Dispatchers

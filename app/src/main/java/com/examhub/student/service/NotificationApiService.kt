@@ -1,14 +1,14 @@
 package com.examhub.student.service
 
 
-import com.examhub.student.model.request.FcmTokenRequest
-import com.examhub.student.model.response.ApiEnvelope
-import com.examhub.student.model.response.FcmTokenResponse
-import com.examhub.student.model.response.NotificationMarkAllReadResponse
-import com.examhub.student.model.response.NotificationReadResponse
-import com.examhub.student.model.response.NotificationResponse
-import com.examhub.student.model.response.NotificationUnreadCountResponse
-import com.examhub.student.model.response.PagedEnvelope
+import com.examhub.student.model.request.notification.FcmTokenRequest
+import com.examhub.student.model.response.common.ApiEnvelope
+import com.examhub.student.model.response.notification.FcmTokenResponse
+import com.examhub.student.model.response.notification.NotificationMarkAllReadResponse
+import com.examhub.student.model.response.notification.NotificationReadResponse
+import com.examhub.student.model.response.notification.NotificationResponse
+import com.examhub.student.model.response.notification.NotificationUnreadCountResponse
+import com.examhub.student.model.response.common.PagedEnvelope
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.GET

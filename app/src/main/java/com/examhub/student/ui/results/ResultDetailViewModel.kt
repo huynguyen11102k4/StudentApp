@@ -5,9 +5,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.examhub.student.R
 import com.examhub.student.model.ApiResult
-import com.examhub.student.model.request.StudentAppealItemRequest
-import com.examhub.student.model.request.StudentAppealRequest
-import com.examhub.student.model.response.StudentResultDetailResponse
+import com.examhub.student.model.request.appeal.StudentAppealItemRequest
+import com.examhub.student.model.request.appeal.StudentAppealRequest
+import com.examhub.student.model.response.result.StudentResultDetailResponse
 import com.examhub.student.repository.AppealsRepository
 import com.examhub.student.repository.ResultsRepository
 import kotlinx.coroutines.flow.MutableSharedFlow

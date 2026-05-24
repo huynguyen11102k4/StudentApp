@@ -4,8 +4,8 @@ import com.google.gson.Gson
 import com.google.gson.JsonParseException
 import com.examhub.student.model.ApiException
 import com.examhub.student.model.ApiResult
-import com.examhub.student.model.response.ApiEnvelope
-import com.examhub.student.model.response.ApiErrorEnvelope
+import com.examhub.student.model.response.common.ApiEnvelope
+import com.examhub.student.model.response.common.ApiErrorEnvelope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flow

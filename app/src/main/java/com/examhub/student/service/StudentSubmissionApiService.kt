@@ -1,10 +1,10 @@
 package com.examhub.student.service
 
-import com.examhub.student.model.request.PresignSubmissionImageRequest
-import com.examhub.student.model.request.StudentSubmitRequest
-import com.examhub.student.model.response.ApiEnvelope
-import com.examhub.student.model.response.PresignSubmissionImageResponse
-import com.examhub.student.model.response.StudentSubmitResponse
+import com.examhub.student.model.request.submission.PresignSubmissionImageRequest
+import com.examhub.student.model.request.submission.StudentSubmitRequest
+import com.examhub.student.model.response.common.ApiEnvelope
+import com.examhub.student.model.response.submission.PresignSubmissionImageResponse
+import com.examhub.student.model.response.submission.StudentSubmitResponse
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.POST

@@ -7,7 +7,7 @@ import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.examhub.student.databinding.ItemResultAnswerBinding
-import com.examhub.student.model.response.StudentResultAnswerResponse
+import com.examhub.student.model.response.result.StudentResultAnswerResponse
 import com.examhub.student.R
 
 class ResultAnswerAdapter : ListAdapter<StudentResultAnswerResponse, ResultAnswerAdapter.AnswerViewHolder>(DiffCallback) {

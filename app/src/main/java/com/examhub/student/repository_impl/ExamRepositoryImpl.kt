@@ -2,12 +2,12 @@ package com.examhub.student.repository_impl
 
 import com.google.gson.Gson
 import com.examhub.student.model.ApiResult
-import com.examhub.student.model.response.MobileExamDetailResponse
-import com.examhub.student.model.response.MobileExamSummaryResponse
-import com.examhub.student.model.response.OmrTemplateResponse
-import com.examhub.student.model.response.PagedEnvelope
-import com.examhub.student.model.response.QuestionMetadataResponse
-import com.examhub.student.model.response.StartExamSessionResponse
+import com.examhub.student.model.response.exam.MobileExamDetailResponse
+import com.examhub.student.model.response.exam.MobileExamSummaryResponse
+import com.examhub.student.model.response.template.OmrTemplateResponse
+import com.examhub.student.model.response.common.PagedEnvelope
+import com.examhub.student.model.response.exam.QuestionMetadataResponse
+import com.examhub.student.model.response.common.StartExamSessionResponse
 import com.examhub.student.repository.ExamRepository
 import com.examhub.student.service.ExamApiService
 import kotlinx.coroutines.flow.Flow

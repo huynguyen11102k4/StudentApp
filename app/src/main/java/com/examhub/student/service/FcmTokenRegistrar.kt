@@ -2,7 +2,7 @@ package com.examhub.student.service
 
 import android.content.Context
 import android.util.Log
-import com.examhub.student.model.request.FcmTokenRequest
+import com.examhub.student.model.request.notification.FcmTokenRequest
 import com.google.firebase.messaging.FirebaseMessaging
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
