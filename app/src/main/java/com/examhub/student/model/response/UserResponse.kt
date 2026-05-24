@@ -27,6 +27,9 @@ data class TeacherProfileResponse(
 
 data class StudentProfileResponse(
     val id: String? = null,
+    @SerializedName(value = "internalId", alternate = ["internal_id"])
+    val internalId: String? = null,
+    @SerializedName(value = "studentCode", alternate = ["student_code", "code"])
     val studentCode: String? = null,
     val dateOfBirth: String? = null
 )

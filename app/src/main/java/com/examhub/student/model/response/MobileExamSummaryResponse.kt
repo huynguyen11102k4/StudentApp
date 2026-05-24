@@ -25,7 +25,13 @@ data class MobileExamSummaryResponse(
     val classInfo: ExamClassInfoResponse? = null,
     val template: ExamTemplateSummaryResponse? = null,
     @SerializedName("_count")
-    val count: ExamCountResponse? = null
+    val count: ExamCountResponse? = null,
+    @SerializedName(value = "attempts_used", alternate = ["attemptsUsed"])
+    val attemptsUsed: Int? = null,
+    @SerializedName(value = "submission_status", alternate = ["submissionStatus"])
+    val submissionStatus: String? = null,
+    @SerializedName(value = "result_id", alternate = ["resultId", "sheet_id", "sheetId", "answer_sheet_id", "answerSheetId"])
+    val resultId: String? = null
 ) : Serializable
 
 data class ExamOnlineConfigResponse(
@@ -43,5 +49,8 @@ data class ExamOnlineConfigResponse(
 
 data class ExamClassInfoResponse(
     val id: String? = null,
-    val className: String? = null
+    @SerializedName("class_name")
+    val className: String? = null,
+    @SerializedName("class_code")
+    val classCode: String? = null
 ) : Serializable

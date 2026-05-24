@@ -154,6 +154,14 @@
                         android:text="@string/profile_google_not_linked" />
 
                     <TextView
+                        android:id="@+id/tvStudentCode"
+                        style="@style/Text_Body_Small"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/spacing_8"
+                        android:text="@string/profile_student_code_empty" />
+
+                    <TextView
                         android:id="@+id/tvPasswordStatus"
                         style="@style/Text_Body_Small"
                         android:layout_width="match_parent"

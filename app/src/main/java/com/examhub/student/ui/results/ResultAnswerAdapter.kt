@@ -2,6 +2,7 @@ package com.examhub.student.ui.results
 
 import android.view.LayoutInflater
 import android.view.ViewGroup
+import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
@@ -23,10 +24,23 @@ class ResultAnswerAdapter : ListAdapter<StudentResultAnswerResponse, ResultAnswe
             binding.tvQuestion.text = binding.root.context.getString(R.string.result_answer_question_format, answer.questionNumber)
             binding.tvStudentAnswer.text = answer.studentAnswer ?: "-"
             binding.tvCorrectAnswer.text = answer.correctAnswer ?: "-"
-            binding.tvStatus.text = when (answer.isCorrect) {
-                true -> binding.root.context.getString(R.string.result_answer_correct)
-                false -> binding.root.context.getString(R.string.result_answer_wrong)
-                null -> binding.root.context.getString(R.string.result_answer_pending)
+            val context = binding.root.context
+            when (answer.isCorrect) {
+                true -> {
+                    binding.tvStatus.text = context.getString(R.string.result_answer_correct)
+                    binding.tvStatus.setBackgroundResource(R.drawable.bg_answer_status_correct)
+                    binding.tvStatus.setTextColor(ContextCompat.getColor(context, R.color.on_success_container))
+                }
+                false -> {
+                    binding.tvStatus.text = context.getString(R.string.result_answer_wrong)
+                    binding.tvStatus.setBackgroundResource(R.drawable.bg_answer_status_wrong)
+                    binding.tvStatus.setTextColor(ContextCompat.getColor(context, R.color.on_error_container))
+                }
+                null -> {
+                    binding.tvStatus.text = context.getString(R.string.result_answer_pending)
+                    binding.tvStatus.setBackgroundResource(R.drawable.bg_answer_status_neutral)
+                    binding.tvStatus.setTextColor(ContextCompat.getColor(context, R.color.text_secondary))
+                }
             }
         }
     }

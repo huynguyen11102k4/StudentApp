@@ -19,5 +19,7 @@ data class OmrProcessingResult(
     val rawImageBase64: String,
     val dewarpedImageBase64: String,
     val debugImageBase64: String,
+    val laplacianVariance: Float,
+    val meanBrightness: Float,
     val warnings: List<String>
 )

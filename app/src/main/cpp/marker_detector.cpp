@@ -17,7 +17,15 @@ namespace omr {
 
 namespace {
 
-constexpr size_t MIN_MARKERS_FOR_FAST_DEWARP = 10;
+constexpr size_t MIN_MARKERS_FOR_FAST_DEWARP = 8;
+
+size_t countUniqueMarkerIds(const std::vector<DetectedMarker>& markers) {
+    std::set<int> uniqueIds;
+    for (const auto& marker : markers) {
+        uniqueIds.insert(marker.id);
+    }
+    return uniqueIds.size();
+}
 
 bool hasAllMarkers(const std::map<int, cv::Point2f>& markers, const std::vector<int>& ids) {
     for (int id : ids) {
@@ -319,25 +327,25 @@ std::vector<DetectedMarker> MarkerDetector::detectMarkers(const cv::Mat& grayImg
 
     std::vector<DetectedMarker> result = runDetector(grayImg, "raw");
 
-    if (result.size() < MIN_MARKERS_FOR_FAST_DEWARP) {
+    if (countUniqueMarkerIds(result) < MIN_MARKERS_FOR_FAST_DEWARP) {
         cv::Mat normalized;
         cv::normalize(grayImg, normalized, 0, 255, cv::NORM_MINMAX);
         appendUniqueMarkers(result, runDetector(normalized, "normalized"), "normalized");
     }
 
-    if (result.size() < MIN_MARKERS_FOR_FAST_DEWARP) {
+    if (countUniqueMarkerIds(result) < MIN_MARKERS_FOR_FAST_DEWARP) {
         cv::Mat brightened = applyGamma(grayImg, 0.65);
         appendUniqueMarkers(result, runDetector(brightened, "gamma_bright"), "gamma_bright");
     }
 
-    if (result.size() < MIN_MARKERS_FOR_FAST_DEWARP) {
+    if (countUniqueMarkerIds(result) < MIN_MARKERS_FOR_FAST_DEWARP) {
         cv::Mat claheImg;
         auto clahe = cv::createCLAHE(3.0, cv::Size(8, 8));
         clahe->apply(grayImg, claheImg);
         appendUniqueMarkers(result, runDetector(claheImg, "clahe"), "clahe");
     }
 
-    if (result.size() < MIN_MARKERS_FOR_FAST_DEWARP) {
+    if (countUniqueMarkerIds(result) < MIN_MARKERS_FOR_FAST_DEWARP) {
         cv::Mat blurred;
         cv::GaussianBlur(grayImg, blurred, cv::Size(0, 0), 1.0);
         cv::Mat sharpened;
@@ -345,7 +353,7 @@ std::vector<DetectedMarker> MarkerDetector::detectMarkers(const cv::Mat& grayImg
         appendUniqueMarkers(result, runDetector(sharpened, "sharpen"), "sharpen");
     }
 
-    if (result.size() < MIN_MARKERS_FOR_FAST_DEWARP) {
+    if (countUniqueMarkerIds(result) < MIN_MARKERS_FOR_FAST_DEWARP) {
         cv::Mat binary;
         cv::adaptiveThreshold(grayImg, binary, 255,
                               cv::ADAPTIVE_THRESH_GAUSSIAN_C,
@@ -353,7 +361,7 @@ std::vector<DetectedMarker> MarkerDetector::detectMarkers(const cv::Mat& grayImg
         appendUniqueMarkers(result, runDetector(binary, "adaptive_binary"), "adaptive_binary");
     }
 
-    if (result.size() < MIN_MARKERS_FOR_FAST_DEWARP) {
+    if (countUniqueMarkerIds(result) < MIN_MARKERS_FOR_FAST_DEWARP) {
         cv::Mat binary;
         cv::adaptiveThreshold(grayImg, binary, 255,
                               cv::ADAPTIVE_THRESH_MEAN_C,

@@ -39,6 +39,15 @@ class OfflineCacheManager(context: Context) {
         return prefs.getString(keyQuestionMetadata(examId), null)
     }
 
+    fun saveExamClassCode(examId: String, classCode: String?) {
+        if (examId.isBlank() || classCode.isNullOrBlank()) return
+        prefs.edit().putString(keyExamClassCode(examId), classCode).apply()
+    }
+
+    fun getExamClassCode(examId: String): String? {
+        return prefs.getString(keyExamClassCode(examId), null)
+    }
+
     fun isOfflineReady(examId: String): Boolean {
         return getTemplate(examId) != null
     }
@@ -138,7 +147,16 @@ class OfflineCacheManager(context: Context) {
             .remove(keyTemplate(examId))
             .remove(keyAnswerKeys(examId))
             .remove(keyQuestionMetadata(examId))
+            .remove(keyExamClassCode(examId))
             .putString(KEY_OFFLINE_IDS, gson.toJson(ids.toList()))
+            .apply()
+    }
+
+    fun clearUserScopedLists() {
+        prefs.edit()
+            .remove(KEY_EXAM_BASICS)
+            .remove(KEY_CLASS_BASICS)
+            .remove(KEY_NOTIFICATIONS)
             .apply()
     }
 
@@ -150,6 +168,7 @@ class OfflineCacheManager(context: Context) {
                 .remove(keyTemplate(examId))
                 .remove(keyAnswerKeys(examId))
                 .remove(keyQuestionMetadata(examId))
+                .remove(keyExamClassCode(examId))
         }
         editor.putString(KEY_OFFLINE_IDS, gson.toJson(emptyList<String>())).apply()
 
@@ -161,6 +180,7 @@ class OfflineCacheManager(context: Context) {
     private fun keyTemplate(examId: String) = "template_$examId"
     private fun keyAnswerKeys(examId: String) = "answer_keys_$examId"
     private fun keyQuestionMetadata(examId: String) = "question_metadata_$examId"
+    private fun keyExamClassCode(examId: String) = "exam_class_code_$examId"
 
     private companion object {
         const val PREFS_NAME = "offline_cache"

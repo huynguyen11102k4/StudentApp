@@ -1,235 +1,244 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/background">
+    android:background="@color/register_background"
+    android:clipToPadding="false"
+    android:fillViewport="true"
+    android:paddingHorizontal="@dimen/register_screen_padding">
 
-    <ScrollView
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:fillViewport="true">
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingTop="@dimen/register_header_top"
+        android:paddingBottom="@dimen/spacing_32">
 
-        <LinearLayout
+        <ImageButton
+            android:id="@+id/btnBack"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/common_back"
+            android:padding="@dimen/spacing_10"
+            android:src="@drawable/ic_chevron_left"
+            app:tint="@color/register_text_primary" />
+
+        <TextView
+            android:id="@+id/tvTitle"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:paddingHorizontal="@dimen/spacing_24"
-            android:paddingVertical="@dimen/spacing_48">
+            android:layout_marginTop="@dimen/spacing_28"
+            android:includeFontPadding="false"
+            android:lineSpacingExtra="2dp"
+            android:text="@string/register_title"
+            android:textColor="@color/register_text_primary"
+            android:textSize="@dimen/register_title_size"
+            android:textStyle="bold" />
 
-            <!-- Header: Back Button + Title/Subtitle -->
-            <androidx.constraintlayout.widget.ConstraintLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content">
+        <TextView
+            android:id="@+id/tvSubtitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/spacing_10"
+            android:lineSpacingExtra="3dp"
+            android:text="@string/register_subtitle"
+            android:textColor="@color/register_text_secondary"
+            android:textSize="@dimen/register_subtitle_size" />
 
-                <!-- Icon-only Back Button -->
-                <ImageButton
-                    android:id="@+id/btnBack"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:background="?android:attr/selectableItemBackgroundBorderless"
-                    android:contentDescription="Back"
-                    android:padding="@dimen/spacing_8"
-                    android:src="@drawable/ic_chevron_left"
-                    app:tint="@color/text_primary"
-                    app:layout_constraintBottom_toBottomOf="@+id/tvTitle"
-                    app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toTopOf="@+id/tvTitle" />
+        <LinearLayout
+            android:id="@+id/registerFormContent"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/spacing_36"
+            android:orientation="vertical">
 
-                <!-- Title -->
-                <TextView
-                    android:id="@+id/tvTitle"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="@dimen/spacing_12"
-                    android:text="@string/register_title"
-                    android:textAppearance="@style/Text_Headline_Small"
-                    android:textColor="@color/text_primary"
-                    app:layout_constraintEnd_toEndOf="parent"
-                    app:layout_constraintStart_toEndOf="@id/btnBack"
-                    app:layout_constraintTop_toTopOf="parent" />
-
-                <!-- Subtitle -->
-                <TextView
-                    android:id="@+id/tvSubtitle"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="@dimen/spacing_4"
-                    android:text="@string/register_subtitle"
-                    android:textAppearance="@style/Text_Body_Medium"
-                    android:textColor="@color/text_secondary"
-                    app:layout_constraintEnd_toEndOf="parent"
-                    app:layout_constraintStart_toStartOf="@id/tvTitle"
-                    app:layout_constraintTop_toBottomOf="@id/tvTitle" />
-
-            </androidx.constraintlayout.widget.ConstraintLayout>
-
-            <!-- Full Name -->
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/tilFullName"
-                style="@style/Student.InputField"
+                style="@style/Register.InputLayout"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/spacing_48"
-                app:hintEnabled="false">
+                app:startIconDrawable="@drawable/ic_user">
 
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/etFullName"
+                    style="@style/Register.EditText"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
+                    android:layout_height="@dimen/register_input_height"
                     android:hint="@string/register_full_name_hint"
                     android:inputType="textPersonName"
-                    android:paddingVertical="@dimen/spacing_16"
-                    android:textAppearance="@style/Text_Body_Large" />
+                    android:maxLines="1"
+                    android:paddingStart="@dimen/spacing_4"
+                    android:paddingEnd="@dimen/spacing_16" />
             </com.google.android.material.textfield.TextInputLayout>
 
-            <!-- Email -->
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/tilEmail"
-                style="@style/Student.InputField"
+                style="@style/Register.InputLayout"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/spacing_16"
-                app:hintEnabled="false">
+                android:layout_marginTop="@dimen/register_input_gap"
+                app:startIconDrawable="@drawable/ic_email">
 
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/etEmail"
+                    style="@style/Register.EditText"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
+                    android:layout_height="@dimen/register_input_height"
                     android:hint="@string/register_email_hint"
                     android:inputType="textEmailAddress"
-                    android:paddingVertical="@dimen/spacing_16"
-                    android:textAppearance="@style/Text_Body_Large" />
+                    android:maxLines="1"
+                    android:paddingStart="@dimen/spacing_4"
+                    android:paddingEnd="@dimen/spacing_16" />
             </com.google.android.material.textfield.TextInputLayout>
 
-            <!-- Student Code (optional) -->
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/tilStudentCode"
-                style="@style/Student.InputField"
+                style="@style/Register.InputLayout"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/spacing_16"
-                app:hintEnabled="false">
+                android:layout_marginTop="@dimen/register_input_gap"
+                app:startIconDrawable="@drawable/ic_badge">
 
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/etStudentCode"
+                    style="@style/Register.EditText"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
+                    android:layout_height="@dimen/register_input_height"
                     android:hint="@string/register_student_code_hint"
                     android:inputType="text"
-                    android:paddingVertical="@dimen/spacing_16"
-                    android:textAppearance="@style/Text_Body_Large" />
+                    android:maxLines="1"
+                    android:paddingStart="@dimen/spacing_4"
+                    android:paddingEnd="@dimen/spacing_16" />
             </com.google.android.material.textfield.TextInputLayout>
 
-            <!-- Password -->
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/tilPassword"
-                style="@style/Student.InputField"
+                style="@style/Register.InputLayout"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/spacing_16"
+                android:layout_marginTop="@dimen/register_input_gap"
                 app:endIconMode="password_toggle"
-                app:endIconTint="@color/text_secondary"
-                app:hintEnabled="false">
+                app:startIconDrawable="@drawable/ic_lock">
 
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/etPassword"
+                    style="@style/Register.EditText"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
+                    android:layout_height="@dimen/register_input_height"
                     android:hint="@string/register_password_hint"
                     android:inputType="textPassword"
-                    android:paddingVertical="@dimen/spacing_16"
-                    android:textAppearance="@style/Text_Body_Large" />
+                    android:maxLines="1"
+                    android:paddingStart="@dimen/spacing_4"
+                    android:paddingEnd="@dimen/spacing_16" />
             </com.google.android.material.textfield.TextInputLayout>
 
-            <!-- Confirm Password -->
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/tilConfirmPassword"
-                style="@style/Student.InputField"
+                style="@style/Register.InputLayout"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/spacing_16"
+                android:layout_marginTop="@dimen/register_input_gap"
                 app:endIconMode="password_toggle"
-                app:endIconTint="@color/text_secondary"
-                app:hintEnabled="false">
+                app:startIconDrawable="@drawable/ic_lock">
 
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/etConfirmPassword"
+                    style="@style/Register.EditText"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
+                    android:layout_height="@dimen/register_input_height"
                     android:hint="@string/register_confirm_password_hint"
                     android:inputType="textPassword"
-                    android:paddingVertical="@dimen/spacing_16"
-                    android:textAppearance="@style/Text_Body_Large" />
+                    android:maxLines="1"
+                    android:paddingStart="@dimen/spacing_4"
+                    android:paddingEnd="@dimen/spacing_16" />
             </com.google.android.material.textfield.TextInputLayout>
 
-            <!-- Register Button -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnRegister"
-                style="@style/Student.PrimaryButton"
+                style="@style/Register.PrimaryButton"
                 android:layout_width="match_parent"
-                android:layout_height="@dimen/button_height_large"
-                android:layout_marginTop="@dimen/spacing_48"
+                android:layout_height="@dimen/register_button_height"
+                android:layout_marginTop="@dimen/spacing_28"
                 android:text="@string/register_button" />
 
-            <LinearLayout
-                android:id="@+id/registerOtpContent"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/spacing_48"
-                android:orientation="vertical"
-                android:visibility="gone">
+            <TextView
+                android:id="@+id/btnLoginLink"
+                android:layout_width="wrap_content"
+                android:layout_height="44dp"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginTop="@dimen/spacing_12"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:gravity="center"
+                android:paddingHorizontal="@dimen/spacing_12"
+                android:text="@string/register_login_prompt"
+                android:textColor="@color/register_primary"
+                android:textSize="15sp"
+                android:textStyle="bold" />
+        </LinearLayout>
 
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/register_otp_title"
-                    android:textAppearance="@style/Text_Headline_Small"
-                    android:textColor="@color/text_primary" />
+        <LinearLayout
+            android:id="@+id/registerOtpContent"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/spacing_36"
+            android:orientation="vertical"
+            android:visibility="gone">
 
-                <TextView
-                    android:id="@+id/tvOtpSubtitle"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="@dimen/spacing_4"
-                    android:text="@string/register_otp_subtitle"
-                    android:textAppearance="@style/Text_Body_Medium"
-                    android:textColor="@color/text_secondary" />
-
-                <LinearLayout
-                    android:id="@+id/otpContainer"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="@dimen/spacing_24"
-                    android:gravity="center"
-                    android:orientation="horizontal" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnVerifyOtp"
-                    style="@style/Student.PrimaryButton"
-                    android:layout_width="match_parent"
-                    android:layout_height="@dimen/button_height_large"
-                    android:layout_marginTop="@dimen/spacing_24"
-                    android:text="@string/register_verify_otp" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnResendOtp"
-                    style="@style/Button_Text"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_gravity="center_horizontal"
-                    android:layout_marginTop="@dimen/spacing_12"
-                    android:text="@string/register_resend_otp" />
-            </LinearLayout>
-
-            <ProgressBar
-                android:id="@+id/progressBar"
+            <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_gravity="center"
-                android:layout_marginTop="@dimen/spacing_16"
-                android:visibility="gone" />
+                android:includeFontPadding="false"
+                android:text="@string/register_otp_title"
+                android:textColor="@color/register_text_primary"
+                android:textSize="24sp"
+                android:textStyle="bold" />
 
+            <TextView
+                android:id="@+id/tvOtpSubtitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/spacing_8"
+                android:lineSpacingExtra="3dp"
+                android:text="@string/register_otp_subtitle"
+                android:textColor="@color/register_text_secondary"
+                android:textSize="15sp" />
+
+            <LinearLayout
+                android:id="@+id/otpContainer"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/spacing_24"
+                android:gravity="center"
+                android:orientation="horizontal" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnVerifyOtp"
+                style="@style/Register.PrimaryButton"
+                android:layout_width="match_parent"
+                android:layout_height="@dimen/register_button_height"
+                android:layout_marginTop="@dimen/spacing_24"
+                android:text="@string/register_verify_otp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnResendOtp"
+                style="@style/Button_Text"
+                android:layout_width="wrap_content"
+                android:layout_height="44dp"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginTop="@dimen/spacing_12"
+                android:text="@string/register_resend_otp"
+                android:textColor="@color/register_primary" />
         </LinearLayout>
-    </ScrollView>
-</androidx.constraintlayout.widget.ConstraintLayout>
+
+        <ProgressBar
+            android:id="@+id/progressBar"
+            android:layout_width="28dp"
+            android:layout_height="28dp"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="@dimen/spacing_16"
+            android:indeterminateTint="@color/register_primary"
+            android:visibility="gone" />
+    </LinearLayout>
+</androidx.core.widget.NestedScrollView>

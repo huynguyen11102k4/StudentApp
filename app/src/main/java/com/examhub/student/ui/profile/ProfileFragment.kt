@@ -98,6 +98,10 @@ class ProfileFragment : Fragment() {
         } else {
             getString(R.string.profile_google_linked)
         }
+        binding.tvStudentCode.text = profile.student?.studentCode
+            ?.takeIf { it.isNotBlank() }
+            ?.let { getString(R.string.profile_student_code_format, it) }
+            ?: getString(R.string.profile_student_code_empty)
         binding.tvPasswordStatus.text = if (profile.mustChangePassword == true) {
             getString(R.string.profile_password_must_change)
         } else {

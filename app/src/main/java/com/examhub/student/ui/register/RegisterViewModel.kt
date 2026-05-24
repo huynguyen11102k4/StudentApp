@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import java.text.Normalizer
 
 class RegisterViewModel(
     private val authRepository: AuthRepository,
@@ -63,19 +64,19 @@ class RegisterViewModel(
         val isGoogleRegistration = googleIdToken.isNotBlank()
 
         if (fullName.isBlank()) {
-            _errorMessage.tryEmit("Vui long nhap ho ten")
+            _errorMessage.tryEmit("Vui lòng nhập họ tên")
             return
         }
         if (trimmedEmail.isBlank()) {
-            _errorMessage.tryEmit("Vui long nhap email")
+            _errorMessage.tryEmit("Vui lòng nhập email")
             return
         }
         if (!isGoogleRegistration && password.length < 6) {
-            _errorMessage.tryEmit("Mat khau phai co it nhat 6 ky tu")
+            _errorMessage.tryEmit("Mật khẩu phải có ít nhất 6 ký tự")
             return
         }
         if (!isGoogleRegistration && password != confirmPassword) {
-            _errorMessage.tryEmit("Mat khau khong khop")
+            _errorMessage.tryEmit("Mật khẩu không khớp")
             return
         }
 
@@ -87,7 +88,7 @@ class RegisterViewModel(
                     password = password.takeIf { !isGoogleRegistration },
                     googleIdToken = googleIdToken.takeIf { isGoogleRegistration },
                     studentCode = trimmedStudentCode.takeIf { it.isNotBlank() }
-                    )
+                )
             ).collect { result ->
                 when (result) {
                     is ApiResult.Loading -> _isLoading.value = true
@@ -96,13 +97,16 @@ class RegisterViewModel(
                         registeredEmail = trimmedEmail
                         if (isGoogleRegistration && !result.data.accessToken.isNullOrBlank()) {
                             fcmTokenRegistrar.syncCurrentToken(viewModelScope)
-                            _message.tryEmit("Dang ky thanh cong")
+                            _message.tryEmit("Đăng ký thành công")
                             _registerSuccess.tryEmit(RegisterDestination.Dashboard)
+                        } else if (isGoogleRegistration) {
+                            _message.tryEmit(result.data.message ?: "Đăng ký thành công. Vui lòng đăng nhập.")
+                            _registerSuccess.tryEmit(RegisterDestination.Login)
                         } else if (result.data.requiresOtp) {
                             _currentStep.value = 2
-                            _message.tryEmit(result.data.message ?: "Ma OTP da duoc gui den email dang ky")
+                            _message.tryEmit(result.data.message ?: "Mã OTP đã được gửi đến email đăng ký")
                         } else {
-                            _message.tryEmit(result.data.message ?: "Dang ky thanh cong. Vui long dang nhap.")
+                            _message.tryEmit(result.data.message ?: "Đăng ký thành công. Vui lòng đăng nhập.")
                             _registerSuccess.tryEmit(RegisterDestination.Login)
                         }
                     }
@@ -113,7 +117,7 @@ class RegisterViewModel(
                             _currentStep.value = 2
                             resendOtp()
                         } else {
-                            _errorMessage.tryEmit(result.exception.message ?: "Dang ky that bai")
+                            _errorMessage.tryEmit(result.exception.message ?: "Đăng ký thất bại")
                         }
                     }
                 }
@@ -123,7 +127,7 @@ class RegisterViewModel(
 
     fun resendOtp() {
         if (registeredEmail.isBlank()) {
-            _errorMessage.tryEmit("Email dang ky khong hop le")
+            _errorMessage.tryEmit("Email đăng ký không hợp lệ")
             return
         }
         viewModelScope.launch {
@@ -132,14 +136,14 @@ class RegisterViewModel(
                     is ApiResult.Loading -> _isLoading.value = true
                     is ApiResult.Success -> {
                         _isLoading.value = false
-                        _message.tryEmit(result.data.message.ifBlank { "Ma OTP da duoc gui lai" })
+                        _message.tryEmit(result.data.message.ifBlank { "Mã OTP đã được gửi lại" })
                     }
                     is ApiResult.Error -> {
                         _isLoading.value = false
                         if (result.exception.isOtpRateLimited()) {
-                            _message.tryEmit("OTP da duoc gui truoc do. Hay kiem tra email hoac thu lai sau it phut.")
+                            _message.tryEmit("OTP đã được gửi trước đó. Hãy kiểm tra email hoặc thử lại sau ít phút.")
                         } else {
-                            _errorMessage.tryEmit(result.exception.message ?: "Gui OTP that bai")
+                            _errorMessage.tryEmit(result.exception.message ?: "Gửi OTP thất bại")
                         }
                     }
                 }
@@ -149,11 +153,11 @@ class RegisterViewModel(
 
     fun verifyOtp(otp: String) {
         if (otp.length < 6) {
-            _errorMessage.tryEmit("Vui long nhap day du ma OTP")
+            _errorMessage.tryEmit("Vui lòng nhập đầy đủ mã OTP")
             return
         }
         if (registeredEmail.isBlank()) {
-            _errorMessage.tryEmit("Email dang ky khong hop le")
+            _errorMessage.tryEmit("Email đăng ký không hợp lệ")
             return
         }
 
@@ -169,15 +173,15 @@ class RegisterViewModel(
                     is ApiResult.Success -> {
                         _isLoading.value = false
                         if (result.data.verified) {
-                            _message.tryEmit(result.data.message.ifBlank { "Xac thuc thanh cong. Vui long dang nhap." })
+                            _message.tryEmit(result.data.message.ifBlank { "Xác thực thành công. Vui lòng đăng nhập." })
                             _registerSuccess.tryEmit(RegisterDestination.Login)
                         } else {
-                            _errorMessage.tryEmit(result.data.message.ifBlank { "OTP khong hop le" })
+                            _errorMessage.tryEmit(result.data.message.ifBlank { "OTP không hợp lệ" })
                         }
                     }
                     is ApiResult.Error -> {
                         _isLoading.value = false
-                        _errorMessage.tryEmit(result.exception.message ?: "Xac thuc OTP that bai")
+                        _errorMessage.tryEmit(result.exception.message ?: "Xác thực OTP thất bại")
                     }
                 }
             }
@@ -187,29 +191,34 @@ class RegisterViewModel(
     private fun ApiException.isOtpRateLimited(): Boolean {
         val normalizedCode = code.lowercase()
         val normalizedMessage = message.lowercase()
+        val searchableMessage = message.toSearchableText()
         return httpCode == 429 ||
             normalizedCode.contains("rate") ||
             normalizedCode.contains("too_many") ||
             normalizedMessage.contains("too many") ||
             normalizedMessage.contains("rate") ||
-            normalizedMessage.contains("qua nhieu") ||
-            normalizedMessage.contains("quÃ¡ nhiá»u")
+            searchableMessage.contains("qua nhieu")
     }
 
     private fun ApiException.canContinueWithOtp(): Boolean {
         val normalizedCode = code.lowercase()
         val normalizedMessage = message.lowercase()
+        val searchableMessage = message.toSearchableText()
         return httpCode == 409 ||
             normalizedCode.contains("already_exists") ||
             normalizedCode.contains("email_exists") ||
             normalizedCode.contains("account_inactive") ||
             normalizedCode.contains("inactive") ||
             normalizedMessage.contains("already exists") ||
-            normalizedMessage.contains("da ton tai") ||
-            normalizedMessage.contains("Ä‘Ã£ tá»“n táº¡i") ||
+            searchableMessage.contains("da ton tai") ||
             normalizedMessage.contains("inactive") ||
-            normalizedMessage.contains("chua kich hoat") ||
-            normalizedMessage.contains("chÆ°a kÃ­ch hoáº¡t")
+            searchableMessage.contains("chua kich hoat")
+    }
+
+    private fun String.toSearchableText(): String {
+        return Normalizer.normalize(lowercase(), Normalizer.Form.NFD)
+            .replace("\\p{Mn}+".toRegex(), "")
+            .replace('đ', 'd')
     }
 }
 

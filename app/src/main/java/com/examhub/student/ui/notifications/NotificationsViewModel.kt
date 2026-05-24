@@ -64,6 +64,10 @@ class NotificationsViewModel(
                                     ?: notif.metadata.stringValue("appeal_id")
                                     ?: notif.data.stringValue("appealId")
                                     ?: notif.data.stringValue("appeal_id"),
+                                targetId = notif.targetId,
+                                entityId = notif.entityId,
+                                metadata = notif.metadata,
+                                data = notif.data,
                                 isRead = notif.isRead,
                                 createdAt = notif.createdAt
                             )

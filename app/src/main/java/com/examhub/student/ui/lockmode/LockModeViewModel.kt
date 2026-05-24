@@ -3,11 +3,16 @@ package com.examhub.student.ui.lockmode
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.google.gson.Gson
 import com.examhub.student.R
 import com.examhub.student.model.ApiResult
 import com.examhub.student.model.request.LockHeartbeatRequest
 import com.examhub.student.model.request.LockViolationRequest
+import com.examhub.student.model.response.UserResponse
 import com.examhub.student.repository.LockModeRepository
+import com.examhub.student.service.NetworkStatusProvider
+import com.examhub.student.service.OfflineCacheManager
+import com.examhub.student.service.TokenManager
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -24,7 +29,10 @@ import java.util.TimeZone
 
 class LockModeViewModel(
     private val lockModeRepository: LockModeRepository,
-    private val context: Context
+    private val context: Context,
+    private val offlineCacheManager: OfflineCacheManager,
+    private val tokenManager: TokenManager,
+    private val gson: Gson
 ) : ViewModel() {
     private val _remainingSeconds = MutableStateFlow(0)
     val remainingSeconds: StateFlow<Int> = _remainingSeconds.asStateFlow()
@@ -34,14 +42,17 @@ class LockModeViewModel(
     val timeExpired: SharedFlow<Unit> = _timeExpired.asSharedFlow()
     private val _queuedViolationCount = MutableStateFlow(0)
     val queuedViolationCount: StateFlow<Int> = _queuedViolationCount.asStateFlow()
+    private val _omrCodes = MutableStateFlow(LockModeOmrCodes())
+    val omrCodes: StateFlow<LockModeOmrCodes> = _omrCodes.asStateFlow()
 
     private var timerJob: Job? = null
     private var heartbeatJob: Job? = null
     private var sessionId: String = ""
 
-    fun start(sessionId: String, initialSeconds: Int) {
+    fun start(sessionId: String, examId: String, initialSeconds: Int, argCodes: LockModeOmrCodes = LockModeOmrCodes()) {
         this.sessionId = sessionId
         if (_remainingSeconds.value <= 0) _remainingSeconds.value = initialSeconds.coerceAtLeast(0)
+        loadOmrCodes(examId, argCodes)
         startTimer()
         startHeartbeat()
     }
@@ -89,7 +100,7 @@ class LockModeViewModel(
                 lockModeRepository.heartbeat(
                     sessionId,
                     LockHeartbeatRequest(
-                        network = mapOf("type" to "unknown", "strength" to "unknown"),
+                        network = NetworkStatusProvider.currentNetwork(context),
                         appInForeground = true
                     )
                 ).collect { result ->
@@ -105,9 +116,71 @@ class LockModeViewModel(
         }
     }
 
+    private fun loadOmrCodes(examId: String, argCodes: LockModeOmrCodes) {
+        val mode = readStudentIdentifierMode(examId)
+        val profile = tokenManager.getCachedProfileJson()
+            ?.let { raw -> runCatching { gson.fromJson(raw, UserResponse::class.java) }.getOrNull() }
+        val cachedStudentCode = when (mode) {
+            StudentIdentifierMode.INTERNAL -> listOfNotNull(
+                profile?.student?.internalId,
+                profile?.student?.id
+            ).firstOrNull { it.isNotBlank() }.orEmpty()
+            StudentIdentifierMode.EXTERNAL -> profile?.student?.studentCode.orEmpty()
+            StudentIdentifierMode.UNKNOWN -> listOfNotNull(
+                profile?.student?.studentCode,
+                profile?.student?.internalId,
+                profile?.student?.id
+            ).firstOrNull { it.isNotBlank() }.orEmpty()
+        }
+        val cachedClassCode = offlineCacheManager.getExamClassCode(examId)
+            ?: offlineCacheManager.getCachedClassBasics()
+                .takeIf { it.size == 1 }
+                ?.firstOrNull()
+                ?.classCode
+                .orEmpty()
+        _omrCodes.value = LockModeOmrCodes(
+            classCode = argCodes.classCode.ifBlank { cachedClassCode },
+            studentCode = argCodes.studentCode.ifBlank { cachedStudentCode },
+            studentCodeMode = argCodes.studentCodeMode.ifBlank { mode.label }
+        )
+    }
+
+    private fun readStudentIdentifierMode(examId: String): StudentIdentifierMode {
+        val rawTemplate = offlineCacheManager.getTemplate(examId) ?: return StudentIdentifierMode.UNKNOWN
+        return runCatching {
+            val root = org.json.JSONObject(rawTemplate)
+            listOf(
+                root.optString("student_code_type"),
+                root.optString("identification_mode")
+            ).firstNotNullOfOrNull { StudentIdentifierMode.from(it) } ?: StudentIdentifierMode.UNKNOWN
+        }.getOrDefault(StudentIdentifierMode.UNKNOWN)
+    }
+
     private fun nowIso(): String {
         return SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US).apply {
             timeZone = TimeZone.getTimeZone("UTC")
         }.format(Date())
     }
+
+    private enum class StudentIdentifierMode(val label: String) {
+        INTERNAL("INTERNAL"),
+        EXTERNAL("EXTERNAL"),
+        UNKNOWN("UNKNOWN");
+
+        companion object {
+            fun from(value: String?): StudentIdentifierMode? {
+                return when (value?.trim()?.uppercase()) {
+                    "INTERNAL" -> INTERNAL
+                    "EXTERNAL" -> EXTERNAL
+                    else -> null
+                }
+            }
+        }
+    }
 }
+
+data class LockModeOmrCodes(
+    val classCode: String = "",
+    val studentCode: String = "",
+    val studentCodeMode: String = "UNKNOWN"
+)

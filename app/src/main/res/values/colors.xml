@@ -114,6 +114,18 @@
     <color name="button_primary_pressed">@color/army_green_dark</color>
     <color name="button_secondary_bg">@android:color/transparent</color>
 
+    <!-- Register screen aliases: keep XML readable while following the app theme. -->
+    <color name="register_background">@color/background</color>
+    <color name="register_surface">@color/surface</color>
+    <color name="register_text_primary">@color/text_primary</color>
+    <color name="register_text_secondary">@color/text_secondary</color>
+    <color name="register_placeholder">@color/text_hint</color>
+    <color name="register_border">@color/outline_variant</color>
+    <color name="register_primary">@color/primary</color>
+    <color name="register_primary_pressed">@color/primary_dark</color>
+    <color name="register_primary_disabled">@color/text_disabled</color>
+    <color name="register_error">@color/error</color>
+
     <!-- Legacy (keep for old code) -->
     <color name="purple_200">#FFBB86FC</color>
     <color name="purple_500">#FF6200EE</color>

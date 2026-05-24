@@ -110,6 +110,7 @@ class ExamDetailViewModel(
         }
         _templateName.value = exam.template?.name ?: "Mẫu OMR đã sẵn sàng khi bắt đầu bài"
         _progressText.value = "Sẵn sàng nộp bài"
+        offlineCacheManager.saveExamClassCode(exam.id, exam.classInfo?.classCode)
         offlineCacheManager.saveExamBasic(exam.toCachedExam())
     }
 
@@ -131,7 +132,7 @@ class ExamDetailViewModel(
             examRepository.getExamTemplate(currentExamId).collect { result ->
                 when (result) {
                     is ApiResult.Success -> {
-                        offlineCacheManager.saveTemplate(currentExamId, gson.toJson(result.data))
+                        offlineCacheManager.saveTemplate(currentExamId, gson.toJson(result.data.toCacheMap()))
                         _isOfflineReady.value = offlineCacheManager.isOfflineReady(currentExamId)
                         _downloadStep.value = ""
                         _isDownloading.value = false
@@ -202,7 +203,14 @@ class ExamDetailViewModel(
         val gridConfig = template.gridConfig ?: return
         offlineCacheManager.saveTemplate(
             currentExamId,
-            gson.toJson(mapOf("gridConfig" to gridConfig))
+            gson.toJson(
+                buildMap<String, Any?> {
+                    put("gridConfig", gridConfig)
+                    session.studentCodeType?.takeIf { it.isNotBlank() }?.let {
+                        put("student_code_type", it)
+                    }
+                }
+            )
         )
         offlineCacheManager.markOfflineReady(currentExamId)
         _isOfflineReady.value = true
@@ -233,5 +241,18 @@ class ExamDetailViewModel(
             isOfflineReady = offlineCacheManager.getTemplate(id) != null,
             date = onlineConfig?.startTime.orEmpty()
         )
+    }
+
+    private fun com.examhub.student.model.response.OmrTemplateResponse.toCacheMap(): Map<String, Any?> {
+        return buildMap {
+            gridConfig?.let { put("gridConfig", it) }
+            anchorPoints?.let { put("anchor_points", it) }
+            studentCodeType?.takeIf { it.isNotBlank() }?.let {
+                put("student_code_type", it)
+            }
+            identificationMode?.takeIf { it.isNotBlank() }?.let {
+                put("identification_mode", it)
+            }
+        }
     }
 }

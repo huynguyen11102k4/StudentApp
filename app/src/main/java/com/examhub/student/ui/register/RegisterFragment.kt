@@ -5,6 +5,7 @@ import android.text.Editable
 import android.text.InputFilter
 import android.text.InputType
 import android.text.TextWatcher
+import android.util.Patterns
 import android.view.KeyEvent
 import android.view.Gravity
 import android.view.LayoutInflater
@@ -29,6 +30,7 @@ class RegisterFragment : Fragment() {
     private val viewModel: RegisterViewModel by viewModel()
     private val otpEditTexts = mutableListOf<EditText>()
     private var googleIdToken: String = ""
+    private var isLoading = false
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentRegisterBinding.inflate(inflater, container, false)
@@ -47,7 +49,9 @@ class RegisterFragment : Fragment() {
         setupGoogleRegistrationMode()
         setupOtpFields()
         setupClickListeners()
+        setupFormValidation()
         observeViewModel()
+        updateRegisterButtonState()
     }
 
     private fun setupPrefill() {
@@ -120,6 +124,7 @@ class RegisterFragment : Fragment() {
         binding.btnBack.setOnClickListener { findNavController().navigateUp() }
 
         binding.btnRegister.setOnClickListener {
+            if (!validateForm(showErrors = true)) return@setOnClickListener
             viewModel.register(
                 fullName = binding.etFullName.text.toString(),
                 email = binding.etEmail.text.toString(),
@@ -138,6 +143,70 @@ class RegisterFragment : Fragment() {
         binding.btnResendOtp.setOnClickListener {
             viewModel.resendOtp()
         }
+
+        binding.btnLoginLink.setOnClickListener {
+            findNavController().navigate(R.id.action_register_to_login)
+        }
+    }
+
+    private fun setupFormValidation() {
+        val watcher = object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) = Unit
+            override fun afterTextChanged(s: Editable?) {
+                clearFieldErrors()
+                updateRegisterButtonState()
+            }
+        }
+        listOf(
+            binding.etFullName,
+            binding.etEmail,
+            binding.etPassword,
+            binding.etConfirmPassword
+        ).forEach { editText ->
+            editText.addTextChangedListener(watcher)
+            editText.setOnFocusChangeListener { _, hasFocus ->
+                if (!hasFocus) validateForm(showErrors = true)
+            }
+        }
+    }
+
+    private fun validateForm(showErrors: Boolean): Boolean {
+        val isGoogleRegistration = googleIdToken.isNotBlank()
+        val fullName = binding.etFullName.text?.toString().orEmpty().trim()
+        val email = binding.etEmail.text?.toString().orEmpty().trim()
+        val password = binding.etPassword.text?.toString().orEmpty()
+        val confirmPassword = binding.etConfirmPassword.text?.toString().orEmpty()
+
+        var valid = true
+        if (fullName.isBlank()) {
+            valid = false
+            if (showErrors) binding.tilFullName.error = getString(R.string.register_validation_name_required)
+        }
+        if (email.isBlank() || !Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
+            valid = false
+            if (showErrors) binding.tilEmail.error = getString(R.string.login_validation_email_invalid)
+        }
+        if (!isGoogleRegistration && password.length < 6) {
+            valid = false
+            if (showErrors) binding.tilPassword.error = getString(R.string.register_validation_password_short)
+        }
+        if (!isGoogleRegistration && confirmPassword != password) {
+            valid = false
+            if (showErrors) binding.tilConfirmPassword.error = getString(R.string.register_validation_password_mismatch)
+        }
+        return valid
+    }
+
+    private fun clearFieldErrors() {
+        binding.tilFullName.error = null
+        binding.tilEmail.error = null
+        binding.tilPassword.error = null
+        binding.tilConfirmPassword.error = null
+    }
+
+    private fun updateRegisterButtonState() {
+        binding.btnRegister.isEnabled = !isLoading && validateForm(showErrors = false)
     }
 
     private fun observeViewModel() {
@@ -167,8 +236,10 @@ class RegisterFragment : Fragment() {
             }
             launch {
                 viewModel.isLoading.collect { loading ->
+                    isLoading = loading
                     binding.progressBar.visibility = if (loading) View.VISIBLE else View.GONE
-                    binding.btnRegister.isEnabled = !loading
+                    binding.btnRegister.text = getString(if (loading) R.string.register_loading else R.string.register_button)
+                    updateRegisterButtonState()
                     binding.btnVerifyOtp.isEnabled = !loading
                     binding.btnResendOtp.isEnabled = !loading
                 }
@@ -177,12 +248,7 @@ class RegisterFragment : Fragment() {
     }
 
     private fun showOtpStep(showOtp: Boolean) {
-        binding.tilFullName.isVisible = !showOtp
-        binding.tilEmail.isVisible = !showOtp
-        binding.tilStudentCode.isVisible = !showOtp
-        binding.tilPassword.isVisible = !showOtp && googleIdToken.isBlank()
-        binding.tilConfirmPassword.isVisible = !showOtp && googleIdToken.isBlank()
-        binding.btnRegister.isVisible = !showOtp
+        binding.registerFormContent.isVisible = !showOtp
         binding.registerOtpContent.isVisible = showOtp
     }
 

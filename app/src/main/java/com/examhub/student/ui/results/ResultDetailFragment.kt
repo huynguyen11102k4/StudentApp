@@ -20,7 +20,9 @@ import com.examhub.student.ui.applySystemWindowInsets
 import com.examhub.student.ui.collectOnStarted
 import kotlinx.coroutines.launch
 import org.koin.androidx.viewmodel.ext.android.viewModel
+import java.text.SimpleDateFormat
 import java.util.Locale
+import java.util.TimeZone
 
 class ResultDetailFragment : Fragment() {
     private var _binding: FragmentResultDetailBinding? = null
@@ -55,16 +57,37 @@ class ResultDetailFragment : Fragment() {
     private fun bindResult(result: StudentResultDetailResponse) {
         binding.tvExamName.text = result.exam?.name ?: getString(R.string.result_detail_default_title)
         binding.tvSubject.text = result.exam?.subject.orEmpty()
-        binding.tvScore.text = result.totalScore?.let { String.format(Locale.US, "%.2f", it) } ?: "--"
-        binding.tvGradedAt.text = result.gradedAt.orEmpty()
+        binding.tvScore.text = result.totalScore?.let { String.format(Locale.US, "%.1f", it) } ?: "--"
+        binding.tvQuestionCount.text = result.exam?.totalQuestions
+            ?.let { getString(R.string.result_detail_question_count_format, it) }
+            ?: ""
+        binding.tvDuration.text = result.exam?.duration
+            ?.let { getString(R.string.result_detail_duration_format, it) }
+            ?: ""
+        binding.tvGradedAt.text = formatGradedAt(result.gradedAt)
         adapter.submitList(result.answerDetails)
         val imageUrl = result.processedImageUrl ?: result.dewarpedImageUrl ?: result.rawImageUrl
         if (imageUrl.isNullOrBlank()) {
+            binding.imageCard.visibility = View.GONE
             binding.ivResult.visibility = View.GONE
         } else {
+            binding.imageCard.visibility = View.VISIBLE
             binding.ivResult.visibility = View.VISIBLE
             Glide.with(this).load(imageUrl).into(binding.ivResult)
         }
+    }
+
+    private fun formatGradedAt(value: String?): String {
+        if (value.isNullOrBlank()) return getString(R.string.result_detail_ungraded)
+        val output = SimpleDateFormat("HH:mm dd/MM/yyyy", Locale.forLanguageTag("vi-VN"))
+        val parsers = listOf(
+            SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US),
+            SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US)
+        ).onEach { it.timeZone = TimeZone.getTimeZone("UTC") }
+        val formatted = parsers.firstNotNullOfOrNull { parser ->
+            runCatching { parser.parse(value)?.let(output::format) }.getOrNull()
+        } ?: value
+        return getString(R.string.result_detail_graded_at_format, formatted)
     }
 
     private fun showCreateAppealDialog() {

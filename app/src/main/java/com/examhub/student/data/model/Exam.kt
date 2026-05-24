@@ -13,5 +13,7 @@ data class Exam(
     val gradedCount: Int,
     val totalStudents: Int,
     val isOfflineReady: Boolean = false,
-    val date: String = ""
+    val date: String = "",
+    val resultSheetId: String? = null,
+    val hasSubmitted: Boolean = false
 ) : Serializable

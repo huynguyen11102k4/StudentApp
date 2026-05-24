@@ -51,8 +51,13 @@ class ExamListFragment : Fragment() {
         }
 
         adapter = RecentExamAdapter { exam ->
-            val bundle = Bundle().apply { putString("examId", exam.id) }
-            findNavController().navigate(R.id.action_exam_list_to_exam_detail, bundle)
+            if (exam.hasSubmitted && !exam.resultSheetId.isNullOrBlank()) {
+                val bundle = Bundle().apply { putString("sheetId", exam.resultSheetId) }
+                findNavController().navigate(R.id.resultDetailFragment, bundle)
+            } else {
+                val bundle = Bundle().apply { putString("examId", exam.id) }
+                findNavController().navigate(R.id.action_exam_list_to_exam_detail, bundle)
+            }
         }
         binding.rvExams.layoutManager = LinearLayoutManager(requireContext())
         binding.rvExams.adapter = adapter
@@ -153,7 +158,9 @@ class ExamListFragment : Fragment() {
         val statusFiltered = when (selectedFilter) {
             ExamFilter.ALL -> allExams
             ExamFilter.READY -> allExams.filter { it.isOfflineReady }
-            ExamFilter.PROCESSING -> allExams.filter { it.status.equals("PROCESSING", ignoreCase = true) }
+            ExamFilter.PROCESSING -> allExams.filter {
+                it.hasSubmitted || it.status.equals("PROCESSING", ignoreCase = true)
+            }
             ExamFilter.CLOSED -> allExams.filter { it.status.equals("CLOSED", ignoreCase = true) || it.status.equals("DONE", ignoreCase = true) }
         }
         val query = searchQuery.trim()

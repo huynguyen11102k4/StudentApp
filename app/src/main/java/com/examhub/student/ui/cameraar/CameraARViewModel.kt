@@ -1,5 +1,6 @@
 package com.examhub.student.ui.cameraar
 
+import android.content.Context
 import android.graphics.Bitmap
 import android.util.Base64
 import androidx.lifecycle.ViewModel
@@ -10,6 +11,7 @@ import com.examhub.student.model.request.LockViolationRequest
 import com.examhub.student.omr.OmrProcessor
 import com.examhub.student.omr.OmrReviewStore
 import com.examhub.student.repository.LockModeRepository
+import com.examhub.student.service.NetworkStatusProvider
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -30,7 +32,8 @@ import java.util.TimeZone
 class CameraARViewModel(
     private val omrProcessor: OmrProcessor,
     private val omrReviewStore: OmrReviewStore,
-    private val lockModeRepository: LockModeRepository
+    private val lockModeRepository: LockModeRepository,
+    private val context: Context
 ) : ViewModel() {
 
     private val _flashMode = MutableStateFlow("off")
@@ -187,7 +190,7 @@ class CameraARViewModel(
                 lockModeRepository.heartbeat(
                     currentSessionId,
                     LockHeartbeatRequest(
-                        network = mapOf("type" to "unknown", "strength" to "unknown"),
+                        network = NetworkStatusProvider.currentNetwork(context),
                         appInForeground = true
                     )
                 ).collect { result ->

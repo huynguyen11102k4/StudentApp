@@ -7,11 +7,14 @@
     <dimen name="spacing_4">4dp</dimen>
     <dimen name="spacing_6">6dp</dimen>
     <dimen name="spacing_8">8dp</dimen>
+    <dimen name="spacing_10">10dp</dimen>
     <dimen name="spacing_12">12dp</dimen>
     <dimen name="spacing_16">16dp</dimen>
     <dimen name="spacing_20">20dp</dimen>
     <dimen name="spacing_24">24dp</dimen>
+    <dimen name="spacing_28">28dp</dimen>
     <dimen name="spacing_32">32dp</dimen>
+    <dimen name="spacing_36">36dp</dimen>
     <dimen name="spacing_40">40dp</dimen>
     <dimen name="spacing_48">48dp</dimen>
     <dimen name="spacing_56">56dp</dimen>
@@ -109,4 +112,15 @@
          ============================================================ -->
     <dimen name="input_padding_horizontal">16dp</dimen>
     <dimen name="input_padding_vertical">12dp</dimen>
+
+    <!-- Register screen redesign -->
+    <dimen name="register_screen_padding">24dp</dimen>
+    <dimen name="register_input_height">56dp</dimen>
+    <dimen name="register_input_radius">16dp</dimen>
+    <dimen name="register_input_gap">14dp</dimen>
+    <dimen name="register_button_height">56dp</dimen>
+    <dimen name="register_header_top">40dp</dimen>
+    <dimen name="register_title_size">32sp</dimen>
+    <dimen name="register_subtitle_size">16sp</dimen>
+    <dimen name="register_icon_size">20dp</dimen>
 </resources>

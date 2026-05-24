@@ -68,6 +68,51 @@ static void parsePointMap(JNIEnv* env, jobject mapObj, std::map<int, cv::Point2f
     }
 }
 
+static std::vector<DetectedMarker> detectedMarkersFromMap(
+        const std::map<int, cv::Point2f>& detectedMap
+) {
+    std::vector<DetectedMarker> markers;
+    markers.reserve(detectedMap.size());
+    for (const auto& pair : detectedMap) {
+        DetectedMarker marker;
+        marker.id = pair.first;
+        marker.center = pair.second;
+        markers.push_back(marker);
+    }
+    return markers;
+}
+
+static std::vector<AnchorPoint> anchorsFromMap(
+        const std::map<int, cv::Point2f>& expectedMap,
+        int width,
+        int height
+) {
+    std::vector<AnchorPoint> anchors;
+    anchors.reserve(expectedMap.size());
+    for (const auto& pair : expectedMap) {
+        anchors.push_back(AnchorPoint{
+            pair.first,
+            pair.second.x,
+            pair.second.y,
+            width > 0 ? pair.second.x / static_cast<float>(width) : 0.0f,
+            height > 0 ? pair.second.y / static_cast<float>(height) : 0.0f,
+        });
+    }
+    return anchors;
+}
+
+static void copyOrResizeToDst(const cv::Mat& warped, cv::Mat& dst, int width, int height) {
+    if (warped.empty()) {
+        return;
+    }
+
+    if (width > 0 && height > 0 && (warped.cols != width || warped.rows != height)) {
+        cv::resize(warped, dst, cv::Size(width, height));
+    } else {
+        warped.copyTo(dst);
+    }
+}
+
 /**
  * JNI: Analyze distortion
  */
@@ -178,10 +223,41 @@ Java_com_examhub_student_NativeLib_meshWarp(
         jint gridSize,
         jdouble smoothness
 ) {
-    LOGE("MeshWarp is currently a stub! Falling back to simple resize.");
+    LOGI("meshWarp called: %dx%d, gridSize=%d, smoothness=%.2f", width, height, gridSize, smoothness);
     cv::Mat& src = matFromAddr(srcAddr);
     cv::Mat& dst = matFromAddr(dstAddr);
-    cv::resize(src, dst, cv::Size(width, height));
+
+    std::map<int, cv::Point2f> detectedMap;
+    std::map<int, cv::Point2f> expectedMap;
+    parsePointMap(env, detectedMarkersMap, detectedMap);
+    parsePointMap(env, expectedMarkersMap, expectedMap);
+
+    std::vector<cv::Point2f> srcPoints;
+    std::vector<cv::Point2f> dstPoints;
+    for (const auto& pair : detectedMap) {
+        auto expectedIt = expectedMap.find(pair.first);
+        if (expectedIt == expectedMap.end()) {
+            continue;
+        }
+        srcPoints.push_back(pair.second);
+        dstPoints.push_back(expectedIt->second);
+    }
+
+    if (srcPoints.size() < 4) {
+        LOGE("meshWarp needs at least 4 matched markers, found %zu. Falling back to resize.", srcPoints.size());
+        cv::resize(src, dst, cv::Size(width, height));
+        return;
+    }
+
+    cv::Mat warped = TpsWarper::tpsWarp(
+            src,
+            srcPoints,
+            dstPoints,
+            cv::Size(width, height),
+            smoothness
+    );
+    copyOrResizeToDst(warped, dst, width, height);
+    LOGI("meshWarp completed with %zu control points", srcPoints.size());
 }
 
 /**
@@ -199,10 +275,35 @@ Java_com_examhub_student_NativeLib_hybridWarp(
         jint height,
         jint blendMargin
 ) {
-    LOGE("HybridWarp is currently a stub! Falling back to simple resize.");
+    LOGI("hybridWarp called: %dx%d, blendMargin=%d", width, height, blendMargin);
     cv::Mat& src = matFromAddr(srcAddr);
     cv::Mat& dst = matFromAddr(dstAddr);
-    cv::resize(src, dst, cv::Size(width, height));
+
+    std::map<int, cv::Point2f> detectedMap;
+    std::map<int, cv::Point2f> expectedMap;
+    parsePointMap(env, detectedMarkersMap, detectedMap);
+    parsePointMap(env, expectedMarkersMap, expectedMap);
+
+    const auto detectedMarkers = detectedMarkersFromMap(detectedMap);
+    const auto expectedAnchors = anchorsFromMap(expectedMap, width, height);
+
+    if (detectedMarkers.size() < 4 || expectedAnchors.size() < 4) {
+        LOGE("hybridWarp needs at least 4 markers, detected=%zu expected=%zu. Falling back to resize.",
+             detectedMarkers.size(), expectedAnchors.size());
+        cv::resize(src, dst, cv::Size(width, height));
+        return;
+    }
+
+    MarkerDetector detector;
+    cv::Mat warped = detector.dewarpHybrid(src, detectedMarkers, expectedAnchors);
+    if (warped.empty()) {
+        LOGE("hybridWarp failed. Falling back to resize.");
+        cv::resize(src, dst, cv::Size(width, height));
+        return;
+    }
+
+    copyOrResizeToDst(warped, dst, width, height);
+    LOGI("hybridWarp completed with %zu detected markers", detectedMarkers.size());
 }
 
 /**

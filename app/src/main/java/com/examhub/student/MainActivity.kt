@@ -172,6 +172,11 @@ class MainActivity : AppCompatActivity() {
             ?: extras.getString("target_id")
             ?: extras.getString("entity_id")
             ?: extras.getString("link")?.extractLastId()
+        val examId = extras.getString("exam_id")
+            ?: extras.getString("examId")
+            ?: extras.getString("target_id")
+            ?: extras.getString("entity_id")
+            ?: extras.getString("link")?.extractLastId()
 
         if ((route == "appeal_detail" || type.equals("appeal_created", ignoreCase = true) || type.equals("appeal_updated", ignoreCase = true)) && !appealId.isNullOrBlank()) {
             navController.navigate(
@@ -180,7 +185,21 @@ class MainActivity : AppCompatActivity() {
                 navOptions { launchSingleTop = true }
             )
             intent.replaceExtras(Bundle())
+        } else if (isExamNotification(route, type) && !examId.isNullOrBlank()) {
+            navController.navigate(
+                R.id.examDetailFragment,
+                bundleOf("examId" to examId),
+                navOptions { launchSingleTop = true }
+            )
+            intent.replaceExtras(Bundle())
         }
+    }
+
+    private fun isExamNotification(route: String, type: String): Boolean {
+        return route.equals("exam_detail", ignoreCase = true) ||
+            route.equals("exam", ignoreCase = true) ||
+            listOf("exam_created", "exam_opened", "exam_upcoming", "exam_reminder", "exam_assigned")
+                .any { type.equals(it, ignoreCase = true) }
     }
 
     private fun observeAuthEvents() {

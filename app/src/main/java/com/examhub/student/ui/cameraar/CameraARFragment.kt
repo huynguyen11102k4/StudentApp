@@ -228,7 +228,7 @@ class CameraARFragment : Fragment() {
         binding.btnFlash.setImageResource(
             when (mode) {
                 "on" -> R.drawable.ic_flash_on
-                "auto" -> R.drawable.ic_notification  // placeholder for flash_auto
+                "auto" -> R.drawable.ic_flash_auto
                 else -> R.drawable.ic_flash_off
             }
         )

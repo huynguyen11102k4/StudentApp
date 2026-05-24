@@ -275,6 +275,44 @@
         <item name="boxCornerRadiusTopEnd">@dimen/corner_large</item>
         <item name="boxCornerRadiusBottomStart">@dimen/corner_large</item>
         <item name="boxCornerRadiusBottomEnd">@dimen/corner_large</item>
+        <!-- Prevent background flash/flicker on focus by using NONE mode for the inner box fill -->
+        <item name="boxBackgroundMode">outline</item>
+    </style>
+
+    <style name="Register.InputLayout" parent="Widget.Material3.TextInputLayout.OutlinedBox">
+        <item name="boxBackgroundMode">outline</item>
+        <item name="boxBackgroundColor">@color/register_surface</item>
+        <item name="boxStrokeColor">@color/register_input_stroke</item>
+        <item name="boxStrokeErrorColor">@color/register_error</item>
+        <item name="boxStrokeWidth">1dp</item>
+        <item name="boxStrokeWidthFocused">1dp</item>
+        <item name="boxCornerRadiusTopStart">@dimen/register_input_radius</item>
+        <item name="boxCornerRadiusTopEnd">@dimen/register_input_radius</item>
+        <item name="boxCornerRadiusBottomStart">@dimen/register_input_radius</item>
+        <item name="boxCornerRadiusBottomEnd">@dimen/register_input_radius</item>
+        <item name="hintEnabled">false</item>
+        <item name="hintTextColor">@color/register_placeholder</item>
+        <item name="startIconTint">@color/register_text_secondary</item>
+        <item name="endIconTint">@color/register_text_secondary</item>
+        <item name="errorTextColor">@color/register_error</item>
+    </style>
+
+    <style name="Register.EditText" parent="TextAppearance.Material3.BodyLarge">
+        <item name="android:textColor">@color/register_text_primary</item>
+        <item name="android:textColorHint">@color/register_placeholder</item>
+        <item name="android:textSize">15sp</item>
+        <item name="android:fontFamily">sans</item>
+        <item name="android:includeFontPadding">false</item>
+    </style>
+
+    <style name="Register.PrimaryButton" parent="Widget.Material3.Button">
+        <item name="backgroundTint">@color/register_button_tint</item>
+        <item name="android:textColor">@color/white</item>
+        <item name="cornerRadius">@dimen/register_input_radius</item>
+        <item name="android:textSize">17sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:minHeight">@dimen/register_button_height</item>
+        <item name="rippleColor">@color/register_primary_pressed</item>
     </style>
 
     <style name="Student.Badge" parent="Chip_Status">

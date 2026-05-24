@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import java.text.Normalizer
 
 class LoginViewModel(
     private val authRepository: AuthRepository,
@@ -30,6 +31,7 @@ class LoginViewModel(
     private val _activationRequired = MutableSharedFlow<String>(extraBufferCapacity = 1)
     val activationRequired: SharedFlow<String> = _activationRequired.asSharedFlow()
 
+    // Emits error message codes (e.g. "email_blank") or raw API error messages
     private val _errorMessage = MutableSharedFlow<String>(extraBufferCapacity = 1)
     val errorMessage: SharedFlow<String> = _errorMessage.asSharedFlow()
 
@@ -38,11 +40,11 @@ class LoginViewModel(
 
     fun login(email: String, password: String) {
         if (email.isBlank()) {
-            _errorMessage.tryEmit("Vui lòng nhập email")
+            _errorMessage.tryEmit("email_blank")
             return
         }
         if (password.isBlank()) {
-            _errorMessage.tryEmit("Vui lòng nhập mật khẩu")
+            _errorMessage.tryEmit("password_blank")
             return
         }
 
@@ -60,7 +62,7 @@ class LoginViewModel(
                         if (result.exception.isAccountInactive()) {
                             _activationRequired.tryEmit(email.trim())
                         } else {
-                            _errorMessage.tryEmit(result.exception.message ?: "Đăng nhập thất bại")
+                            _errorMessage.tryEmit(result.exception.message ?: "login_failed")
                         }
                     }
                 }
@@ -70,7 +72,7 @@ class LoginViewModel(
 
     fun loginWithGoogle(idToken: String, email: String? = null, fullName: String? = null) {
         if (idToken.isBlank()) {
-            _errorMessage.tryEmit("Không thể lấy token từ Google")
+            _errorMessage.tryEmit("google_token_missing")
             return
         }
 
@@ -85,17 +87,17 @@ class LoginViewModel(
                     }
                     is ApiResult.Error -> {
                         _isLoading.value = false
-                        if (result.exception.requiresRegistrationOrActivation()) {
+                        if (result.exception.requiresGoogleRegistration()) {
                             _googleRegistrationRequired.tryEmit(
                                 GoogleRegisterPrefill(
                                     email = email.orEmpty(),
                                     fullName = fullName.orEmpty(),
                                     googleIdToken = idToken,
-                                    startActivation = result.exception.isAccountInactive()
+                                    startActivation = false
                                 )
                             )
                         } else {
-                            _errorMessage.tryEmit(result.exception.message ?: "Đăng nhập Google thất bại")
+                            _errorMessage.tryEmit(result.exception.message ?: "google_login_failed")
                         }
                     }
                 }
@@ -103,13 +105,10 @@ class LoginViewModel(
         }
     }
 
-    private fun ApiException.requiresRegistrationOrActivation(): Boolean {
-        return isUserNotRegistered() || isAccountInactive()
-    }
-
     private fun ApiException.isUserNotRegistered(): Boolean {
         val normalizedCode = code.lowercase()
         val normalizedMessage = message.lowercase()
+        val searchableMessage = message.toSearchableText()
         return httpCode == 404 ||
             normalizedCode.contains("account_not_found") ||
             normalizedCode.contains("user_not_found") ||
@@ -124,20 +123,51 @@ class LoginViewModel(
             normalizedMessage.contains("email not registered") ||
             normalizedMessage.contains("not registered") ||
             normalizedMessage.contains("not found") ||
-            normalizedMessage.contains("chưa đăng ký") ||
-            normalizedMessage.contains("chua dang ky")
+            normalizedMessage.contains("not exist") ||
+            normalizedMessage.contains("does not exist") ||
+            searchableMessage.contains("chua dang ky")
+    }
+
+    private fun ApiException.requiresGoogleRegistration(): Boolean {
+        if (isUserNotRegistered()) return true
+        val normalizedCode = code.lowercase()
+        val normalizedMessage = message.lowercase()
+        val searchableMessage = message.toSearchableText()
+        val invalidToken = normalizedCode.contains("invalid_token") ||
+            normalizedMessage.contains("invalid token") ||
+            searchableMessage.contains("token khong hop le")
+
+        return !invalidToken && (
+            normalizedCode.contains("google") ||
+                normalizedCode.contains("registration_required") ||
+                normalizedCode.contains("register_required") ||
+                normalizedCode.contains("account_required") ||
+                normalizedCode.contains("not_linked") ||
+                normalizedMessage.contains("google") ||
+                normalizedMessage.contains("not linked") ||
+                searchableMessage.contains("chua lien ket") ||
+                searchableMessage.contains("can dang ky") ||
+                searchableMessage.contains("vui long dang ky") ||
+                httpCode == 401 ||
+                httpCode == 403
+            )
     }
 
     private fun ApiException.isAccountInactive(): Boolean {
         val normalizedCode = code.lowercase()
         val normalizedMessage = message.lowercase()
+        val searchableMessage = message.toSearchableText()
         return normalizedCode.contains("account_inactive") ||
             normalizedCode.contains("inactive") ||
             normalizedMessage.contains("inactive") ||
-            normalizedMessage.contains("chua kich hoat") ||
-            normalizedMessage.contains("chÆ°a kÃ­ch hoáº¡t") ||
-            normalizedMessage.contains("xac thuc otp") ||
-            normalizedMessage.contains("xÃ¡c thá»±c otp")
+            searchableMessage.contains("chua kich hoat") ||
+            searchableMessage.contains("xac thuc otp")
+    }
+
+    private fun String.toSearchableText(): String {
+        return Normalizer.normalize(lowercase(), Normalizer.Form.NFD)
+            .replace("\\p{Mn}+".toRegex(), "")
+            .replace('đ', 'd')
     }
 }
 

@@ -95,9 +95,21 @@ class NotificationsFragment : Fragment() {
     private fun handleNotificationClick(notification: com.examhub.student.data.model.AppNotification) {
         val type = notification.type.uppercase()
         val appealId = notification.appealId ?: notification.link?.extractLastId()
+        val examId = notification.targetId
+            ?: notification.entityId
+            ?: notification.data?.stringValue("exam_id")
+            ?: notification.data?.stringValue("examId")
+            ?: notification.metadata?.stringValue("exam_id")
+            ?: notification.metadata?.stringValue("examId")
+            ?: notification.link?.extractLastId()
         if ((type == "APPEAL_CREATED" || type == "APPEAL_UPDATED" || type == "APPEAL_NEW") && !appealId.isNullOrBlank()) {
             val bundle = Bundle().apply { putString("appealId", appealId) }
             findNavController().navigate(R.id.action_notifications_to_appeal_detail, bundle)
+            return
+        }
+        if ((type == "EXAM_CREATED" || type == "EXAM_OPENED" || type == "EXAM_UPCOMING" || type == "EXAM_REMINDER" || type == "EXAM_ASSIGNED") && !examId.isNullOrBlank()) {
+            val bundle = Bundle().apply { putString("examId", examId) }
+            findNavController().navigate(R.id.examDetailFragment, bundle)
             return
         }
 
@@ -121,6 +133,10 @@ class NotificationsFragment : Fragment() {
         return split('/', '?', '#')
             .asReversed()
             .firstOrNull { it.length >= 16 && it.any(Char::isDigit) }
+    }
+
+    private fun com.google.gson.JsonObject.stringValue(key: String): String? {
+        return get(key)?.takeIf { it.isJsonPrimitive }?.asString?.takeIf { it.isNotBlank() }
     }
 
     override fun onDestroyView() {

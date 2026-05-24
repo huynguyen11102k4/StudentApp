@@ -52,6 +52,13 @@ class LockModeFragment : Fragment() {
                 viewModel.message.collect { Snackbar.make(binding.root, it, Snackbar.LENGTH_LONG).show() }
             }
             launch {
+                viewModel.omrCodes.collect { codes ->
+                    binding.tvStudentCode.text = codes.studentCode.ifBlank { getString(R.string.lock_mode_code_empty) }
+                    binding.tvStudentCodeMode.text = getString(R.string.lock_mode_student_code_mode_format, codes.studentCodeMode)
+                    binding.tvClassCode.text = codes.classCode.ifBlank { getString(R.string.lock_mode_code_empty) }
+                }
+            }
+            launch {
                 viewModel.queuedViolationCount.collect { count ->
                     binding.tvViolationQueue.text = if (count > 0) {
                         getString(R.string.lock_mode_queue_format, count)
@@ -67,7 +74,16 @@ class LockModeFragment : Fragment() {
                 }
             }
         }
-        viewModel.start(sessionId, arguments?.getInt("remainingSeconds") ?: 0)
+        viewModel.start(
+            sessionId = sessionId,
+            examId = examId,
+            initialSeconds = arguments?.getInt("remainingSeconds") ?: 0,
+            argCodes = LockModeOmrCodes(
+                classCode = arguments?.getString("classCode").orEmpty(),
+                studentCode = arguments?.getString("studentCode").orEmpty(),
+                studentCodeMode = arguments?.getString("studentCodeMode").orEmpty()
+            )
+        )
         viewModel.flushViolations()
     }
 

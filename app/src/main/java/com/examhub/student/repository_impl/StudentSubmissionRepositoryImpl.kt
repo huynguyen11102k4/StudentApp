@@ -9,8 +9,10 @@ import com.examhub.student.model.response.PresignSubmissionImageResponse
 import com.examhub.student.model.response.StudentSubmitResponse
 import com.examhub.student.repository.StudentSubmissionRepository
 import com.examhub.student.service.StudentSubmissionApiService
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOn
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -42,7 +44,7 @@ class StudentSubmissionRepositoryImpl(
         }.onFailure { error ->
             emit(ApiResult.Error(ApiException(code = "UPLOAD_FAILED", message = error.message ?: "Upload anh that bai")))
         }
-    }
+    }.flowOn(Dispatchers.IO)
 
     override fun submit(
         sessionId: String,

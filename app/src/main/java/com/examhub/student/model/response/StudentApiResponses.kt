@@ -28,6 +28,7 @@ data class StartExamSessionResponse(
     private val legacyIsLockedMode: Boolean? = null
 ) {
     val sessionId: String get() = session?.sessionId ?: legacySessionId.orEmpty()
+    val studentCodeType: String? get() = exam?.studentCodeType
     val attemptNo: Int get() = session?.attemptNo ?: legacyAttemptNo ?: 0
     val startTime: String get() = session?.startTime ?: legacyStartTime.orEmpty()
     val endTime: String get() = session?.endTime ?: legacyEndTime.orEmpty()
@@ -48,6 +49,8 @@ data class StartedExamResponse(
     val examType: String?,
     @SerializedName("grading_type")
     val gradingType: String?,
+    @SerializedName(value = "student_code_type", alternate = ["studentCodeType", "student_id_type", "studentIdType", "student_identifier_type", "studentIdentifierType", "identification_mode", "identificationMode", "identifier_type", "identifierType", "code_type", "codeType"])
+    val studentCodeType: String? = null,
     val status: String?
 )
 

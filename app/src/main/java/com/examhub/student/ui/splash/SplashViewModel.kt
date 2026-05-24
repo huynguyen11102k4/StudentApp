@@ -23,7 +23,7 @@ class SplashViewModel(
     private val _destination = MutableStateFlow<SplashDestination?>(null)
     val destination: StateFlow<SplashDestination?> = _destination.asStateFlow()
 
-    private val _statusText = MutableStateFlow("Dang khoi dong...")
+    private val _statusText = MutableStateFlow("Đang khởi động...")
     val statusText: StateFlow<String> = _statusText.asStateFlow()
 
     private var started = false
@@ -35,7 +35,7 @@ class SplashViewModel(
             delay(800)
 
             if (!tokenManager.hasToken()) {
-                _statusText.value = "Chua dang nhap"
+                _statusText.value = "Chưa đăng nhập"
                 delay(300)
                 _destination.value = SplashDestination.Login
                 return@launch
@@ -43,14 +43,14 @@ class SplashViewModel(
 
             val hasNetwork = NetworkUtils.isNetworkAvailable(context)
             val hasRefreshToken = !tokenManager.getRefreshToken().isNullOrBlank()
-            _statusText.value = if (hasNetwork) "Dang kiem tra phien..." else "Che do ngoai tuyen..."
+            _statusText.value = if (hasNetwork) "Đang kiểm tra phiên..." else "Chế độ ngoại tuyến..."
 
             when {
                 tokenManager.isTokenValid() && !tokenManager.isTokenExpiringSoon() -> {
                     _destination.value = SplashDestination.Dashboard(if (hasNetwork) "online" else "offline")
                 }
                 hasRefreshToken -> {
-                    _statusText.value = if (hasNetwork) "Dang lam moi phien..." else "Che do ngoai tuyen..."
+                    _statusText.value = if (hasNetwork) "Đang làm mới phiên..." else "Chế độ ngoại tuyến..."
                     _destination.value = SplashDestination.Dashboard(if (hasNetwork) "online" else "offline-expired")
                 }
                 else -> {

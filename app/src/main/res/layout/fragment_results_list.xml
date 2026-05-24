@@ -14,6 +14,22 @@
         app:navigationIcon="@drawable/ic_close"
         app:title="@string/results_title" />
 
+    <TextView
+        android:id="@+id/tvResultsSubtitle"
+        style="@style/Text_Body_Medium"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:background="@color/background"
+        android:paddingStart="@dimen/spacing_20"
+        android:paddingTop="@dimen/spacing_16"
+        android:paddingEnd="@dimen/spacing_20"
+        android:paddingBottom="@dimen/spacing_8"
+        android:text="@string/results_subtitle"
+        android:textColor="@color/text_secondary"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/toolbar" />
+
     <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
         android:id="@+id/swipeRefresh"
         android:layout_width="0dp"
@@ -21,29 +37,50 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/toolbar">
+        app:layout_constraintTop_toBottomOf="@id/tvResultsSubtitle">
 
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/rvResults"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:clipToPadding="false"
-            android:padding="@dimen/spacing_16"
+            android:paddingStart="@dimen/spacing_16"
+            android:paddingTop="@dimen/spacing_8"
+            android:paddingEnd="@dimen/spacing_16"
+            android:paddingBottom="@dimen/screen_bottom_content_padding"
             app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager" />
     </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
 
-    <TextView
+    <LinearLayout
         android:id="@+id/emptyState"
-        style="@style/Text_Body_Medium"
-        android:layout_width="wrap_content"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:text="@string/results_empty"
-        android:textColor="@color/text_secondary"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:padding="@dimen/spacing_32"
         android:visibility="gone"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/toolbar" />
+        app:layout_constraintTop_toBottomOf="@id/toolbar">
+
+        <TextView
+            style="@style/Text_Title_Medium"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/results_empty"
+            android:textColor="@color/text_primary"
+            android:textStyle="bold" />
+
+        <TextView
+            style="@style/Text_Body_Medium"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/spacing_8"
+            android:gravity="center"
+            android:text="@string/results_empty_subtitle"
+            android:textColor="@color/text_secondary" />
+    </LinearLayout>
 
     <ProgressBar
         android:id="@+id/progressBar"

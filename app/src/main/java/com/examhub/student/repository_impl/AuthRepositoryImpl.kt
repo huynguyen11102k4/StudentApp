@@ -18,6 +18,7 @@ import com.examhub.student.model.response.StudentRegisterResponse
 import com.examhub.student.model.response.UserResponse
 import com.examhub.student.repository.AuthRepository
 import com.examhub.student.service.AuthApiService
+import com.examhub.student.service.OfflineCacheManager
 import com.examhub.student.service.TokenManager
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emitAll
@@ -29,6 +30,7 @@ import okhttp3.MultipartBody
 class AuthRepositoryImpl(
     private val apiService: AuthApiService,
     private val tokenManager: TokenManager,
+    private val offlineCacheManager: OfflineCacheManager,
     private val gson: Gson
 ) : AuthRepository {
     override fun registerStudent(request: StudentRegisterRequest): Flow<ApiResult<StudentRegisterResponse>> =
@@ -38,6 +40,7 @@ class AuthRepositoryImpl(
                     val accessToken = result.data.accessToken
                     val refreshToken = result.data.refreshToken
                     if (!accessToken.isNullOrBlank() && !refreshToken.isNullOrBlank()) {
+                        clearUserScopedCacheIfNeeded(result.data.user)
                         tokenManager.saveTokens(accessToken, refreshToken)
                         result.data.user?.let { user ->
                             tokenManager.saveCachedAvatarUrl(user.avatarUrl)
@@ -57,6 +60,7 @@ class AuthRepositoryImpl(
         safeApiFlow(gson) { apiService.login(request.copy(deviceId = request.deviceId ?: tokenManager.getDeviceId())) }
             .onEach { result ->
                 if (result is ApiResult.Success) {
+                    clearUserScopedCacheIfNeeded(result.data.user)
                     tokenManager.saveTokens(result.data.accessToken, result.data.refreshToken)
                     tokenManager.saveCachedAvatarUrl(result.data.user.avatarUrl)
                     tokenManager.saveCachedProfileJson(gson.toJson(result.data.user))
@@ -67,6 +71,7 @@ class AuthRepositoryImpl(
         safeApiFlow(gson) { apiService.loginWithGoogle(request.copy(deviceId = request.deviceId ?: tokenManager.getDeviceId())) }
             .onEach { result ->
                 if (result is ApiResult.Success) {
+                    clearUserScopedCacheIfNeeded(result.data.user)
                     tokenManager.saveTokens(result.data.accessToken, result.data.refreshToken)
                     tokenManager.saveCachedAvatarUrl(result.data.user.avatarUrl)
                     tokenManager.saveCachedProfileJson(gson.toJson(result.data.user))
@@ -81,13 +86,14 @@ class AuthRepositoryImpl(
         safeApiFlow(gson) { apiService.changePassword(request) }
 
     override fun getMe(): Flow<ApiResult<UserResponse>> = flow {
+        // Emit cached profile immediately for fast first render (stale-while-revalidate)
         val cachedProfile = tokenManager.getCachedProfileJson()
             ?.let { json -> runCatching { gson.fromJson(json, UserResponse::class.java) }.getOrNull() }
         if (cachedProfile != null) {
             emit(ApiResult.Success(cachedProfile))
-            return@flow
         }
 
+        // Always fetch fresh data from network to get latest fields (e.g. student.studentCode)
         emitAll(safeApiFlow(gson) { apiService.getMe() }
             .map { result ->
                 if (result is ApiResult.Success) {
@@ -150,4 +156,14 @@ class AuthRepositoryImpl(
 
     override fun revokeSession(sessionId: String): Flow<ApiResult<MessageResponse>> =
         safeApiFlow(gson) { apiService.revokeSession(sessionId) }
+
+    private fun clearUserScopedCacheIfNeeded(newUser: UserResponse?) {
+        val newUserId = newUser?.id?.takeIf { it.isNotBlank() } ?: return
+        val cachedUserId = tokenManager.getCachedProfileJson()
+            ?.let { raw -> runCatching { gson.fromJson(raw, UserResponse::class.java).id }.getOrNull() }
+        if (cachedUserId != newUserId) {
+            offlineCacheManager.clearUserScopedLists()
+        }
+    }
+
 }

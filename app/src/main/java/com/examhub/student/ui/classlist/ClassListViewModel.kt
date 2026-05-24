@@ -29,6 +29,10 @@ class ClassListViewModel(
     private val _message = MutableSharedFlow<String>(extraBufferCapacity = 1)
     val message: SharedFlow<String> = _message.asSharedFlow()
 
+    // true = joined successfully, false = blank code error, null = API error (with message in _message)
+    private val _joinResult = MutableSharedFlow<Boolean>(extraBufferCapacity = 1)
+    val joinResult: SharedFlow<Boolean> = _joinResult.asSharedFlow()
+
     fun loadClasses() {
         viewModelScope.launch {
             val cached = offlineCacheManager.getCachedClassBasics()
@@ -48,12 +52,9 @@ class ClassListViewModel(
                                     .filterNotNull()
                                     .filter { it.isNotBlank() }
                                     .joinToString(" - "),
-                                classCode = cls.internalId.orEmpty(),
+                                classCode = cls.resolvedInternalClassCode(),
                                 joinCode = info?.joinCode.orEmpty(),
-                                studentCount = info?.count?.classMembers
-                                    ?: info?.count?.students
-                                    ?: info?.count?.members
-                                    ?: 0,
+                                studentCount = cls.studentCount ?: info?.studentCount ?: 0,
                                 hasOfflineData = false
                             )
                         }
@@ -72,7 +73,7 @@ class ClassListViewModel(
     fun joinClass(joinCode: String) {
         val normalized = joinCode.trim()
         if (normalized.isBlank()) {
-            _message.tryEmit("Vui lòng nhập mã lớp")
+            _joinResult.tryEmit(false) // signal blank to Fragment, Fragment shows string
             return
         }
 
@@ -82,15 +83,20 @@ class ClassListViewModel(
                     is ApiResult.Loading -> _isLoading.value = true
                     is ApiResult.Success -> {
                         _isLoading.value = false
-                        _message.tryEmit("Đã tham gia lớp")
+                        _joinResult.tryEmit(true) // signal success to Fragment
                         loadClasses()
                     }
                     is ApiResult.Error -> {
                         _isLoading.value = false
-                        _message.tryEmit(result.exception.message ?: "Không thể tham gia lớp")
+                        _message.tryEmit(result.exception.message ?: "")
                     }
                 }
             }
         }
     }
+
+    private fun com.examhub.student.model.response.MobileClassResponse.resolvedInternalClassCode(): String {
+        return classInfo?.classCode.orEmpty()
+    }
+
 }

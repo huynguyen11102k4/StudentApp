@@ -6,7 +6,6 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import com.google.android.material.snackbar.Snackbar
-import com.examhub.student.R
 import com.examhub.student.databinding.FragmentClassDetailStudentBinding
 import com.examhub.student.model.response.MobileClassResponse
 import com.examhub.student.ui.applySystemWindowInsets
@@ -45,16 +44,37 @@ class ClassDetailFragment : Fragment() {
             .filter { it.isNotBlank() }
             .joinToString(" • ")
             .ifBlank { "Chưa cập nhật khối / năm học" }
-        binding.tvTeacher.text = info?.teacher?.user?.fullName.orEmpty()
-            .ifBlank { info?.teacher?.user?.email.orEmpty() }
-            .ifBlank { "Chưa cập nhật" }
-        binding.tvStatus.text = item.status ?: info?.status.orEmpty()
-        binding.tvJoinCode.text = info?.joinCode ?: item.internalId.orEmpty()
-        binding.tvStudentCount.text = (info?.count?.classMembers
+        binding.tvTeacher.text = listOf(
+            info?.teacher?.fullName.orEmpty().ifBlank { "Chưa cập nhật" },
+            info?.teacher?.email.orEmpty()
+        ).filter { it.isNotBlank() }.joinToString("\n")
+        binding.tvStatus.text = listOfNotNull(
+            (item.status ?: info?.status)?.takeIf { it.isNotBlank() },
+            item.joinedAt?.takeIf { it.isNotBlank() }?.let { "Tham gia: $it" },
+            item.approvedAt?.takeIf { it.isNotBlank() }?.let { "Duyệt: $it" }
+        ).joinToString("\n").ifBlank { "Chưa cập nhật" }
+        binding.tvStudentCount.text = (info?.studentCount
+            ?: item.studentCount
             ?: info?.count?.students
-            ?: info?.count?.members
+            ?: item.count?.students
+            ?: info?.count?.studentClasses
+            ?: info?.count?.studentClassesCamel
+            ?: item.count?.studentClasses
+            ?: item.count?.studentClassesCamel
             ?: 0).toString()
-        binding.tvExamCount.text = (info?.count?.exams ?: info?.count?.examAssignments ?: 0).toString()
+        binding.tvExamCount.text = (info?.examCount
+            ?: item.examCount
+            ?: info?.count?.exams
+            ?: item.count?.exams
+            ?: 0).toString()
+        binding.tvJoinCode.text = buildList {
+            info?.classCode?.takeIf { it.isNotBlank() }?.let { add("Mã lớp: $it") }
+            info?.joinCode?.takeIf { it.isNotBlank() }?.let { add("Mã tham gia: $it") }
+            info?.approvalMode?.takeIf { it.isNotBlank() }?.let { add("Cách duyệt: $it") }
+            item.internalId?.takeIf { it.isNotBlank() }?.let { add("Mã nội bộ của bạn: $it") }
+            item.studentId?.takeIf { it.isNotBlank() }?.let { add("Student ID: $it") }
+        }.joinToString("\n")
+        binding.tvJoinCode.visibility = if (binding.tvJoinCode.text.isNullOrBlank()) View.GONE else View.VISIBLE
     }
 
     override fun onDestroyView() {

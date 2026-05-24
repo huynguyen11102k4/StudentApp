@@ -52,8 +52,13 @@ class DashboardFragment : Fragment() {
 
     private fun setupRecyclerView() {
         recentExamsAdapter = RecentExamAdapter { exam ->
-            val bundle = Bundle().apply { putString("examId", exam.id) }
-            findNavController().navigate(R.id.action_dashboard_to_exam_detail, bundle)
+            if (exam.hasSubmitted && !exam.resultSheetId.isNullOrBlank()) {
+                val bundle = Bundle().apply { putString("sheetId", exam.resultSheetId) }
+                findNavController().navigate(R.id.resultDetailFragment, bundle)
+            } else {
+                val bundle = Bundle().apply { putString("examId", exam.id) }
+                findNavController().navigate(R.id.action_dashboard_to_exam_detail, bundle)
+            }
         }
         binding.rvRecentExams.layoutManager = LinearLayoutManager(requireContext())
         binding.rvRecentExams.adapter = recentExamsAdapter

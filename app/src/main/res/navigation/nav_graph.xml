@@ -140,6 +140,9 @@
         <argument android:name="sessionId" app:argType="string" android:defaultValue="" />
         <argument android:name="remainingSeconds" app:argType="integer" android:defaultValue="0" />
         <argument android:name="isLockedMode" app:argType="boolean" android:defaultValue="false" />
+        <argument android:name="classCode" app:argType="string" android:defaultValue="" />
+        <argument android:name="studentCode" app:argType="string" android:defaultValue="" />
+        <argument android:name="studentCodeMode" app:argType="string" android:defaultValue="" />
         <action android:id="@+id/action_lock_mode_to_camera_ar" app:destination="@id/cameraARFragment" />
     </fragment>
 
@@ -181,7 +184,10 @@
         android:name="com.examhub.student.ui.submissionend.SubmissionEndFragment"
         android:label="@string/submission_end_title"
         tools:layout="@layout/fragment_submission_end">
+        <argument android:name="examId" app:argType="string" android:defaultValue="" />
+        <argument android:name="sheetId" app:argType="string" android:defaultValue="" />
         <action android:id="@+id/action_submission_end_to_results" app:destination="@id/resultsListFragment" />
+        <action android:id="@+id/action_submission_end_to_result_detail" app:destination="@id/resultDetailFragment" />
     </fragment>
 
     <fragment

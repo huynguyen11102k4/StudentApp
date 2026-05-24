@@ -12,6 +12,7 @@ import com.examhub.student.data.model.Answer
 import com.examhub.student.omr.OmrReviewStore
 import com.examhub.student.repository.StudentSubmissionRepository
 import com.examhub.student.model.response.PresignSubmissionImageResponse
+import com.examhub.student.model.response.StudentSubmitResponse
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -33,8 +34,8 @@ class SmartReviewViewModel(
     private val _filteredAnswers = MutableStateFlow<List<Answer>>(emptyList())
     val filteredAnswers: StateFlow<List<Answer>> = _filteredAnswers.asStateFlow()
 
-    private val _savedSuccess = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
-    val savedSuccess: SharedFlow<Unit> = _savedSuccess.asSharedFlow()
+    private val _savedSuccess = MutableSharedFlow<StudentSubmitResponse>(extraBufferCapacity = 1)
+    val savedSuccess: SharedFlow<StudentSubmitResponse> = _savedSuccess.asSharedFlow()
 
     private val _errorMessage = MutableSharedFlow<String>(extraBufferCapacity = 1)
     val errorMessage: SharedFlow<String> = _errorMessage.asSharedFlow()
@@ -61,6 +62,9 @@ class SmartReviewViewModel(
     private var currentRawImageBase64: String = ""
     private var currentDewarpedImageBase64: String = ""
     private var currentDebugImageBase64: String = ""
+    private var currentLaplacianVariance: Float = 0f
+    private var currentMeanBrightness: Float = 0f
+    private var currentWarnings: List<String> = emptyList()
 
     fun loadReviewData(submissionId: String) {
         omrReviewStore.consume()?.let { result ->
@@ -78,6 +82,9 @@ class SmartReviewViewModel(
             currentRawImageBase64 = result.rawImageBase64
             currentDewarpedImageBase64 = result.dewarpedImageBase64
             currentDebugImageBase64 = result.debugImageBase64
+            currentLaplacianVariance = result.laplacianVariance
+            currentMeanBrightness = result.meanBrightness
+            currentWarnings = result.warnings
             setAnswers(result.answers)
             updateReviewState()
         }
@@ -157,14 +164,14 @@ class SmartReviewViewModel(
                         )
                     },
                     capturedAt = nowIso(),
-                    imageQualityScore = 85,
-                    qualityFeedback = mapOf("markers" to "ok")
+                    imageQualityScore = calculateImageQualityScore(),
+                    qualityFeedback = buildQualityFeedback()
                 )
             ).first { it !is ApiResult.Loading }
 
             _isLoading.value = false
             when (submit) {
-                is ApiResult.Success -> _savedSuccess.tryEmit(Unit)
+                is ApiResult.Success -> _savedSuccess.tryEmit(submit.data)
                 is ApiResult.Error -> _errorMessage.tryEmit(submit.exception.message ?: "Nộp bài thất bại")
                 else -> Unit
             }
@@ -219,6 +226,32 @@ class SmartReviewViewModel(
 
     private fun decodeBase64Image(base64: String): ByteArray? {
         return runCatching { Base64.decode(base64, Base64.DEFAULT) }.getOrNull()
+    }
+
+    private fun calculateImageQualityScore(): Int {
+        val blurScore = when {
+            currentLaplacianVariance <= 0f -> 0
+            currentLaplacianVariance >= 200f -> 45
+            else -> ((currentLaplacianVariance / 200f) * 45f).toInt()
+        }
+        val brightnessScore = when {
+            currentMeanBrightness <= 0f -> 0
+            currentMeanBrightness in 80f..220f -> 35
+            currentMeanBrightness < 80f -> ((currentMeanBrightness / 80f) * 35f).toInt()
+            else -> (((255f - currentMeanBrightness).coerceAtLeast(0f) / 35f) * 35f).toInt().coerceIn(0, 35)
+        }
+        val idScore = if (currentIdOk || !currentStudentIdEnabled && !currentClassCodeEnabled && !currentExamCodeEnabled) 10 else 0
+        val warningPenalty = (currentWarnings.size * 5).coerceAtMost(20)
+        return (blurScore + brightnessScore + idScore + 10 - warningPenalty).coerceIn(0, 100)
+    }
+
+    private fun buildQualityFeedback(): Map<String, String> {
+        return buildMap {
+            put("laplacian_variance", "%.2f".format(Locale.US, currentLaplacianVariance))
+            put("mean_brightness", "%.2f".format(Locale.US, currentMeanBrightness))
+            put("id_ok", currentIdOk.toString())
+            put("warnings", currentWarnings.joinToString(",").ifBlank { "none" })
+        }
     }
 
     fun setFallbackSession(sessionId: String) {

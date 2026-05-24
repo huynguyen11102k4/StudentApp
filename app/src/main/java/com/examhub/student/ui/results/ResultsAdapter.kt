@@ -8,7 +8,9 @@ import androidx.recyclerview.widget.RecyclerView
 import com.examhub.student.databinding.ItemResultBinding
 import com.examhub.student.model.response.StudentResultSummaryResponse
 import com.examhub.student.R
+import java.text.SimpleDateFormat
 import java.util.Locale
+import java.util.TimeZone
 
 class ResultsAdapter(
     private val onClick: (StudentResultSummaryResponse) -> Unit
@@ -27,10 +29,25 @@ class ResultsAdapter(
     ) : RecyclerView.ViewHolder(binding.root) {
         fun bind(result: StudentResultSummaryResponse) {
             binding.tvExamName.text = result.exam?.name ?: binding.root.context.getString(R.string.result_item_default_exam)
-            binding.tvSubject.text = result.exam?.subject.orEmpty()
-            binding.tvScore.text = result.totalScore?.let { String.format(Locale.US, "%.2f", it) } ?: "--"
-            binding.tvStatus.text = result.gradedAt ?: result.createdAt.orEmpty()
+            binding.tvSubject.text = listOfNotNull(
+                result.exam?.subject?.takeIf { it.isNotBlank() },
+                result.source?.takeIf { it.isNotBlank() }
+            ).joinToString(" • ")
+            binding.tvScore.text = result.totalScore?.let { String.format(Locale.US, "%.1f", it) } ?: "--"
+            binding.tvStatus.text = formatDate(result.gradedAt ?: result.createdAt)
             binding.root.setOnClickListener { onClick(result) }
+        }
+
+        private fun formatDate(value: String?): String {
+            if (value.isNullOrBlank()) return ""
+            val output = SimpleDateFormat("HH:mm dd/MM/yyyy", Locale.forLanguageTag("vi-VN"))
+            val parsers = listOf(
+                SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US),
+                SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US)
+            ).onEach { it.timeZone = TimeZone.getTimeZone("UTC") }
+            return parsers.firstNotNullOfOrNull { parser ->
+                runCatching { parser.parse(value)?.let(output::format) }.getOrNull()
+            } ?: value
         }
     }
 

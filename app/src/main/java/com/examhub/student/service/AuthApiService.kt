@@ -51,14 +51,14 @@ interface AuthApiService {
     @POST("student/auth/change-password")
     suspend fun changePassword(@Body request: ChangePasswordRequest): Response<MessageResponse>
 
-    @GET("student/auth/me")
+    @GET("auth/me")
     suspend fun getMe(): Response<UserResponse>
 
-    @PATCH("student/auth/me")
+    @PATCH("auth/me")
     suspend fun updateProfile(@Body request: UpdateProfileRequest): Response<UserResponse>
 
     @Multipart
-    @POST("student/auth/me/avatar")
+    @POST("auth/me/avatar")
     suspend fun uploadAvatar(@Part file: MultipartBody.Part): Response<UserResponse>
 
     @GET("auth/sessions")

@@ -34,12 +34,14 @@ class OmrProcessor(
 
         val normalizedTemplateJson = normalizeTemplateJson(templateJson)
         val enabledIdFields = readEnabledIdFields(normalizedTemplateJson)
+        val studentIdentifierMode = readStudentIdentifierMode(templateJson)
         Log.i(
             tag,
             "Template JSON raw=${templateJson.length} normalized=${normalizedTemplateJson.length} " +
                 "hasAnchors=${normalizedTemplateJson.contains("anchor_points")} " +
                 "hasIdZone=${normalizedTemplateJson.contains("id_zones")} " +
-                "hasAnswerZones=${normalizedTemplateJson.contains("answer_zones")}"
+                "hasAnswerZones=${normalizedTemplateJson.contains("answer_zones")} " +
+                "studentIdentifierMode=${studentIdentifierMode.apiValue}"
         )
 
         val output = OmrEngine.process(
@@ -56,7 +58,7 @@ class OmrProcessor(
             error(output.errorMessage.ifBlank { "Xử lý OMR thất bại (${output.errorCode})" })
         }
 
-        validateIdZone(output.idResult, enabledIdFields)
+        validateIdZone(output.idResult, enabledIdFields, studentIdentifierMode, examId)
 
         val answers = output.answers.map { answer ->
             Answer(
@@ -84,6 +86,8 @@ class OmrProcessor(
             rawImageBase64 = "",
             dewarpedImageBase64 = output.dewarpedImageBase64,
             debugImageBase64 = output.debugImageBase64,
+            laplacianVariance = output.laplacianVariance,
+            meanBrightness = output.meanBrightness,
             warnings = output.warnings
         )
     }
@@ -138,7 +142,12 @@ class OmrProcessor(
         }
     }
 
-    private fun validateIdZone(idResult: com.examhub.student.IdResult, enabledFields: EnabledIdFields) {
+    private fun validateIdZone(
+        idResult: com.examhub.student.IdResult,
+        enabledFields: EnabledIdFields,
+        studentIdentifierMode: StudentIdentifierMode,
+        examId: String
+    ) {
         if (!enabledFields.anyEnabled()) return
 
         val scannedStudentId = idResult.studentId.trim()
@@ -155,19 +164,19 @@ class OmrProcessor(
             error("Không đọc được mã đề trên phiếu. Vui lòng chụp lại.")
         }
 
-        val expectedStudentCodes = getExpectedStudentCodes()
+        val expectedStudentCodes = getExpectedStudentCodes(studentIdentifierMode)
         if (enabledFields.studentId && expectedStudentCodes.isNotEmpty() && expectedStudentCodes.none { sameCode(it, scannedStudentId) }) {
             error("Mã học sinh trên phiếu ($scannedStudentId) không trùng với tài khoản đăng nhập.")
         }
 
         if (enabledFields.classCode) {
-            val classCodes = offlineCacheManager.getCachedClassBasics()
-                .map { it.classCode }
-                .filter { it.isNotBlank() }
-            if (classCodes.isEmpty()) {
-                error("Chưa có mã lớp nội bộ để đối chiếu. Hãy tải danh sách lớp trước khi nộp bài.")
+            val classCodes = buildList {
+                offlineCacheManager.getExamClassCode(examId)?.let(::add)
+                addAll(offlineCacheManager.getCachedClassBasics().map { it.classCode })
             }
-            if (classCodes.none { sameCode(it, scannedClassCode) }) {
+                .filter { it.isNotBlank() }
+                .distinctBy { it.trim().uppercase() }
+            if (classCodes.isNotEmpty() && classCodes.none { sameClassCode(it, scannedClassCode) }) {
                 error("Mã lớp trên phiếu ($scannedClassCode) không trùng với lớp của học sinh.")
             }
         }
@@ -211,20 +220,69 @@ class OmrProcessor(
         }.getOrDefault(EnabledIdFields())
     }
 
-    private fun getExpectedStudentCodes(): List<String> {
+    private fun getExpectedStudentCodes(mode: StudentIdentifierMode): List<String> {
         val profile = tokenManager.getCachedProfileJson()
             ?.let { raw -> runCatching { gson.fromJson(raw, UserResponse::class.java) }.getOrNull() }
             ?: return emptyList()
 
-        return listOfNotNull(
-            profile.student?.studentCode,
-            profile.student?.id,
-            profile.id
-        ).filter { it.isNotBlank() }
+        val externalCodes = listOfNotNull(profile.student?.studentCode)
+        val internalCodes = buildList {
+            addAll(listOfNotNull(profile.student?.internalId, profile.student?.id))
+            addAll(offlineCacheManager.getCachedClassBasics().map { it.classCode })
+        }
+
+        return when (mode) {
+            StudentIdentifierMode.EXTERNAL -> externalCodes
+            StudentIdentifierMode.INTERNAL -> internalCodes
+            StudentIdentifierMode.UNKNOWN -> externalCodes + internalCodes + profile.id
+        }.filter { it.isNotBlank() }.distinctBy { it.trim().uppercase() }
+    }
+
+    private fun readStudentIdentifierMode(rawTemplateJson: String): StudentIdentifierMode {
+        return runCatching {
+            val root = JSONObject(rawTemplateJson)
+            val data = root.optJSONObject("data")
+            val templateRoot = data ?: root
+            val grid = templateRoot.optJSONObject("gridConfig")
+                ?: templateRoot.optJSONObject("grid_config")
+                ?: templateRoot
+            val idZones = grid.optJSONObject("id_zones") ?: grid.optJSONObject("idZones")
+            val studentItem = idZones?.optJSONArray("items")?.let { items ->
+                (0 until items.length())
+                    .mapNotNull { index -> items.optJSONObject(index) }
+                    .firstOrNull { it.optString("type") == "student_id" }
+            }
+
+            listOf(
+                studentItem?.findIdentifierModeValue(),
+                idZones?.findIdentifierModeValue(),
+                grid.findIdentifierModeValue(),
+                templateRoot.findIdentifierModeValue(),
+                data?.findIdentifierModeValue(),
+                root.findIdentifierModeValue()
+            ).firstNotNullOfOrNull { StudentIdentifierMode.from(it) } ?: StudentIdentifierMode.UNKNOWN
+        }.getOrDefault(StudentIdentifierMode.UNKNOWN)
+    }
+
+    private fun JSONObject.findIdentifierModeValue(): String? {
+        val keys = listOf(
+            "student_code_type",
+            "identification_mode",
+            "source"
+        )
+        return keys.firstNotNullOfOrNull { key -> optString(key).takeIf { it.isNotBlank() } }
     }
 
     private fun sameCode(left: String, right: String): Boolean {
         return left.trim().uppercase() == right.trim().uppercase()
+    }
+
+    private fun sameClassCode(left: String, right: String): Boolean {
+        val normalizedLeft = left.trim().uppercase()
+        val normalizedRight = right.trim().uppercase()
+        if (normalizedLeft == normalizedRight) return true
+        return normalizedLeft.trimStart('0').ifBlank { "0" } ==
+            normalizedRight.trimStart('0').ifBlank { "0" }
     }
 
     private data class EnabledIdFields(
@@ -233,6 +291,27 @@ class OmrProcessor(
         val examCode: Boolean = false
     ) {
         fun anyEnabled() = studentId || classCode || examCode
+    }
+
+    private enum class StudentIdentifierMode(val apiValue: String) {
+        INTERNAL("internal"),
+        EXTERNAL("external"),
+        UNKNOWN("unknown");
+
+        companion object {
+            fun from(value: String?): StudentIdentifierMode? {
+                val normalized = value
+                    ?.trim()
+                    ?.lowercase()
+                    ?.replace("-", "_")
+                    ?: return null
+                return when (normalized) {
+                    "internal", "internal_id", "class_internal", "class_member_internal", "member_internal", "internal_code" -> INTERNAL
+                    "external", "student_code", "school_code", "external_id", "external_code", "external_code_mode" -> EXTERNAL
+                    else -> null
+                }
+            }
+        }
     }
 
     private fun JsonElement.toAnswerString(): String {

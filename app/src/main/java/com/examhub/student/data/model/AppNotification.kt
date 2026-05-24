@@ -7,6 +7,10 @@ data class AppNotification(
     val content: String,
     val link: String?,
     val appealId: String?,
+    val targetId: String? = null,
+    val entityId: String? = null,
+    val metadata: com.google.gson.JsonObject? = null,
+    val data: com.google.gson.JsonObject? = null,
     val isRead: Boolean,
     val createdAt: String
 )

@@ -15,7 +15,6 @@ import com.google.android.gms.auth.api.signin.GoogleSignInClient
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.common.api.ApiException
 import com.google.android.material.snackbar.Snackbar
-import com.examhub.student.BuildConfig
 import com.examhub.student.R
 import com.examhub.student.databinding.FragmentLoginBinding
 import com.examhub.student.ui.add3DTouch
@@ -53,8 +52,25 @@ class LoginFragment : Fragment() {
                     }
                 } catch (e: ApiException) {
                     Log.e(TAG, "Google sign-in failed: ${e.statusCode}", e)
-                    Snackbar.make(binding.root, "Đăng nhập Google thất bại (${e.statusCode})", Snackbar.LENGTH_SHORT).show()
+                    Snackbar.make(
+                        binding.root,
+                        googleErrorMessage(e.statusCode),
+                        Snackbar.LENGTH_SHORT
+                    ).show()
                 }
+            } else {
+                val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
+                val statusCode = runCatching {
+                    task.getResult(ApiException::class.java)
+                    null
+                }.exceptionOrNull()
+                    ?.let { it as? ApiException }
+                    ?.statusCode
+                Snackbar.make(
+                    binding.root,
+                    statusCode?.let(::googleErrorMessage) ?: getString(R.string.login_error_google_failed),
+                    Snackbar.LENGTH_SHORT
+                ).show()
             }
         }
 
@@ -76,8 +92,17 @@ class LoginFragment : Fragment() {
         val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
             .requestIdToken(getString(R.string.default_web_client_id))
             .requestEmail()
+            .requestProfile()
             .build()
         googleSignInClient = GoogleSignIn.getClient(requireContext(), gso)
+    }
+
+    private fun googleErrorMessage(statusCode: Int): String {
+        return if (statusCode == 10) {
+            getString(R.string.login_google_developer_error)
+        } else {
+            getString(R.string.login_google_failed_format, statusCode)
+        }
     }
 
     private fun setup3DTouch() {
@@ -104,7 +129,7 @@ class LoginFragment : Fragment() {
         binding.btnGoogleSignIn.setOnClickListener {
             googleSignInClient?.signInIntent?.let { intent ->
                 googleSignInLauncher.launch(intent)
-            } ?: Snackbar.make(binding.root, "Google Sign-In chưa được cấu hình", Snackbar.LENGTH_SHORT).show()
+            } ?: Snackbar.make(binding.root, R.string.login_google_not_configured, Snackbar.LENGTH_SHORT).show()
         }
     }
 
@@ -117,8 +142,16 @@ class LoginFragment : Fragment() {
             }
 
             launch {
-                viewModel.errorMessage.collect {
-                    Snackbar.make(binding.root, it, Snackbar.LENGTH_SHORT).show()
+                viewModel.errorMessage.collect { code ->
+                    val message = when (code) {
+                        "email_blank" -> getString(R.string.login_error_email_blank)
+                        "password_blank" -> getString(R.string.login_error_password_blank)
+                        "google_token_missing" -> getString(R.string.login_error_google_token)
+                        "login_failed" -> getString(R.string.login_error_failed)
+                        "google_login_failed" -> getString(R.string.login_error_google_failed)
+                        else -> code // raw API error message
+                    }
+                    Snackbar.make(binding.root, message, Snackbar.LENGTH_SHORT).show()
                 }
             }
 

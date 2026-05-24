@@ -22,7 +22,15 @@ class SubmissionEndFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         (requireActivity() as? MainActivity)?.exitKioskMode()
         binding.btnResults.setOnClickListener {
-            findNavController().navigate(R.id.action_submission_end_to_results)
+            val sheetId = arguments?.getString("sheetId").orEmpty()
+            if (sheetId.isNotBlank()) {
+                findNavController().navigate(
+                    R.id.action_submission_end_to_result_detail,
+                    Bundle().apply { putString("sheetId", sheetId) }
+                )
+            } else {
+                findNavController().navigate(R.id.action_submission_end_to_results)
+            }
         }
         binding.btnHome.setOnClickListener {
             findNavController().navigate(R.id.dashboardFragment)

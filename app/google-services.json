@@ -7,17 +7,17 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:685380102892:android:96c584bd8a27d07b5093c9",
+        "mobilesdk_app_id": "1:685380102892:android:3d7afd059e79b3d85093c9",
         "android_client_info": {
-          "package_name": "com.omr.scanner"
+          "package_name": "com.examhub.student"
         }
       },
       "oauth_client": [
         {
-          "client_id": "685380102892-636oq4m8lb7vrj1gc7lrt5kdcn3l91ob.apps.googleusercontent.com",
+          "client_id": "685380102892-i6t5uk80ugvfutuib19om7o7ain9brok.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
-            "package_name": "com.omr.scanner",
+            "package_name": "com.examhub.student",
             "certificate_hash": "685843f7970dfdc5375193556bfb7fba580da9da"
           }
         },
@@ -44,17 +44,17 @@
     },
     {
       "client_info": {
-        "mobilesdk_app_id": "1:685380102892:android:319bd878b9cbe0ce5093c9",
+        "mobilesdk_app_id": "1:685380102892:android:96c584bd8a27d07b5093c9",
         "android_client_info": {
-          "package_name": "com.examhub.student"
+          "package_name": "com.omr.scanner"
         }
       },
       "oauth_client": [
         {
-          "client_id": "685380102892-ndig7mdb3v0852r84jjj8eos249dnk8l.apps.googleusercontent.com",
+          "client_id": "685380102892-636oq4m8lb7vrj1gc7lrt5kdcn3l91ob.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
-            "package_name": "com.examhub.student",
+            "package_name": "com.omr.scanner",
             "certificate_hash": "685843f7970dfdc5375193556bfb7fba580da9da"
           }
         },

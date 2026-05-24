@@ -27,7 +27,7 @@ class ForgotPasswordViewModel(
 
     fun sendOTP(email: String) {
         if (email.isBlank()) {
-            _errorMessage.tryEmit("Vui long nhap email")
+            _errorMessage.tryEmit("Vui lòng nhập email")
             return
         }
         _errorMessage.tryEmit(UNSUPPORTED_FOR_STUDENT)
@@ -35,7 +35,7 @@ class ForgotPasswordViewModel(
 
     fun verifyOTP(otp: String) {
         if (otp.length < 6) {
-            _errorMessage.tryEmit("Vui long nhap day du ma OTP")
+            _errorMessage.tryEmit("Vui lòng nhập đầy đủ mã OTP")
             return
         }
         _errorMessage.tryEmit(UNSUPPORTED_FOR_STUDENT)
@@ -43,11 +43,11 @@ class ForgotPasswordViewModel(
 
     fun resetPassword(newPassword: String, confirmPassword: String) {
         if (newPassword.length < 6) {
-            _errorMessage.tryEmit("Mat khau phai co it nhat 6 ky tu")
+            _errorMessage.tryEmit("Mật khẩu phải có ít nhất 6 ký tự")
             return
         }
         if (newPassword != confirmPassword) {
-            _errorMessage.tryEmit("Mat khau khong khop")
+            _errorMessage.tryEmit("Mật khẩu không khớp")
             return
         }
         _errorMessage.tryEmit(UNSUPPORTED_FOR_STUDENT)

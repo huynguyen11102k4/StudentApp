@@ -39,12 +39,16 @@ class ExamStartFragment : Fragment() {
                 binding.btnStart.isEnabled = !loading
             } }
             launch { viewModel.message.collect { Snackbar.make(binding.root, it, Snackbar.LENGTH_LONG).show() } }
-            launch { viewModel.sessionStarted.collect { session ->
+            launch { viewModel.sessionStarted.collect { event ->
+                val session = event.session
                 val bundle = Bundle().apply {
                     putString("examId", examId)
                     putString("sessionId", session.sessionId)
                     putInt("remainingSeconds", session.remainingSeconds)
                     putBoolean("isLockedMode", session.isLockedMode)
+                    putString("classCode", event.omrCodes.classCode)
+                    putString("studentCode", event.omrCodes.studentCode)
+                    putString("studentCodeMode", event.omrCodes.studentCodeMode)
                 }
                 findNavController().navigate(R.id.action_exam_start_to_lock_mode, bundle)
             } }

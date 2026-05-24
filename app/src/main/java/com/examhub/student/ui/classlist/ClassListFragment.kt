@@ -65,7 +65,18 @@ class ClassListFragment : Fragment() {
             }
             launch {
                 viewModel.message.collect { message ->
-                    Snackbar.make(binding.root, message, Snackbar.LENGTH_SHORT).show()
+                    if (message.isNotBlank()) {
+                        Snackbar.make(binding.root, message, Snackbar.LENGTH_SHORT).show()
+                    }
+                }
+            }
+            launch {
+                viewModel.joinResult.collect { success ->
+                    if (success) {
+                        Snackbar.make(binding.root, R.string.class_list_join_success, Snackbar.LENGTH_SHORT).show()
+                    } else {
+                        Snackbar.make(binding.root, R.string.class_list_join_code_empty, Snackbar.LENGTH_SHORT).show()
+                    }
                 }
             }
         }

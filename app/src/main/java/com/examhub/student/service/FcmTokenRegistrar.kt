@@ -3,6 +3,7 @@ package com.examhub.student.service
 import android.content.Context
 import android.util.Log
 import com.examhub.student.model.request.FcmTokenRequest
+import com.google.firebase.messaging.FirebaseMessaging
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -19,9 +20,19 @@ class FcmTokenRegistrar(
      * API: POST /student/notifications/fcm-token (with X-Device-Id header)
      */
     fun syncCurrentToken(scope: CoroutineScope) {
-        val fcmToken = tokenManager.getFcmToken() ?: return
         if (tokenManager.getAccessToken() == null) return // not logged in yet
-        registerToken(fcmToken, scope)
+        val cachedToken = tokenManager.getFcmToken()
+        if (!cachedToken.isNullOrBlank()) {
+            registerToken(cachedToken, scope)
+            return
+        }
+        FirebaseMessaging.getInstance().token
+            .addOnSuccessListener { token ->
+                if (!token.isNullOrBlank()) registerToken(token, scope)
+            }
+            .addOnFailureListener { e ->
+                Log.w("FcmTokenRegistrar", "Failed to fetch FCM token: ${e.message}")
+            }
     }
 
     /**

@@ -172,11 +172,11 @@
 
                     <TextView
                         android:id="@+id/tvJoinCode"
-                        style="@style/Text_Label_Small"
+                        style="@style/Text_Body_Small"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="@dimen/spacing_16"
-                        android:textColor="@color/text_hint"
+                        android:textColor="@color/text_secondary"
                         android:visibility="gone" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>

@@ -27,7 +27,11 @@ class RecentExamAdapter(
             binding.tvExamUpdated.text = formatExamDate(exam.date).ifBlank {
                 context.getString(R.string.dashboard_exam_updated)
             }
-            if (exam.isOfflineReady) {
+            if (exam.hasSubmitted) {
+                binding.tvOfflineBadge.setText(R.string.dashboard_status_submitted)
+                binding.tvOfflineBadge.setBackgroundResource(R.drawable.bg_badge_online)
+                binding.tvOfflineBadge.setTextColor(context.getColor(R.color.status_online_text))
+            } else if (exam.isOfflineReady) {
                 binding.tvOfflineBadge.setText(R.string.dashboard_status_ready)
                 binding.tvOfflineBadge.setBackgroundResource(R.drawable.bg_badge_ready)
                 binding.tvOfflineBadge.setTextColor(context.getColor(R.color.status_ready_text))

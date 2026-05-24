@@ -74,6 +74,15 @@ object NetworkModule {
                 .build()
         }
 
+        single(named("storageUploadOkHttp")) {
+            OkHttpClient.Builder()
+                .addInterceptor(get<HttpLoggingInterceptor>())
+                .connectTimeout(30, TimeUnit.SECONDS)
+                .readTimeout(60, TimeUnit.SECONDS)
+                .writeTimeout(120, TimeUnit.SECONDS)
+                .build()
+        }
+
         single(named("refreshRetrofit")) {
             Retrofit.Builder()
                 .baseUrl(BuildConfig.API_BASE_URL)
