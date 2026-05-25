@@ -59,20 +59,17 @@ class OfflineCacheManager(context: Context) {
     }
 
     fun saveExamBasics(exams: List<Exam>) {
-        if (exams.isEmpty()) return
-        val merged = getCachedExamBasics()
-            .associateBy { it.id }
-            .toMutableMap()
-
-        exams.forEach { exam ->
-            merged[exam.id] = exam.copy(isOfflineReady = isOfflineReady(exam.id))
-        }
-
-        prefs.edit().putString(KEY_EXAM_BASICS, gson.toJson(merged.values.toList())).apply()
+        prefs.edit()
+            .putString(KEY_EXAM_BASICS, gson.toJson(exams.map { it.copy(isOfflineReady = isOfflineReady(it.id)) }))
+            .apply()
     }
 
     fun saveExamBasic(exam: Exam) {
-        saveExamBasics(listOf(exam))
+        val merged = getCachedExamBasics()
+            .associateBy { it.id }
+            .toMutableMap()
+        merged[exam.id] = exam.copy(isOfflineReady = isOfflineReady(exam.id))
+        prefs.edit().putString(KEY_EXAM_BASICS, gson.toJson(merged.values.toList())).apply()
     }
 
     fun getCachedExamBasics(): List<Exam> {
@@ -129,6 +126,10 @@ class OfflineCacheManager(context: Context) {
         } catch (e: Exception) {
             emptyList()
         }
+    }
+
+    fun clearNotifications() {
+        prefs.edit().remove(KEY_NOTIFICATIONS).apply()
     }
 
     fun getOfflineExamIds(): List<String> {

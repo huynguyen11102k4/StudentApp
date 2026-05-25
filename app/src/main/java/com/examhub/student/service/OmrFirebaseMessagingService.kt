@@ -45,11 +45,19 @@ class OmrFirebaseMessagingService : FirebaseMessagingService() {
         val preferences = runCatching { GlobalContext.get().get<NotificationPreferenceManager>() }.getOrNull()
         if (preferences?.isEnabled() == false) return
 
-        val title = message.notification?.title ?: data["title"] ?: getString(R.string.notifications_title)
-        val body = message.notification?.body ?: data["body"] ?: data["content"] ?: return
+        val type = data["type"].orEmpty()
+        val title = message.notification?.title
+            ?: data["title"]
+            ?: defaultTitleFor(type)
+        val body = message.notification?.body
+            ?: data["body"]
+            ?: data["content"]
+            ?: data["message"]
+            ?: data["exam_name"]?.let { getString(R.string.notifications_exam_opened_default_title) + ": " + it }
+            ?: defaultBodyFor(type)
         val notificationId = data["notification_id"]?.hashCode() ?: System.currentTimeMillis().toInt()
 
-        ensureNotificationChannel()
+        ensureNotificationChannel(this)
         val intent = Intent(this, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
             data.forEach { (key, value) -> putExtra(key, value) }
@@ -74,20 +82,36 @@ class OmrFirebaseMessagingService : FirebaseMessagingService() {
         NotificationManagerCompat.from(this).notify(notificationId, notification)
     }
 
-    private fun ensureNotificationChannel() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
-        val channel = NotificationChannel(
-            CHANNEL_ID,
-            getString(R.string.fcm_channel_name),
-            NotificationManager.IMPORTANCE_HIGH
-        ).apply {
-            description = getString(R.string.fcm_channel_description)
+    private fun defaultTitleFor(type: String): String {
+        return if (type.equals("exam_opened", ignoreCase = true)) {
+            getString(R.string.notifications_exam_opened_default_title)
+        } else {
+            getString(R.string.notifications_title)
         }
-        val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        manager.createNotificationChannel(channel)
     }
 
-    private companion object {
+    private fun defaultBodyFor(type: String): String {
+        return if (type.equals("exam_opened", ignoreCase = true)) {
+            getString(R.string.notifications_exam_opened_default_body)
+        } else {
+            getString(R.string.notifications_subtitle)
+        }
+    }
+
+    companion object {
         const val CHANNEL_ID = "student_updates"
+
+        fun ensureNotificationChannel(context: Context) {
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
+            val channel = NotificationChannel(
+                CHANNEL_ID,
+                context.getString(R.string.fcm_channel_name),
+                NotificationManager.IMPORTANCE_HIGH
+            ).apply {
+                description = context.getString(R.string.fcm_channel_description)
+            }
+            val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            manager.createNotificationChannel(channel)
+        }
     }
 }

@@ -172,13 +172,25 @@ class MainActivity : AppCompatActivity() {
             ?: extras.getString("target_id")
             ?: extras.getString("entity_id")
             ?: extras.getString("link")?.extractLastId()
+        val sheetId = extras.getString("sheet_id")
+            ?: extras.getString("sheetId")
+            ?: extras.getString("answer_sheet_id")
+            ?: extras.getString("answerSheetId")
+            ?: extras.getString("link")?.takeIf { it.contains("/results/", ignoreCase = true) }?.extractLastId()
         val examId = extras.getString("exam_id")
             ?: extras.getString("examId")
             ?: extras.getString("target_id")
             ?: extras.getString("entity_id")
             ?: extras.getString("link")?.extractLastId()
 
-        if ((route == "appeal_detail" || type.equals("appeal_created", ignoreCase = true) || type.equals("appeal_updated", ignoreCase = true)) && !appealId.isNullOrBlank()) {
+        if (isResultNotification(route, type, extras.getString("link").orEmpty()) && !sheetId.isNullOrBlank()) {
+            navController.navigate(
+                R.id.resultDetailFragment,
+                bundleOf("sheetId" to sheetId),
+                navOptions { launchSingleTop = true }
+            )
+            intent.replaceExtras(Bundle())
+        } else if ((route == "appeal_detail" || type.equals("appeal_created", ignoreCase = true) || type.equals("appeal_updated", ignoreCase = true)) && !appealId.isNullOrBlank()) {
             navController.navigate(
                 R.id.appealDetailFragment,
                 bundleOf("appealId" to appealId),
@@ -199,6 +211,14 @@ class MainActivity : AppCompatActivity() {
         return route.equals("exam_detail", ignoreCase = true) ||
             route.equals("exam", ignoreCase = true) ||
             listOf("exam_created", "exam_opened", "exam_upcoming", "exam_reminder", "exam_assigned")
+                .any { type.equals(it, ignoreCase = true) }
+    }
+
+    private fun isResultNotification(route: String, type: String, link: String): Boolean {
+        return route.equals("result_detail", ignoreCase = true) ||
+            route.equals("result", ignoreCase = true) ||
+            link.contains("/results/", ignoreCase = true) ||
+            listOf("grade_updated", "result_ready", "exam_graded")
                 .any { type.equals(it, ignoreCase = true) }
     }
 
@@ -259,7 +279,10 @@ class MainActivity : AppCompatActivity() {
                 occurredAt = nowIso(),
                 evidenceData = mapOf(
                     "screen" to activeLockScreen.ifBlank { "unknown" },
-                    "source" to "activity_on_stop"
+                    "source" to "activity_on_stop",
+                    "reason" to "app_background",
+                    "violation_label" to "Thoát ứng dụng trong lúc làm bài",
+                    "teacher_message" to "Học sinh đã đưa app xuống nền hoặc chuyển sang ứng dụng khác trong lúc làm bài."
                 )
             )
         )

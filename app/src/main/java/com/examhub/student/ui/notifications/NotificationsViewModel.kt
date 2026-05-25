@@ -19,6 +19,9 @@ class NotificationsViewModel(
     private val offlineCacheManager: OfflineCacheManager
 ) : ViewModel() {
 
+    private var currentFilter = NotificationFilter.ALL
+    private var allNotifications = emptyList<AppNotification>()
+
     private val _notifications = MutableStateFlow<List<AppNotification>>(emptyList())
     val notifications: StateFlow<List<AppNotification>> = _notifications.asStateFlow()
 
@@ -38,11 +41,12 @@ class NotificationsViewModel(
         viewModelScope.launch {
             val cached = offlineCacheManager.getCachedNotifications()
             if (cached.isNotEmpty()) {
-                _notifications.value = cached
+                allNotifications = cached
+                applyFilter()
                 _unreadCount.value = cached.count { !it.isRead }
             }
 
-            notificationRepository.getNotifications().collect { result ->
+            notificationRepository.getNotifications(unreadOnly = unreadOnlyQuery()).collect { result ->
                 when (result) {
                     is ApiResult.Loading -> {
                         if (!_isRefreshing.value) _isLoading.value = cached.isEmpty()
@@ -68,14 +72,20 @@ class NotificationsViewModel(
                                 entityId = notif.entityId,
                                 metadata = notif.metadata,
                                 data = notif.data,
-                                isRead = notif.isRead,
-                                createdAt = notif.createdAt
+                                isRead = notif.isRead == true,
+                                createdAt = notif.createdAt.orEmpty()
                             )
                         }
-                        _notifications.value = mapped
-                        _unreadCount.value = mapped.count { !it.isRead }
-                        offlineCacheManager.saveNotifications(mapped)
-                        loadUnreadCount()
+                        allNotifications = when (currentFilter) {
+                            NotificationFilter.UNREAD -> mergeNotifications(
+                                existing = allNotifications,
+                                incoming = mapped
+                            )
+                            else -> mapped
+                        }
+                        applyFilter()
+                        _unreadCount.value = result.data.meta?.unreadCount ?: mapped.count { !it.isRead }
+                        offlineCacheManager.saveNotifications(allNotifications)
                     }
                     is ApiResult.Error -> {
                         _isLoading.value = false
@@ -92,11 +102,22 @@ class NotificationsViewModel(
         loadNotifications()
     }
 
+    fun setFilter(filter: NotificationFilter) {
+        if (currentFilter == filter) return
+        currentFilter = filter
+        applyFilter()
+        if (filter == NotificationFilter.UNREAD) {
+            loadNotifications()
+        }
+    }
+
     fun markAsRead(notificationId: String) {
-        _notifications.value = _notifications.value.map {
+        allNotifications = allNotifications.map {
             if (it.id == notificationId) it.copy(isRead = true) else it
         }
-        _unreadCount.value = _notifications.value.count { !it.isRead }
+        applyFilter()
+        _unreadCount.value = allNotifications.count { !it.isRead }
+        offlineCacheManager.saveNotifications(allNotifications)
         viewModelScope.launch {
             notificationRepository.markAsRead(notificationId).collect { result ->
                 if (result is ApiResult.Error) {
@@ -108,14 +129,16 @@ class NotificationsViewModel(
     }
 
     fun markAllAsRead() {
-        if (_notifications.value.none { !it.isRead } && _unreadCount.value == 0) return
+        if (allNotifications.none { !it.isRead } && _unreadCount.value == 0) return
 
-        _notifications.value = _notifications.value.map { it.copy(isRead = true) }
+        allNotifications = allNotifications.map { it.copy(isRead = true) }
+        applyFilter()
         _unreadCount.value = 0
+        offlineCacheManager.saveNotifications(allNotifications)
         viewModelScope.launch {
             notificationRepository.markAllAsRead().collect { result ->
                 when (result) {
-                    is ApiResult.Success -> loadUnreadCount()
+                    is ApiResult.Success -> Unit
                     is ApiResult.Error -> {
                         _errorMessage.tryEmit(result.exception.message ?: "Không thể đánh dấu tất cả đã đọc")
                         loadNotifications()
@@ -126,17 +149,41 @@ class NotificationsViewModel(
         }
     }
 
-    private fun loadUnreadCount() {
-        viewModelScope.launch {
-            notificationRepository.getUnreadCount().collect { result ->
-                if (result is ApiResult.Success) {
-                    _unreadCount.value = result.data.count
-                }
-            }
+    fun clearNotifications() {
+        allNotifications = emptyList()
+        _notifications.value = emptyList()
+        _unreadCount.value = 0
+        offlineCacheManager.clearNotifications()
+    }
+
+    private fun unreadOnlyQuery(): Boolean? {
+        return if (currentFilter == NotificationFilter.UNREAD) true else null
+    }
+
+    private fun applyFilter() {
+        _notifications.value = when (currentFilter) {
+            NotificationFilter.ALL -> allNotifications
+            NotificationFilter.UNREAD -> allNotifications.filter { !it.isRead }
+            NotificationFilter.READ -> allNotifications.filter { it.isRead }
         }
+    }
+
+    private fun mergeNotifications(
+        existing: List<AppNotification>,
+        incoming: List<AppNotification>
+    ): List<AppNotification> {
+        val merged = existing.associateBy { it.id }.toMutableMap()
+        incoming.forEach { merged[it.id] = it }
+        return merged.values.sortedByDescending { it.createdAt }
     }
 
     private fun com.google.gson.JsonObject?.stringValue(key: String): String? {
         return this?.get(key)?.takeIf { !it.isJsonNull }?.asString?.takeIf { it.isNotBlank() }
+    }
+
+    enum class NotificationFilter {
+        ALL,
+        UNREAD,
+        READ
     }
 }

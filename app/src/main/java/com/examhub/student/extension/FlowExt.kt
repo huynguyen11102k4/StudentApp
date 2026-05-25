@@ -1,4 +1,4 @@
-package com.examhub.student.ui
+package com.examhub.student.extension
 
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Lifecycle

@@ -2,6 +2,7 @@ package com.examhub.student.ui.register
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.examhub.student.R
 import com.examhub.student.model.ApiException
 import com.examhub.student.model.ApiResult
 import com.examhub.student.model.request.auth.OtpRequest
@@ -9,6 +10,7 @@ import com.examhub.student.model.request.auth.OtpVerifyRequest
 import com.examhub.student.model.request.auth.StudentRegisterRequest
 import com.examhub.student.repository.AuthRepository
 import com.examhub.student.service.FcmTokenRegistrar
+import com.examhub.student.ui.ResourceProvider
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -20,7 +22,8 @@ import java.text.Normalizer
 
 class RegisterViewModel(
     private val authRepository: AuthRepository,
-    private val fcmTokenRegistrar: FcmTokenRegistrar
+    private val fcmTokenRegistrar: FcmTokenRegistrar,
+    private val resources: ResourceProvider
 ) : ViewModel() {
     private val _registerSuccess = MutableSharedFlow<RegisterDestination>(extraBufferCapacity = 1)
     val registerSuccess: SharedFlow<RegisterDestination> = _registerSuccess.asSharedFlow()
@@ -64,19 +67,19 @@ class RegisterViewModel(
         val isGoogleRegistration = googleIdToken.isNotBlank()
 
         if (fullName.isBlank()) {
-            _errorMessage.tryEmit("Vui lòng nhập họ tên")
+            _errorMessage.tryEmit(resources.getString(R.string.register_validation_name_required))
             return
         }
         if (trimmedEmail.isBlank()) {
-            _errorMessage.tryEmit("Vui lòng nhập email")
+            _errorMessage.tryEmit(resources.getString(R.string.register_validation_email_required))
             return
         }
         if (!isGoogleRegistration && password.length < 6) {
-            _errorMessage.tryEmit("Mật khẩu phải có ít nhất 6 ký tự")
+            _errorMessage.tryEmit(resources.getString(R.string.register_validation_password_short))
             return
         }
         if (!isGoogleRegistration && password != confirmPassword) {
-            _errorMessage.tryEmit("Mật khẩu không khớp")
+            _errorMessage.tryEmit(resources.getString(R.string.register_validation_password_mismatch))
             return
         }
 
@@ -97,16 +100,16 @@ class RegisterViewModel(
                         registeredEmail = trimmedEmail
                         if (isGoogleRegistration && !result.data.accessToken.isNullOrBlank()) {
                             fcmTokenRegistrar.syncCurrentToken(viewModelScope)
-                            _message.tryEmit("Đăng ký thành công")
+                            _message.tryEmit(resources.getString(R.string.register_success))
                             _registerSuccess.tryEmit(RegisterDestination.Dashboard)
                         } else if (isGoogleRegistration) {
-                            _message.tryEmit(result.data.message ?: "Đăng ký thành công. Vui lòng đăng nhập.")
+                            _message.tryEmit(result.data.message ?: resources.getString(R.string.register_success_login))
                             _registerSuccess.tryEmit(RegisterDestination.Login)
                         } else if (result.data.requiresOtp) {
                             _currentStep.value = 2
-                            _message.tryEmit(result.data.message ?: "Mã OTP đã được gửi đến email đăng ký")
+                            _message.tryEmit(result.data.message ?: resources.getString(R.string.register_otp_sent))
                         } else {
-                            _message.tryEmit(result.data.message ?: "Đăng ký thành công. Vui lòng đăng nhập.")
+                            _message.tryEmit(result.data.message ?: resources.getString(R.string.register_success_login))
                             _registerSuccess.tryEmit(RegisterDestination.Login)
                         }
                     }
@@ -117,7 +120,7 @@ class RegisterViewModel(
                             _currentStep.value = 2
                             resendOtp()
                         } else {
-                            _errorMessage.tryEmit(result.exception.message ?: "Đăng ký thất bại")
+                            _errorMessage.tryEmit(result.exception.message ?: resources.getString(R.string.register_failed))
                         }
                     }
                 }
@@ -127,7 +130,7 @@ class RegisterViewModel(
 
     fun resendOtp() {
         if (registeredEmail.isBlank()) {
-            _errorMessage.tryEmit("Email đăng ký không hợp lệ")
+            _errorMessage.tryEmit(resources.getString(R.string.register_email_invalid))
             return
         }
         viewModelScope.launch {
@@ -136,14 +139,14 @@ class RegisterViewModel(
                     is ApiResult.Loading -> _isLoading.value = true
                     is ApiResult.Success -> {
                         _isLoading.value = false
-                        _message.tryEmit(result.data.message.ifBlank { "Mã OTP đã được gửi lại" })
+                        _message.tryEmit(result.data.message.ifBlank { resources.getString(R.string.register_otp_resent) })
                     }
                     is ApiResult.Error -> {
                         _isLoading.value = false
                         if (result.exception.isOtpRateLimited()) {
-                            _message.tryEmit("OTP đã được gửi trước đó. Hãy kiểm tra email hoặc thử lại sau ít phút.")
+                            _message.tryEmit(resources.getString(R.string.register_otp_rate_limited))
                         } else {
-                            _errorMessage.tryEmit(result.exception.message ?: "Gửi OTP thất bại")
+                            _errorMessage.tryEmit(result.exception.message ?: resources.getString(R.string.register_otp_resend_failed))
                         }
                     }
                 }
@@ -153,11 +156,11 @@ class RegisterViewModel(
 
     fun verifyOtp(otp: String) {
         if (otp.length < 6) {
-            _errorMessage.tryEmit("Vui lòng nhập đầy đủ mã OTP")
+            _errorMessage.tryEmit(resources.getString(R.string.forgot_password_validation_otp_required))
             return
         }
         if (registeredEmail.isBlank()) {
-            _errorMessage.tryEmit("Email đăng ký không hợp lệ")
+            _errorMessage.tryEmit(resources.getString(R.string.register_email_invalid))
             return
         }
 
@@ -173,15 +176,15 @@ class RegisterViewModel(
                     is ApiResult.Success -> {
                         _isLoading.value = false
                         if (result.data.verified) {
-                            _message.tryEmit(result.data.message.ifBlank { "Xác thực thành công. Vui lòng đăng nhập." })
+                            _message.tryEmit(result.data.message.ifBlank { resources.getString(R.string.register_otp_success_login) })
                             _registerSuccess.tryEmit(RegisterDestination.Login)
                         } else {
-                            _errorMessage.tryEmit(result.data.message.ifBlank { "OTP không hợp lệ" })
+                            _errorMessage.tryEmit(result.data.message.ifBlank { resources.getString(R.string.register_otp_invalid) })
                         }
                     }
                     is ApiResult.Error -> {
                         _isLoading.value = false
-                        _errorMessage.tryEmit(result.exception.message ?: "Xác thực OTP thất bại")
+                        _errorMessage.tryEmit(result.exception.message ?: resources.getString(R.string.register_otp_verify_failed))
                     }
                 }
             }

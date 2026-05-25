@@ -9,7 +9,7 @@ import org.koin.androidx.viewmodel.ext.android.viewModel
 import androidx.navigation.fragment.findNavController
 import com.examhub.student.R
 import com.examhub.student.databinding.FragmentSplashBinding
-import com.examhub.student.ui.collectOnStarted
+import com.examhub.student.extension.collectOnStarted
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 

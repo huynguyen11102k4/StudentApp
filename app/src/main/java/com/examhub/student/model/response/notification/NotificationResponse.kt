@@ -38,11 +38,11 @@ data class NotificationResponse(
     val data: JsonObject? = null,
 
     @SerializedName("is_read")
-    val isRead: Boolean,
+    val isRead: Boolean? = null,
 
     @SerializedName("created_at")
-    val createdAt: String,
+    val createdAt: String? = null,
 
     @SerializedName("updated_at")
-    val updatedAt: String?
+    val updatedAt: String? = null
 )

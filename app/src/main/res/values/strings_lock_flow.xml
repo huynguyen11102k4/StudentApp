@@ -30,6 +30,7 @@
     <string name="lock_mode_kiosk_activity_unavailable">Không thể bật kiosk mode trên activity hiện tại</string>
     <string name="lock_mode_queue_format">Đang chờ đồng bộ %d vi phạm</string>
     <string name="lock_mode_time_expired">Đã hết thời gian làm bài</string>
+    <string name="lock_mode_time_expired_auto_submit">Đã hết thời gian. Hệ thống đang nộp bài làm của bạn.</string>
     <string name="lock_mode_open_camera">Quét phiếu OMR</string>
     <string name="lock_mode_submit">Nộp bài</string>
     <string name="lock_mode_submit_hint_title">Nộp bài</string>

@@ -3,7 +3,9 @@ package com.examhub.student.ui.appeals
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.examhub.student.data.model.Appeal
+import com.examhub.student.extension.toFriendlyAppealItemStatus
 import com.examhub.student.model.ApiResult
+import com.examhub.student.model.response.appeal.AppealSummaryResponse
 import com.examhub.student.repository.AppealsRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -28,34 +30,45 @@ class AppealsListViewModel(
                     is ApiResult.Success -> {
                         _isLoading.value = false
                         _appeals.value = result.data.data
-                            .filter { appeal -> examId.isBlank() || appeal.exam?.id == examId }
-                            .map { appeal ->
-                            Appeal(
-                                id = appeal.id,
-                                studentId = appeal.student?.id ?: "",
-                                studentName = appeal.student?.name ?: "",
-                                studentCode = appeal.student?.code ?: "",
-                                examId = appeal.exam?.id ?: "",
-                                examName = appeal.exam?.name ?: "",
-                                subject = appeal.exam?.subject ?: "",
-                                sheetId = appeal.sheet?.id ?: "",
-                                oldScore = appeal.oldScore ?: 0.0,
-                                newScore = appeal.newScore,
-                                reason = appeal.reason ?: "",
-                                status = appeal.status,
-                                createdAt = appeal.createdAt,
-                                teacherNote = appeal.teacherNote,
-                                processedImageUrl = appeal.sheet?.processedImageUrl,
-                                dewarpedImageUrl = appeal.sheet?.dewarpedImageUrl,
-                                itemMessages = appeal.items.orEmpty().joinToString("\n") { item ->
-                                    "Câu ${item.questionNumber}: ${item.studentMessage.orEmpty().ifBlank { item.status }}"
-                                }
-                            )
-                        }
+                            .filter { appeal ->
+                                val resolvedExam = appeal.resolvedExam()
+                                examId.isBlank() || resolvedExam?.id == examId
+                            }
+                            .map { appeal -> appeal.toUiModel() }
                     }
                     is ApiResult.Error -> _isLoading.value = false
                 }
             }
         }
     }
+
+    private fun AppealSummaryResponse.toUiModel(): Appeal {
+        val resolvedExam = resolvedExam()
+        return Appeal(
+            id = id,
+            studentId = student?.id.orEmpty(),
+            studentName = student?.name.orEmpty(),
+            studentCode = student?.code.orEmpty(),
+            examId = resolvedExam?.id.orEmpty(),
+            examName = resolvedExam?.name.orEmpty(),
+            subject = resolvedExam?.subject.orEmpty(),
+            sheetId = sheet?.id.orEmpty(),
+            oldScore = oldScore ?: sheet?.totalScore ?: 0.0,
+            newScore = newScore,
+            reason = reason.orEmpty(),
+            status = status,
+            createdAt = createdAt,
+            teacherNote = teacherNote,
+            processedImageUrl = sheet?.processedImageUrl,
+            dewarpedImageUrl = sheet?.dewarpedImageUrl,
+            itemMessages = items.orEmpty().joinToString("\n") { item ->
+                listOf(
+                    "Câu ${item.questionNumber}: ${item.studentMessage.orEmpty().ifBlank { item.status.toFriendlyAppealItemStatus() }}",
+                    item.teacherResponse?.takeIf { it.isNotBlank() }?.let { "Phản hồi: $it" }
+                ).filterNotNull().joinToString("\n")
+            }
+        )
+    }
+
+    private fun AppealSummaryResponse.resolvedExam() = exam ?: sheet?.exam
 }

@@ -12,8 +12,8 @@ import androidx.appcompat.widget.SearchView
 import com.examhub.student.R
 import com.examhub.student.databinding.FragmentExamListFullBinding
 import com.examhub.student.ui.dashboard.RecentExamAdapter
-import com.examhub.student.ui.applySystemWindowInsets
-import com.examhub.student.ui.collectOnStarted
+import com.examhub.student.extension.applySystemWindowInsets
+import com.examhub.student.extension.collectOnStarted
 import kotlinx.coroutines.launch
 import org.koin.androidx.viewmodel.ext.android.viewModel
 
@@ -43,7 +43,7 @@ class ExamListFragment : Fragment() {
         setupSearch()
         binding.toolbar.setOnMenuItemClickListener { item ->
             if (item.itemId == R.id.actionExamTypeFilter) {
-                showExamTypeFilter()
+                showFilterMenu()
                 true
             } else {
                 false
@@ -61,15 +61,6 @@ class ExamListFragment : Fragment() {
         }
         binding.rvExams.layoutManager = LinearLayoutManager(requireContext())
         binding.rvExams.adapter = adapter
-        binding.chipGroupFilters.setOnCheckedStateChangeListener { _, checkedIds ->
-            selectedFilter = when (checkedIds.firstOrNull()) {
-                R.id.chipReady -> ExamFilter.READY
-                R.id.chipProcessing -> ExamFilter.PROCESSING
-                R.id.chipClosed -> ExamFilter.CLOSED
-                else -> ExamFilter.ALL
-            }
-            submitFilteredExams()
-        }
 
         collectOnStarted {
             launch {
@@ -115,23 +106,23 @@ class ExamListFragment : Fragment() {
         })
     }
 
-    private fun showExamTypeFilter() {
+    private fun showFilterMenu() {
         val anchor = binding.toolbar.findViewById<View>(R.id.actionExamTypeFilter) ?: binding.toolbar
         PopupMenu(requireContext(), anchor).apply {
-            menu.add(0, MENU_ALL, 0, R.string.exam_list_type_all)
-            menu.add(0, MENU_STUDENT, 1, R.string.exam_list_type_student)
-            menu.findItem(menuIdForType(currentGradingType))?.isChecked = true
-            menu.setGroupCheckable(0, true, true)
+            menu.add(GROUP_STATUS, MENU_STATUS_ALL, 0, R.string.exam_list_filter_all)
+            menu.add(GROUP_STATUS, MENU_STATUS_READY, 1, R.string.exam_list_filter_ready)
+            menu.add(GROUP_STATUS, MENU_STATUS_PROCESSING, 2, R.string.exam_list_filter_processing)
+            menu.add(GROUP_STATUS, MENU_STATUS_CLOSED, 3, R.string.exam_list_filter_closed)
+            menu.setGroupCheckable(GROUP_STATUS, true, true)
+            menu.findItem(menuIdForStatus(selectedFilter))?.isChecked = true
             setOnMenuItemClickListener { item ->
-                val newType = when (item.itemId) {
-                    MENU_STUDENT -> "STUDENT_SUBMISSION"
-                    else -> ""
+                selectedFilter = when (item.itemId) {
+                    MENU_STATUS_READY -> ExamFilter.READY
+                    MENU_STATUS_PROCESSING -> ExamFilter.PROCESSING
+                    MENU_STATUS_CLOSED -> ExamFilter.CLOSED
+                    else -> ExamFilter.ALL
                 }
-                if (newType != currentGradingType) {
-                    currentGradingType = newType
-                    updateToolbarTitle(null)
-                    viewModel.load(currentGradingType)
-                }
+                submitFilteredExams()
                 true
             }
             show()
@@ -147,21 +138,21 @@ class ExamListFragment : Fragment() {
         }
     }
 
-    private fun menuIdForType(type: String): Int {
-        return when (type) {
-            "STUDENT_SUBMISSION" -> MENU_STUDENT
-            else -> MENU_ALL
+    private fun menuIdForStatus(filter: ExamFilter): Int {
+        return when (filter) {
+            ExamFilter.READY -> MENU_STATUS_READY
+            ExamFilter.PROCESSING -> MENU_STATUS_PROCESSING
+            ExamFilter.CLOSED -> MENU_STATUS_CLOSED
+            ExamFilter.ALL -> MENU_STATUS_ALL
         }
     }
 
     private fun submitFilteredExams() {
         val statusFiltered = when (selectedFilter) {
             ExamFilter.ALL -> allExams
-            ExamFilter.READY -> allExams.filter { it.isOfflineReady }
-            ExamFilter.PROCESSING -> allExams.filter {
-                it.hasSubmitted || it.status.equals("PROCESSING", ignoreCase = true)
-            }
-            ExamFilter.CLOSED -> allExams.filter { it.status.equals("CLOSED", ignoreCase = true) || it.status.equals("DONE", ignoreCase = true) }
+            ExamFilter.READY -> allExams.filter { it.isOpenForStudent() && !it.hasSubmitted }
+            ExamFilter.PROCESSING -> allExams.filter { it.hasSubmitted || it.isSubmittedLikeStatus() }
+            ExamFilter.CLOSED -> allExams.filter { it.isClosedStatus() }
         }
         val query = searchQuery.trim()
         val filtered = if (query.isBlank()) {
@@ -186,9 +177,28 @@ class ExamListFragment : Fragment() {
         CLOSED
     }
 
+    private fun com.examhub.student.data.model.Exam.isOpenForStudent(): Boolean {
+        val normalized = status.uppercase()
+        return normalized.isBlank() ||
+            listOf("OPEN", "ACTIVE", "PUBLISHED", "STARTED", "READY").any { normalized.contains(it) }
+    }
+
+    private fun com.examhub.student.data.model.Exam.isSubmittedLikeStatus(): Boolean {
+        val normalized = status.uppercase()
+        return listOf("SUBMITTED", "PROCESSING", "GRADED", "COMPLETED", "DONE").any { normalized.contains(it) }
+    }
+
+    private fun com.examhub.student.data.model.Exam.isClosedStatus(): Boolean {
+        val normalized = status.uppercase()
+        return listOf("CLOSED", "ENDED", "EXPIRED", "LOCKED").any { normalized.contains(it) }
+    }
+
     private companion object {
-        const val MENU_ALL = 1
-        const val MENU_STUDENT = 2
+        const val GROUP_STATUS = 1
+        const val MENU_STATUS_ALL = 101
+        const val MENU_STATUS_READY = 102
+        const val MENU_STATUS_PROCESSING = 103
+        const val MENU_STATUS_CLOSED = 104
     }
 
     override fun onDestroyView() {

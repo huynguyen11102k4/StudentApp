@@ -4,7 +4,6 @@ import com.examhub.student.model.ApiResult
 import com.examhub.student.model.response.notification.NotificationMarkAllReadResponse
 import com.examhub.student.model.response.notification.NotificationReadResponse
 import com.examhub.student.model.response.notification.NotificationResponse
-import com.examhub.student.model.response.notification.NotificationUnreadCountResponse
 import com.examhub.student.model.response.common.PagedEnvelope
 import kotlinx.coroutines.flow.Flow
 
@@ -16,8 +15,6 @@ interface NotificationRepository {
     ): Flow<ApiResult<PagedEnvelope<NotificationResponse>>>
 
     fun markAsRead(notificationId: String): Flow<ApiResult<NotificationReadResponse>>
-
-    fun getUnreadCount(): Flow<ApiResult<NotificationUnreadCountResponse>>
 
     fun markAllAsRead(): Flow<ApiResult<NotificationMarkAllReadResponse>>
 }

@@ -8,6 +8,6 @@ data class PageMeta(
     val limit: Int,
     val total: Int,
     // Present in notification list response (section 9.1)
-    @SerializedName("unread_count")
+    @SerializedName(value = "unread_count", alternate = ["unreadCount"])
     val unreadCount: Int? = null
 ) : Serializable

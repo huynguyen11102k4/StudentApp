@@ -8,6 +8,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.examhub.student.R
 import com.examhub.student.data.model.Exam
 import com.examhub.student.databinding.ItemExamBinding
+import com.examhub.student.extension.toFriendlyExamStatus
 import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.TimeZone
@@ -23,7 +24,9 @@ class RecentExamAdapter(
             binding.tvClassName.text = listOf(exam.subject, exam.className)
                 .filter { it.isNotBlank() }
                 .joinToString(" • ")
-            binding.tvExamProgress.text = exam.status
+            binding.tvExamProgress.text = exam.status.ifBlank {
+                context.getString(R.string.exam_status_open)
+            }.toFriendlyExamStatus()
             binding.tvExamUpdated.text = formatExamDate(exam.date).ifBlank {
                 context.getString(R.string.dashboard_exam_updated)
             }

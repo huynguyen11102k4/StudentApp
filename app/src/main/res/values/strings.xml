@@ -41,8 +41,20 @@
     <string name="register_login_prompt">Đã có tài khoản? Đăng nhập</string>
     <string name="register_photo_hint">Tải ảnh đại diện (tùy chọn)</string>
     <string name="register_validation_name_required">Vui lòng nhập họ tên</string>
+    <string name="register_validation_email_required">Vui lòng nhập email</string>
     <string name="register_validation_password_short">Mật khẩu phải có ít nhất 6 ký tự</string>
     <string name="register_validation_password_mismatch">Mật khẩu không khớp</string>
+    <string name="register_success">Đăng ký thành công</string>
+    <string name="register_success_login">Đăng ký thành công. Vui lòng đăng nhập.</string>
+    <string name="register_failed">Đăng ký thất bại</string>
+    <string name="register_email_invalid">Email đăng ký không hợp lệ</string>
+    <string name="register_otp_sent">Mã OTP đã được gửi đến email đăng ký</string>
+    <string name="register_otp_resent">Mã OTP đã được gửi lại</string>
+    <string name="register_otp_rate_limited">OTP đã được gửi trước đó. Hãy kiểm tra email hoặc thử lại sau ít phút.</string>
+    <string name="register_otp_resend_failed">Gửi OTP thất bại</string>
+    <string name="register_otp_success_login">Xác thực thành công. Vui lòng đăng nhập.</string>
+    <string name="register_otp_invalid">OTP không hợp lệ</string>
+    <string name="register_otp_verify_failed">Xác thực OTP thất bại</string>
 
     <!-- Forgot Password Screen -->
     <string name="forgot_password_title">Quên mật khẩu</string>
@@ -56,6 +68,7 @@
     <string name="forgot_password_verify_otp">Xác nhận</string>
     <string name="forgot_password_reset_button">Đổi mật khẩu</string>
     <string name="forgot_password_validation_otp_required">Vui lòng nhập đầy đủ mã OTP</string>
+    <string name="forgot_password_student_unsupported">Chức năng quên mật khẩu học sinh chưa được backend hỗ trợ</string>
 
     <!-- Dashboard Screen -->
     <string name="dashboard_title_student">Xin chào, HS</string>
@@ -120,6 +133,9 @@
     <string name="student_join_class_action">Tham gia</string>
     <string name="class_list_join_success">Đã tham gia lớp thành công</string>
     <string name="class_list_join_code_empty">Vui lòng nhập mã lớp</string>
+    <string name="class_list_student_code_hint">Mã học sinh trong lớp</string>
+    <string name="class_list_student_code_empty">Vui lòng nhập mã học sinh</string>
+    <string name="class_list_student_code_exists">Mã học sinh đã tồn tại trong lớp</string>
     <string name="class_list_empty_title">Chưa có lớp học nào</string>
     <string name="class_list_empty_subtitle">Nhập mã lớp do giáo viên cung cấp để tham gia lớp học</string>
     <string name="class_list_badge_pending">Kỳ thi đang mở</string>
@@ -134,6 +150,10 @@
     <string name="class_detail_stats_students">Học sinh</string>
     <string name="class_detail_stats_exams">Kỳ thi</string>
     <string name="class_detail_status_label">Trạng thái</string>
+    <string name="class_detail_subject_empty">Chưa cập nhật môn học</string>
+    <string name="class_detail_description_empty">Chưa có mô tả lớp học.</string>
+    <string name="class_detail_exam_empty_title">Chưa có kỳ thi trong lớp này</string>
+    <string name="class_detail_exam_empty_subtitle">Kỳ thi sẽ xuất hiện khi giáo viên giao cho lớp.</string>
     <string name="class_detail_copy_code_success">Đã sao chép mã lớp học!</string>
     <string name="class_detail_tab_students">Học sinh</string>
     <string name="class_detail_tab_exams">Kỳ thi</string>
@@ -191,6 +211,7 @@
     <string name="exam_list_type_all">Tất cả loại kỳ thi</string>
     <string name="exam_list_type_student">Bài thi cần nộp</string>
     <string name="exam_list_search_hint">Tìm kỳ thi, môn học...</string>
+    <string name="exam_status_open">Đang mở</string>
 
     <!-- Manual Crop Screen -->
     <string name="manual_crop_title">Chỉnh sửa thủ công</string>
@@ -209,15 +230,42 @@
 
     <!-- Notifications Screen -->
     <string name="notifications_title">Thông báo</string>
+    <string name="notifications_subtitle">Cập nhật mới nhất từ bài thi và lớp học của bạn</string>
     <string name="notifications_empty">Chưa có thông báo nào</string>
+    <string name="notifications_empty_desc">Khi có bài kiểm tra, kết quả hoặc cập nhật lớp học, thông báo sẽ xuất hiện tại đây.</string>
     <string name="notifications_mark_read">Đánh dấu đã đọc</string>
     <string name="notifications_mark_all_read">Đánh dấu tất cả đã đọc</string>
+    <string name="notifications_clear">Xóa thông báo</string>
+    <string name="notifications_clear_success">Đã xóa thông báo trên thiết bị này</string>
+    <string name="notifications_filter_all">Tất cả</string>
+    <string name="notifications_filter_unread">Chưa đọc</string>
+    <string name="notifications_filter_read">Đã đọc</string>
+    <string name="notifications_exam_opened_default_title">Bài kiểm tra đã mở</string>
+    <string name="notifications_exam_opened_default_body">Giáo viên đã mở bài kiểm tra. Nhấn để xem chi tiết.</string>
+    <string name="notifications_view_detail">Xem chi tiết</string>
+    <string name="notifications_view_result">Xem kết quả</string>
+    <string name="notifications_grade_default_title">Bài thi đã có kết quả</string>
+    <string name="notifications_grade_old_sentence">Bài thi của bạn đã được chấm xong.</string>
+    <string name="notifications_grade_old_phrase">Bài thi của bạn đã được chấm xong</string>
+    <string name="notifications_grade_new_sentence">Bài thi đã có kết quả.</string>
+    <string name="notifications_grade_new_phrase">Bài thi đã có kết quả</string>
+    <string name="notifications_just_now">Vừa xong</string>
+    <string name="notifications_minutes_ago">%1$d phút trước</string>
+    <string name="notifications_hours_ago">%1$d giờ trước</string>
+    <string name="notifications_days_ago">%1$d ngày trước</string>
     <string name="fcm_channel_name">Cập nhật học sinh</string>
     <string name="fcm_channel_description">Thông báo bài nộp, khiếu nại và cập nhật kỳ thi</string>
 
     <!-- Appeals List Screen -->
     <string name="appeals_list_title">Khiếu nại</string>
     <string name="appeals_list_empty">Chưa có khiếu nại nào</string>
+    <string name="appeals_list_count">%d khiếu nại</string>
+    <string name="appeals_list_empty_subtitle">Các khiếu nại bạn gửi cho bài làm sẽ xuất hiện tại đây.</string>
+    <string name="appeal_score_format">Điểm: %1$.1fđ</string>
+    <string name="appeal_score_changed_format">Điểm: %1$.1fđ → %2$.1fđ</string>
+    <string name="result_detail_has_appeal_notice">Bạn có khiếu nại đã được gửi cho bài làm này. Nhấn để xem danh sách.</string>
+    <string name="result_detail_has_appeals_notice">%d khiếu nại đã được gửi cho bài làm này. Nhấn để xem danh sách.</string>
+    <string name="result_detail_appeal_dialog_message">Mô tả vấn đề bạn muốn giáo viên kiểm tra lại.</string>
 
     <!-- Appeal Detail Screen -->
     <string name="appeal_detail_title">Chi tiết khiếu nại</string>
@@ -262,6 +310,14 @@
     <string name="settings_change_password_desc">Cập nhật mật khẩu đăng nhập</string>
     <string name="settings_current_password_hint">Mật khẩu hiện tại</string>
     <string name="settings_new_password_hint">Mật khẩu mới</string>
+    <string name="settings_confirm_password_hint">Xác nhận mật khẩu mới</string>
+    <string name="settings_current_password_required">Vui lòng nhập mật khẩu hiện tại</string>
+    <string name="settings_new_password_same">Mật khẩu mới phải khác mật khẩu hiện tại</string>
+    <string name="settings_change_password_invalid">Thông tin đổi mật khẩu chưa hợp lệ</string>
+    <string name="settings_change_password_failed">Không thể đổi mật khẩu</string>
+    <string name="settings_logout_failed">Đăng xuất thất bại</string>
+    <string name="settings_storage_cleared_format">Đã xóa mẫu OMR của %1$d kỳ thi</string>
+    <string name="settings_storage_nothing_to_clear">Không có mẫu OMR để xóa</string>
     <string name="settings_avatar_unsupported">Avatar chỉ hỗ trợ JPG, PNG hoặc WEBP</string>
     <string name="settings_avatar_read_failed">Không thể đọc ảnh đại diện</string>
     <string name="settings_avatar_too_large">Ảnh đại diện tối đa 2MB</string>
@@ -271,6 +327,11 @@
     <string name="profile_save">Lưu thay đổi</string>
     <string name="profile_saving">Đang lưu...</string>
     <string name="profile_saved">Đã lưu!</string>
+    <string name="profile_load_failed">Không thể tải thông tin</string>
+    <string name="profile_name_required">Vui lòng nhập họ tên</string>
+    <string name="profile_email_readonly">Email đăng nhập chưa hỗ trợ chỉnh sửa trên app</string>
+    <string name="profile_update_failed">Không thể cập nhật thông tin</string>
+    <string name="profile_avatar_update_failed">Cập nhật ảnh đại diện thất bại</string>
     <string name="profile_name_placeholder">Học sinh</string>
     <string name="profile_role_student">STUDENT</string>
     <string name="profile_work_info">Thông tin học tập</string>
@@ -302,6 +363,12 @@
     <string name="common_search">Tìm kiếm</string>
     <string name="common_separator_dot">-</string>
     <string name="common_not_updated">Chưa cập nhật</string>
+    <string name="notifications_mark_all_read_success">Đã đánh dấu tất cả là đã đọc</string>
+    <plurals name="notifications_unread_count">
+        <item quantity="one">%d chưa đọc</item>
+        <item quantity="other">%d chưa đọc</item>
+    </plurals>
+    <string name="notifications_all_read">Tất cả đã đọc</string>
 
     <plurals name="settings_session_count">
         <item quantity="one">%d thiết bị đang đăng nhập</item>

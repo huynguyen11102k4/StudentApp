@@ -48,7 +48,6 @@ class DashboardViewModel(
     fun loadDashboard() {
         // Load from cache for instant display — but only show if not stale
         val cachedExams = offlineCacheManager.getCachedExamBasics()
-        if (cachedExams.isNotEmpty()) _recentExams.value = cachedExams.take(5)
 
         val cachedClasses = offlineCacheManager.getCachedClassBasics()
         if (cachedClasses.isNotEmpty()) _classCount.value = cachedClasses.size

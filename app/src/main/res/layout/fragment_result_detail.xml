@@ -12,7 +12,8 @@
         android:background="@color/surface"
         app:layout_constraintTop_toTopOf="parent"
         app:navigationIcon="@drawable/ic_close"
-        app:title="@string/result_detail_title" />
+        app:title="@string/result_detail_title"
+        app:titleTextAppearance="@style/Text_Toolbar_Title_Bold" />
 
     <androidx.core.widget.NestedScrollView
         android:id="@+id/contentScroll"
@@ -173,14 +174,39 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <TextView
-                style="@style/Text_Title_Medium"
+            <LinearLayout
+                android:id="@+id/answersHeader"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="@dimen/spacing_20"
-                android:text="@string/result_detail_answers_title"
-                android:textColor="@color/text_primary"
-                android:textStyle="bold" />
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    style="@style/Text_Title_Medium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/result_detail_answers_title"
+                    android:textColor="@color/text_primary"
+                    android:textStyle="bold" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnToggleAnswers"
+                    style="@style/Widget.MaterialComponents.Button.TextButton.Icon"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:contentDescription="@string/result_detail_answers_title"
+                    android:minWidth="0dp"
+                    android:padding="0dp"
+                    app:backgroundTint="@android:color/transparent"
+                    app:icon="@drawable/ic_keyboard_arrow_down"
+                    app:iconGravity="textStart"
+                    app:iconPadding="0dp"
+                    app:iconTint="@color/text_secondary" />
+            </LinearLayout>
 
             <TextView
                 style="@style/Text_Body_Small"
@@ -193,10 +219,51 @@
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/rvAnswers"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
+                android:layout_height="0dp"
                 android:layout_marginTop="@dimen/spacing_12"
-                android:nestedScrollingEnabled="false"
+                android:nestedScrollingEnabled="true"
+                android:visibility="gone"
                 app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager" />
+
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardAppealNotice"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/spacing_16"
+                android:clickable="true"
+                android:focusable="true"
+                android:visibility="gone"
+                app:cardBackgroundColor="@color/surface"
+                app:cardCornerRadius="@dimen/student_card_radius"
+                app:cardElevation="@dimen/elevation_level0"
+                app:contentPadding="@dimen/spacing_16"
+                app:strokeColor="@color/primary"
+                app:strokeWidth="1dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <ImageView
+                        android:layout_width="@dimen/icon_size_medium"
+                        android:layout_height="@dimen/icon_size_medium"
+                        android:contentDescription="@string/appeals_list_title"
+                        android:src="@drawable/ic_appeal"
+                        app:tint="@color/primary" />
+
+                    <TextView
+                        android:id="@+id/tvAppealNotice"
+                        style="@style/Text_Body_Medium"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="@dimen/spacing_12"
+                        android:layout_weight="1"
+                        android:text="@string/result_detail_has_appeal_notice"
+                        android:textColor="@color/text_primary" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnCreateAppeal"

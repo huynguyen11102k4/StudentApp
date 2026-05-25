@@ -2,6 +2,7 @@ package com.examhub.student.ui.settings
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.examhub.student.R
 import com.examhub.student.model.ApiResult
 import com.examhub.student.model.request.auth.ChangePasswordRequest
 import com.examhub.student.model.response.profile.UserResponse
@@ -9,6 +10,7 @@ import com.examhub.student.repository.AuthRepository
 import com.examhub.student.service.FcmTokenRegistrar
 import com.examhub.student.service.NotificationPreferenceManager
 import com.examhub.student.service.OfflineCacheManager
+import com.examhub.student.ui.ResourceProvider
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -16,13 +18,13 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import okhttp3.MultipartBody
 
 class SettingsViewModel(
     private val authRepository: AuthRepository,
     private val offlineCacheManager: OfflineCacheManager,
     private val notificationPreferenceManager: NotificationPreferenceManager,
-    private val fcmTokenRegistrar: FcmTokenRegistrar
+    private val fcmTokenRegistrar: FcmTokenRegistrar,
+    private val resources: ResourceProvider
 ) : ViewModel() {
 
     private val _logoutSuccess = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
@@ -64,8 +66,8 @@ class SettingsViewModel(
         val removed = offlineCacheManager.clearOfflineDownloads()
         _offlineExamCount.value = 0
         _errorMessage.tryEmit(
-            if (removed > 0) "Đã xóa mẫu OMR của $removed kỳ thi"
-            else "Không có mẫu OMR để xóa"
+            if (removed > 0) resources.getString(R.string.settings_storage_cleared_format, removed)
+            else resources.getString(R.string.settings_storage_nothing_to_clear)
         )
     }
 
@@ -74,13 +76,17 @@ class SettingsViewModel(
         _notificationsEnabled.value = enabled
         if (enabled) {
             fcmTokenRegistrar.syncCurrentToken(viewModelScope)
-            _errorMessage.tryEmit("Đã bật thông báo")
+            _errorMessage.tryEmit(resources.getString(R.string.settings_notifications_enabled))
         } else {
-            _errorMessage.tryEmit("Đã tắt thông báo trên thiết bị này")
+            _errorMessage.tryEmit(resources.getString(R.string.settings_notifications_disabled))
         }
     }
 
     fun changePassword(currentPassword: String, newPassword: String) {
+        if (currentPassword.isBlank() || newPassword.length < 6 || currentPassword == newPassword) {
+            _errorMessage.tryEmit(resources.getString(R.string.settings_change_password_invalid))
+            return
+        }
         viewModelScope.launch {
             authRepository.changePassword(ChangePasswordRequest(currentPassword, newPassword)).collect { result ->
                 when (result) {
@@ -91,7 +97,7 @@ class SettingsViewModel(
                     }
                     is ApiResult.Error -> {
                         _isLoading.value = false
-                        _errorMessage.tryEmit(result.exception.message ?: "Không thể đổi mật khẩu")
+                        _errorMessage.tryEmit(result.exception.message ?: resources.getString(R.string.settings_change_password_failed))
                     }
                 }
             }
@@ -109,7 +115,7 @@ class SettingsViewModel(
                     }
                     is ApiResult.Error -> {
                         _isLoading.value = false
-                        _errorMessage.tryEmit(result.exception.message ?: "Đăng xuất thất bại")
+                        _errorMessage.tryEmit(result.exception.message ?: resources.getString(R.string.settings_logout_failed))
                     }
                 }
             }

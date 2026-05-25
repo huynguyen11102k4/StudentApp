@@ -5,54 +5,68 @@
     android:layout_height="match_parent"
     android:background="@color/background">
 
-    <!-- Top App Bar -->
     <com.google.android.material.appbar.MaterialToolbar
         android:id="@+id/toolbar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@color/primary"
+        android:background="@color/surface"
+        app:itemIconTint="@color/text_secondary"
+        app:layout_constraintTop_toTopOf="parent"
         app:navigationIcon="@drawable/ic_chevron_left"
-        app:navigationIconTint="@color/on_primary"
         app:title="@string/appeals_list_title"
-        app:titleTextColor="@color/on_primary"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:titleTextAppearance="@style/Text_Toolbar_Title_Bold"
+        app:titleTextColor="@color/text_primary" />
 
-    <!-- Appeals List -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/rvAppeals"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:clipToPadding="false"
-        android:paddingHorizontal="@dimen/spacing_16"
-        android:paddingTop="@dimen/spacing_8"
-        android:paddingBottom="@dimen/spacing_16"
+        android:paddingStart="@dimen/spacing_16"
+        android:paddingTop="@dimen/spacing_12"
+        android:paddingEnd="@dimen/spacing_16"
+        android:paddingBottom="@dimen/screen_bottom_content_padding"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintTop_toBottomOf="@id/toolbar" />
 
-    <!-- Empty State -->
     <LinearLayout
         android:id="@+id/emptyState"
-        android:layout_width="wrap_content"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:gravity="center"
         android:orientation="vertical"
+        android:padding="@dimen/spacing_32"
         android:visibility="gone"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent">
+        app:layout_constraintTop_toBottomOf="@id/toolbar">
 
-        <View
-            android:layout_width="@dimen/avatar_size_xlarge"
-            android:layout_height="@dimen/avatar_size_xlarge"
-            android:background="@drawable/bg_badge_neutral" />
+        <ImageView
+            android:layout_width="@dimen/icon_size_xlarge"
+            android:layout_height="@dimen/icon_size_xlarge"
+            android:alpha="0.65"
+            android:contentDescription="@string/appeals_list_title"
+            android:src="@drawable/ic_appeal"
+            app:tint="@color/text_secondary" />
 
         <TextView
+            style="@style/Text_Title_Medium"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/spacing_16"
             android:text="@string/appeals_list_empty"
-            style="@style/Text_Body_Medium" />
+            android:textColor="@color/text_primary"
+            android:textStyle="bold" />
+
+        <TextView
+            style="@style/Text_Body_Medium"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/spacing_6"
+            android:gravity="center"
+            android:text="@string/appeals_list_empty_subtitle"
+            android:textColor="@color/text_secondary" />
     </LinearLayout>
 
     <ProgressBar
@@ -63,6 +77,6 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintTop_toBottomOf="@id/toolbar" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

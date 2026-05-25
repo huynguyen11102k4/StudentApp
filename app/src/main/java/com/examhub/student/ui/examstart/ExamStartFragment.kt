@@ -11,8 +11,10 @@ import com.google.android.material.snackbar.Snackbar
 import com.examhub.student.R
 import com.examhub.student.databinding.FragmentExamStartBinding
 import com.examhub.student.model.response.exam.MobileExamDetailResponse
-import com.examhub.student.ui.applySystemWindowInsets
-import com.examhub.student.ui.collectOnStarted
+import com.examhub.student.extension.applySystemWindowInsets
+import com.examhub.student.extension.collectOnStarted
+import com.examhub.student.extension.toFriendlyExamStatus
+import com.examhub.student.extension.toFriendlyGradingType
 import kotlinx.coroutines.launch
 import org.koin.androidx.viewmodel.ext.android.viewModel
 
@@ -45,6 +47,7 @@ class ExamStartFragment : Fragment() {
                     putString("examId", examId)
                     putString("sessionId", session.sessionId)
                     putInt("remainingSeconds", session.remainingSeconds)
+                    putInt("questionCount", viewModel.exam.value?.totalQuestions ?: 0)
                     putBoolean("isLockedMode", session.isLockedMode)
                     putString("classCode", event.omrCodes.classCode)
                     putString("studentCode", event.omrCodes.studentCode)
@@ -66,12 +69,9 @@ class ExamStartFragment : Fragment() {
         binding.tvDuration.text = getString(R.string.exam_start_duration_format, exam.durationMinutes)
         binding.tvQuestionCount.text = getString(R.string.exam_start_question_count_format, exam.totalQuestions)
         binding.tvMode.text = listOf(
-            when (exam.gradingType) {
-                "STUDENT_SUBMISSION", null, "" -> "Học sinh nộp bài"
-                else -> exam.gradingType
-            },
+            exam.gradingType.toFriendlyGradingType().ifBlank { "Học sinh nộp bài" },
             if (exam.onlineConfig?.isLockedMode == true) "Lock mode" else "Không khóa màn hình",
-            exam.status?.takeIf { it.isNotBlank() } ?: "Đang mở"
+            exam.status.toFriendlyExamStatus()
         ).joinToString(" • ")
     }
 

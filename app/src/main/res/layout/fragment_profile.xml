@@ -14,7 +14,8 @@
         app:navigationIcon="@drawable/ic_chevron_left"
         app:navigationIconTint="@color/on_primary"
         app:title="@string/profile_title"
-        app:titleTextColor="@color/on_primary" />
+        app:titleTextColor="@color/on_primary"
+        app:titleTextAppearance="@style/Text_Toolbar_Title_Bold" />
 
     <ScrollView
         android:layout_width="match_parent"
@@ -113,7 +114,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="@dimen/spacing_16"
-                app:startIconDrawable="@drawable/ic_search"
+                app:startIconDrawable="@drawable/ic_email"
                 app:startIconTint="@color/text_secondary">
 
                 <com.google.android.material.textfield.TextInputEditText

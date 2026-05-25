@@ -15,12 +15,17 @@ import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
 import org.koin.androidx.viewmodel.ext.android.viewModel
 import androidx.navigation.fragment.findNavController
+import androidx.navigation.navOptions
 import com.google.android.material.snackbar.Snackbar
+import com.examhub.student.MainActivity
 import com.examhub.student.R
 import com.examhub.student.databinding.FragmentCameraArBinding
-import com.examhub.student.ui.collectOnStarted
+import com.examhub.student.extension.collectOnStarted
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 
@@ -31,6 +36,7 @@ class CameraARFragment : Fragment() {
     private val viewModel: CameraARViewModel by viewModel()
     private var cameraManager: CameraManager? = null
     private var hasCameraPermission = false
+    private var sessionTimeoutJob: Job? = null
     private val pickImageLauncher =
         registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
             uri?.let { handleGalleryImage(it) }
@@ -63,6 +69,7 @@ class CameraARFragment : Fragment() {
         checkCameraPermission()
         setupClickListeners()
         observeViewModel()
+        startSessionTimeout()
     }
 
     override fun onResume() {
@@ -271,6 +278,8 @@ class CameraARFragment : Fragment() {
                         putString("examId", arguments?.getString("examId").orEmpty())
                         putString("sessionId", arguments?.getString("sessionId").orEmpty())
                         putString("studentId", "")
+                        putInt("remainingSeconds", remainingSeconds())
+                        putLong("timerStartedAt", System.currentTimeMillis())
                     }
                     findNavController().navigate(R.id.action_camera_ar_to_smart_review, bundle)
                 }
@@ -283,8 +292,46 @@ class CameraARFragment : Fragment() {
         }
     }
 
+    private fun startSessionTimeout() {
+        val seconds = remainingSeconds()
+        if (seconds <= 0) return
+        sessionTimeoutJob?.cancel()
+        sessionTimeoutJob = viewLifecycleOwner.lifecycleScope.launch {
+            delay(seconds * 1_000L)
+            finishExpiredSession()
+        }
+    }
+
+    private fun remainingSeconds(): Int {
+        val initial = arguments?.getInt("remainingSeconds") ?: 0
+        val startedAt = arguments?.getLong("timerStartedAt") ?: 0L
+        if (startedAt <= 0L) return initial
+        val elapsed = ((System.currentTimeMillis() - startedAt) / 1_000L).toInt()
+        return (initial - elapsed).coerceAtLeast(0)
+    }
+
+    private fun finishExpiredSession() {
+        if (_binding == null) return
+        viewModel.stopSessionWork()
+        cameraManager?.shutdown()
+        (requireActivity() as? MainActivity)?.exitKioskMode()
+        Toast.makeText(requireContext(), R.string.lock_mode_time_expired, Toast.LENGTH_LONG).show()
+        findNavController().navigate(
+            R.id.submissionEndFragment,
+            Bundle().apply {
+                putString("examId", arguments?.getString("examId").orEmpty())
+                putString("sheetId", "")
+            },
+            navOptions {
+                popUpTo(R.id.lockModeFragment) { inclusive = true }
+            }
+        )
+    }
+
     override fun onDestroyView() {
         super.onDestroyView()
+        sessionTimeoutJob?.cancel()
+        viewModel.stopSessionWork()
         cameraManager?.shutdown()
         cameraManager = null
         _binding = null

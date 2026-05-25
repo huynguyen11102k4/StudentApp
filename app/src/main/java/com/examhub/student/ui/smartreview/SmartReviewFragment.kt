@@ -16,13 +16,18 @@ import android.view.ViewGroup
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
+import androidx.navigation.navOptions
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
+import com.examhub.student.MainActivity
 import com.examhub.student.R
 import com.examhub.student.databinding.FragmentSmartReviewBinding
-import com.examhub.student.ui.applySystemWindowInsets
-import com.examhub.student.ui.collectOnStarted
+import com.examhub.student.extension.applySystemWindowInsets
+import com.examhub.student.extension.collectOnStarted
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import org.koin.androidx.viewmodel.ext.android.viewModel
@@ -33,6 +38,8 @@ class SmartReviewFragment : Fragment() {
     private var _binding: FragmentSmartReviewBinding? = null
     private val binding get() = _binding!!
     private val viewModel: SmartReviewViewModel by viewModel()
+    private var sessionTimeoutJob: Job? = null
+    private var finishingExpiredSession = false
     private val writeStoragePermissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
             if (granted) {
@@ -82,12 +89,14 @@ class SmartReviewFragment : Fragment() {
             launch {
                 viewModel.errorMessage.collect { message ->
                     Snackbar.make(binding.root, message, Snackbar.LENGTH_LONG).show()
+                    if (finishingExpiredSession) finishExpiredSession()
                 }
             }
         }
 
         viewModel.loadReviewData(arguments?.getString("submissionId").orEmpty())
         viewModel.setFallbackSession(arguments?.getString("sessionId").orEmpty())
+        startSessionTimeout()
     }
 
     private fun openCameraForCurrentExam() {
@@ -105,6 +114,8 @@ class SmartReviewFragment : Fragment() {
             val bundle = Bundle().apply {
                 putString("examId", examId)
                 putString("sessionId", viewModel.reviewState.value.sessionId)
+                putInt("remainingSeconds", remainingSeconds())
+                putLong("timerStartedAt", System.currentTimeMillis())
             }
             navController.navigate(R.id.action_smart_review_to_camera_ar, bundle)
         }
@@ -120,6 +131,51 @@ class SmartReviewFragment : Fragment() {
                 viewModel.saveResults(state.score ?: 0.0, state.examId, state.studentId)
             }
             .show()
+    }
+
+    private fun startSessionTimeout() {
+        val seconds = remainingSeconds()
+        if (seconds <= 0) return
+        sessionTimeoutJob?.cancel()
+        sessionTimeoutJob = viewLifecycleOwner.lifecycleScope.launch {
+            delay(seconds * 1_000L)
+            handleSessionExpired()
+        }
+    }
+
+    private fun handleSessionExpired() {
+        if (_binding == null || finishingExpiredSession) return
+        finishingExpiredSession = true
+        val state = viewModel.reviewState.value
+        if (state.hasOmrResult && !viewModel.isLoading.value) {
+            Snackbar.make(binding.root, R.string.lock_mode_time_expired_auto_submit, Snackbar.LENGTH_LONG).show()
+            viewModel.saveResults(state.score ?: 0.0, state.examId, state.studentId)
+        } else {
+            finishExpiredSession()
+        }
+    }
+
+    private fun finishExpiredSession() {
+        if (_binding == null) return
+        (requireActivity() as? MainActivity)?.exitKioskMode()
+        findNavController().navigate(
+            R.id.submissionEndFragment,
+            Bundle().apply {
+                putString("examId", viewModel.reviewState.value.examId.ifBlank { arguments?.getString("examId").orEmpty() })
+                putString("sheetId", "")
+            },
+            navOptions {
+                popUpTo(R.id.lockModeFragment) { inclusive = true }
+            }
+        )
+    }
+
+    private fun remainingSeconds(): Int {
+        val initial = arguments?.getInt("remainingSeconds") ?: 0
+        val startedAt = arguments?.getLong("timerStartedAt") ?: 0L
+        if (startedAt <= 0L) return initial
+        val elapsed = ((System.currentTimeMillis() - startedAt) / 1_000L).toInt()
+        return (initial - elapsed).coerceAtLeast(0)
     }
 
     private fun bindReviewState(state: ReviewUiState) {
@@ -237,6 +293,7 @@ class SmartReviewFragment : Fragment() {
 
     override fun onDestroyView() {
         super.onDestroyView()
+        sessionTimeoutJob?.cancel()
         _binding = null
     }
 }

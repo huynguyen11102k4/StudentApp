@@ -20,7 +20,8 @@
             android:paddingStart="@dimen/spacing_16"
             android:paddingEnd="@dimen/spacing_16"
             app:title="@string/class_list_title"
-            app:titleTextColor="@color/text_primary" />
+            app:titleTextColor="@color/text_primary"
+        app:titleTextAppearance="@style/Text_Toolbar_Title_Bold" />
 
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/tilSearch"

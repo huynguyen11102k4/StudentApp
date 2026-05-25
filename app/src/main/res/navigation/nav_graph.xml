@@ -153,6 +153,8 @@
         tools:layout="@layout/fragment_camera_ar">
         <argument android:name="examId" app:argType="string" android:defaultValue="" />
         <argument android:name="sessionId" app:argType="string" android:defaultValue="" />
+        <argument android:name="remainingSeconds" app:argType="integer" android:defaultValue="0" />
+        <argument android:name="timerStartedAt" app:argType="long" android:defaultValue="0L" />
         <action android:id="@+id/action_camera_ar_to_smart_review" app:destination="@id/smartReviewFragment" />
         <action android:id="@+id/action_camera_ar_to_manual_crop" app:destination="@id/manualCropFragment" />
     </fragment>
@@ -174,6 +176,8 @@
         <argument android:name="sessionId" app:argType="string" android:defaultValue="" />
         <argument android:name="studentId" app:argType="string" android:defaultValue="" />
         <argument android:name="submissionId" app:argType="string" android:defaultValue="" />
+        <argument android:name="remainingSeconds" app:argType="integer" android:defaultValue="0" />
+        <argument android:name="timerStartedAt" app:argType="long" android:defaultValue="0L" />
         <action android:id="@+id/action_smart_review_to_camera_ar" app:destination="@id/cameraARFragment" />
         <action android:id="@+id/action_smart_review_to_results" app:destination="@id/resultsListFragment" />
         <action android:id="@+id/action_smart_review_to_submission_end" app:destination="@id/submissionEndFragment" />
@@ -205,6 +209,7 @@
         tools:layout="@layout/fragment_result_detail">
         <argument android:name="sheetId" app:argType="string" />
         <action android:id="@+id/action_result_detail_to_appeal_detail" app:destination="@id/appealDetailFragment" />
+        <action android:id="@+id/action_result_detail_to_appeals_list" app:destination="@id/appealsListFragment" />
     </fragment>
 
     <fragment

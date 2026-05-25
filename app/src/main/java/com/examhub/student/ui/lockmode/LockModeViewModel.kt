@@ -5,11 +5,16 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.gson.Gson
 import com.examhub.student.R
+import com.examhub.student.model.ApiException
 import com.examhub.student.model.ApiResult
 import com.examhub.student.model.request.lock.LockHeartbeatRequest
 import com.examhub.student.model.request.lock.LockViolationRequest
+import com.examhub.student.model.request.submission.IdZoneResultRequest
+import com.examhub.student.model.request.submission.StudentAnswerRequest
+import com.examhub.student.model.request.submission.StudentSubmitRequest
 import com.examhub.student.model.response.profile.UserResponse
 import com.examhub.student.repository.LockModeRepository
+import com.examhub.student.repository.StudentSubmissionRepository
 import com.examhub.student.service.NetworkStatusProvider
 import com.examhub.student.service.OfflineCacheManager
 import com.examhub.student.service.TokenManager
@@ -29,6 +34,7 @@ import java.util.TimeZone
 
 class LockModeViewModel(
     private val lockModeRepository: LockModeRepository,
+    private val studentSubmissionRepository: StudentSubmissionRepository,
     private val context: Context,
     private val offlineCacheManager: OfflineCacheManager,
     private val tokenManager: TokenManager,
@@ -36,21 +42,32 @@ class LockModeViewModel(
 ) : ViewModel() {
     private val _remainingSeconds = MutableStateFlow(0)
     val remainingSeconds: StateFlow<Int> = _remainingSeconds.asStateFlow()
-    private val _message = MutableSharedFlow<String>(extraBufferCapacity = 1)
-    val message: SharedFlow<String> = _message.asSharedFlow()
     private val _timeExpired = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     val timeExpired: SharedFlow<Unit> = _timeExpired.asSharedFlow()
-    private val _queuedViolationCount = MutableStateFlow(0)
-    val queuedViolationCount: StateFlow<Int> = _queuedViolationCount.asStateFlow()
+    private val _blankSubmissionFinished = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    val blankSubmissionFinished: SharedFlow<Unit> = _blankSubmissionFinished.asSharedFlow()
     private val _omrCodes = MutableStateFlow(LockModeOmrCodes())
     val omrCodes: StateFlow<LockModeOmrCodes> = _omrCodes.asStateFlow()
 
     private var timerJob: Job? = null
     private var heartbeatJob: Job? = null
     private var sessionId: String = ""
+    private var examId: String = ""
+    private var questionCount: Int = 0
+    private var blankSubmitted = false
+    private var stopped = false
 
-    fun start(sessionId: String, examId: String, initialSeconds: Int, argCodes: LockModeOmrCodes = LockModeOmrCodes()) {
+    fun start(
+        sessionId: String,
+        examId: String,
+        initialSeconds: Int,
+        questionCount: Int,
+        argCodes: LockModeOmrCodes = LockModeOmrCodes()
+    ) {
         this.sessionId = sessionId
+        this.examId = examId
+        this.questionCount = questionCount.coerceAtLeast(0)
+        stopped = false
         if (_remainingSeconds.value <= 0) _remainingSeconds.value = initialSeconds.coerceAtLeast(0)
         loadOmrCodes(examId, argCodes)
         startTimer()
@@ -58,6 +75,7 @@ class LockModeViewModel(
     }
 
     fun logViolation(type: String, evidence: Map<String, Any?> = emptyMap()) {
+        if (stopped) return
         val id = sessionId.takeIf { it.isNotBlank() } ?: return
         val request = LockViolationRequest(
             sessionId = id,
@@ -66,16 +84,16 @@ class LockModeViewModel(
             evidenceData = evidence
         )
         lockModeRepository.queueViolation(request)
-        _queuedViolationCount.value = lockModeRepository.queuedViolationCount()
         flushViolations()
     }
 
     fun flushViolations() {
+        if (stopped) return
         viewModelScope.launch {
             lockModeRepository.flushQueuedViolations().collect { result ->
                 when (result) {
-                    is ApiResult.Success -> _queuedViolationCount.value = lockModeRepository.queuedViolationCount()
-                    is ApiResult.Error -> _message.tryEmit(result.exception.message ?: context.getString(R.string.lock_mode_violation_queued))
+                    is ApiResult.Success -> Unit
+                    is ApiResult.Error -> Unit
                     else -> Unit
                 }
             }
@@ -96,7 +114,7 @@ class LockModeViewModel(
     private fun startHeartbeat() {
         if (heartbeatJob?.isActive == true || sessionId.isBlank()) return
         heartbeatJob = viewModelScope.launch {
-            while (true) {
+            while (!stopped) {
                 lockModeRepository.heartbeat(
                     sessionId,
                     LockHeartbeatRequest(
@@ -108,12 +126,101 @@ class LockModeViewModel(
                         _remainingSeconds.value = result.data.remainingSeconds
                         flushViolations()
                     } else if (result is ApiResult.Error) {
-                        _message.tryEmit(result.exception.message ?: context.getString(R.string.lock_mode_heartbeat_failed))
+                        if (result.exception.isTerminalSessionStatusError()) {
+                            stopHeartbeat()
+                            return@collect
+                        }
                     }
                 }
                 delay(30_000)
             }
         }
+    }
+
+    fun stopSessionWork() {
+        stopped = true
+        timerJob?.cancel()
+        timerJob = null
+        stopHeartbeat()
+    }
+
+    private fun stopHeartbeat() {
+        heartbeatJob?.cancel()
+        heartbeatJob = null
+    }
+
+    private fun ApiException.isTerminalSessionStatusError(): Boolean {
+        return code == "INVALID_SESSION_STATUS" || message.contains("VIOLATED", ignoreCase = true)
+    }
+
+    fun submitBlankOnTimeout() {
+        val id = sessionId.takeIf { it.isNotBlank() } ?: return
+        if (blankSubmitted) {
+            _blankSubmissionFinished.tryEmit(Unit)
+            return
+        }
+        blankSubmitted = true
+        viewModelScope.launch {
+            val count = resolveQuestionCount()
+            val codes = _omrCodes.value
+            val localExam = offlineCacheManager.getCachedExamBasic(examId)
+            if (localExam != null) {
+                offlineCacheManager.saveExamBasic(localExam.copy(status = "SUBMITTED", hasSubmitted = true))
+            }
+            studentSubmissionRepository.submit(
+                id,
+                StudentSubmitRequest(
+                    rawImageUrl = null,
+                    dewarpedImageUrl = null,
+                    processedImageUrl = null,
+                    scannedStudentId = codes.studentCode.takeIf { it.isNotBlank() },
+                    scannedClassCode = codes.classCode.takeIf { it.isNotBlank() },
+                    scannedExamCode = null,
+                    idResult = IdZoneResultRequest(
+                        studentId = codes.studentCode.takeIf { it.isNotBlank() },
+                        classCode = codes.classCode.takeIf { it.isNotBlank() },
+                        examCode = null,
+                        idOk = codes.studentCode.isNotBlank() || codes.classCode.isNotBlank(),
+                        idError = "time_expired_no_scan"
+                    ),
+                    studentAnswers = (1..count).map { questionNo ->
+                        StudentAnswerRequest(questionNumber = questionNo, answer = null)
+                    },
+                    capturedAt = nowIso(),
+                    imageQualityScore = 0,
+                    qualityFeedback = mapOf(
+                        "auto_submitted" to "true",
+                        "reason" to "time_expired_no_scan",
+                        "exam_id" to examId
+                    )
+                )
+            ).collect { result ->
+                if (result !is ApiResult.Loading) {
+                    _blankSubmissionFinished.tryEmit(Unit)
+                }
+            }
+        }
+    }
+
+    private fun resolveQuestionCount(): Int {
+        if (questionCount > 0) return questionCount
+        val rawTemplate = offlineCacheManager.getTemplate(examId) ?: return 0
+        return runCatching {
+            val root = org.json.JSONObject(rawTemplate)
+            val grid = root.optJSONObject("gridConfig") ?: root.optJSONObject("grid_config")
+            val zones = grid?.optJSONArray("answer_zones") ?: grid?.optJSONArray("answerZones")
+            var maxQuestion = 0
+            if (zones != null) {
+                for (i in 0 until zones.length()) {
+                    val zone = zones.optJSONObject(i) ?: continue
+                    maxQuestion = maxOf(
+                        maxQuestion,
+                        zone.optInt("end_number", zone.optInt("endNumber", 0))
+                    )
+                }
+            }
+            maxQuestion
+        }.getOrDefault(0)
     }
 
     private fun loadOmrCodes(examId: String, argCodes: LockModeOmrCodes) {

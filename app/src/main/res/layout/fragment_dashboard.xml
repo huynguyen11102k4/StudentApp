@@ -63,7 +63,8 @@
                     android:ellipsize="end"
                     android:maxLines="2"
                     android:text="@string/dashboard_title_student"
-                    android:textColor="?attr/colorOnSurface" />
+                    android:textColor="?attr/colorOnSurface"
+                    android:textStyle="bold" />
 
                 <ImageButton
                     android:id="@+id/btnNotifications"

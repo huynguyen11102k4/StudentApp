@@ -31,6 +31,8 @@ class ResultDetailViewModel(
     val message: SharedFlow<String> = _message.asSharedFlow()
     private val _appealCreated = MutableSharedFlow<String>(extraBufferCapacity = 1)
     val appealCreated: SharedFlow<String> = _appealCreated.asSharedFlow()
+    private val _appealCount = MutableStateFlow(0)
+    val appealCount: StateFlow<Int> = _appealCount.asStateFlow()
 
     fun loadResult(sheetId: String) {
         viewModelScope.launch {
@@ -40,6 +42,7 @@ class ResultDetailViewModel(
                     is ApiResult.Success -> {
                         _isLoading.value = false
                         _result.value = result.data
+                        loadAppealCount(result.data)
                     }
                     is ApiResult.Error -> {
                         _isLoading.value = false
@@ -71,12 +74,23 @@ class ResultDetailViewModel(
                     is ApiResult.Loading -> _isLoading.value = true
                     is ApiResult.Success -> {
                         _isLoading.value = false
+                        _appealCount.value = (_appealCount.value + 1).coerceAtLeast(1)
                         _appealCreated.tryEmit(result.data.appealId)
                     }
                     is ApiResult.Error -> {
                         _isLoading.value = false
                         _message.tryEmit(result.exception.message ?: context.getString(R.string.result_detail_create_appeal_failed))
                     }
+                }
+            }
+        }
+    }
+
+    private fun loadAppealCount(result: StudentResultDetailResponse) {
+        viewModelScope.launch {
+            appealsRepository.getAppeals(examId = result.exam?.id).collect { response ->
+                if (response is ApiResult.Success) {
+                    _appealCount.value = response.data.data.size
                 }
             }
         }

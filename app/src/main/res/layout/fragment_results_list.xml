@@ -12,7 +12,8 @@
         android:background="@color/surface"
         app:layout_constraintTop_toTopOf="parent"
         app:navigationIcon="@drawable/ic_close"
-        app:title="@string/results_title" />
+        app:title="@string/results_title"
+        app:titleTextAppearance="@style/Text_Toolbar_Title_Bold" />
 
     <TextView
         android:id="@+id/tvResultsSubtitle"

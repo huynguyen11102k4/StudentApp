@@ -5,14 +5,16 @@ import android.view.LayoutInflater
 import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
+import androidx.appcompat.widget.PopupMenu
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
-import com.google.android.material.snackbar.Snackbar
 import com.examhub.student.R
+import com.examhub.student.data.model.AppNotification
 import com.examhub.student.databinding.FragmentNotificationsBinding
-import com.examhub.student.ui.applySystemWindowInsets
-import com.examhub.student.ui.collectOnStarted
+import com.examhub.student.extension.applySystemWindowInsets
+import com.examhub.student.extension.collectOnStarted
+import com.google.android.material.snackbar.Snackbar
 import kotlinx.coroutines.launch
 import org.koin.androidx.viewmodel.ext.android.viewModel
 
@@ -22,6 +24,8 @@ class NotificationsFragment : Fragment() {
     private val binding get() = _binding!!
     private val viewModel: NotificationsViewModel by viewModel()
     private lateinit var adapter: NotificationAdapter
+    private var isLoading = false
+    private var selectedFilter = NotificationsViewModel.NotificationFilter.ALL
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentNotificationsBinding.inflate(inflater, container, false)
@@ -31,13 +35,18 @@ class NotificationsFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        binding.toolbar.applySystemWindowInsets(top = true)
+        binding.appBar.applySystemWindowInsets(top = true)
         binding.toolbar.setNavigationOnClickListener { findNavController().navigateUp() }
         binding.toolbar.setOnMenuItemClickListener { menuItem: MenuItem ->
             when (menuItem.itemId) {
                 R.id.action_mark_all_read -> {
                     viewModel.markAllAsRead()
-                    Snackbar.make(binding.root, "Đã đánh dấu tất cả là đã đọc", Snackbar.LENGTH_SHORT).show()
+                    Snackbar.make(binding.root, R.string.notifications_mark_all_read_success, Snackbar.LENGTH_SHORT).show()
+                    true
+                }
+                R.id.action_clear_notifications -> {
+                    viewModel.clearNotifications()
+                    Snackbar.make(binding.root, R.string.notifications_clear_success, Snackbar.LENGTH_SHORT).show()
                     true
                 }
                 else -> false
@@ -55,6 +64,7 @@ class NotificationsFragment : Fragment() {
         )
         binding.rvNotifications.layoutManager = LinearLayoutManager(requireContext())
         binding.rvNotifications.adapter = adapter
+        binding.btnNotificationFilter.setOnClickListener { showFilterMenu() }
 
         binding.swipeRefresh.setOnRefreshListener {
             viewModel.refresh()
@@ -64,36 +74,42 @@ class NotificationsFragment : Fragment() {
             launch {
                 viewModel.notifications.collect { notifications ->
                     adapter.submitList(notifications)
-                    binding.emptyState.visibility = if (notifications.isEmpty()) View.VISIBLE else View.GONE
-                    binding.swipeRefresh.visibility = if (notifications.isEmpty()) View.GONE else View.VISIBLE
+                    updateContentState(notifications)
                 }
             }
             launch {
                 viewModel.unreadCount.collect { unreadCount ->
-                    binding.toolbar.subtitle = if (unreadCount > 0) "$unreadCount chưa đọc" else "Tất cả đã đọc"
+                    binding.tvUnreadBadge.text = if (unreadCount > 0) {
+                        resources.getQuantityString(R.plurals.notifications_unread_count, unreadCount, unreadCount)
+                    } else {
+                        getString(R.string.notifications_all_read)
+                    }
                 }
             }
             launch {
                 viewModel.isLoading.collect { loading ->
-                    binding.progressBar.visibility = if (loading) View.VISIBLE else View.GONE
+                    isLoading = loading
+                    updateContentState(viewModel.notifications.value)
                 }
             }
-            launch {
-                viewModel.isRefreshing.collect { refreshing ->
-                    binding.swipeRefresh.isRefreshing = refreshing
-                }
-            }
-            launch {
-                viewModel.errorMessage.collect { msg ->
-                    Snackbar.make(binding.root, msg, Snackbar.LENGTH_LONG).show()
-                }
-            }
+            launch { viewModel.isRefreshing.collect { refreshing -> binding.swipeRefresh.isRefreshing = refreshing } }
+            launch { viewModel.errorMessage.collect { msg -> Snackbar.make(binding.root, msg, Snackbar.LENGTH_LONG).show() } }
         }
         viewModel.loadNotifications()
     }
 
-    private fun handleNotificationClick(notification: com.examhub.student.data.model.AppNotification) {
+    private fun handleNotificationClick(notification: AppNotification) {
         val type = notification.type.uppercase()
+        val link = notification.link.orEmpty()
+        val sheetId = notification.data?.stringValue("sheet_id")
+            ?: notification.data?.stringValue("sheetId")
+            ?: notification.data?.stringValue("answer_sheet_id")
+            ?: notification.data?.stringValue("answerSheetId")
+            ?: notification.metadata?.stringValue("sheet_id")
+            ?: notification.metadata?.stringValue("sheetId")
+            ?: notification.metadata?.stringValue("answer_sheet_id")
+            ?: notification.metadata?.stringValue("answerSheetId")
+            ?: link.takeIf { it.contains("/results/", ignoreCase = true) }?.extractLastId()
         val appealId = notification.appealId ?: notification.link?.extractLastId()
         val examId = notification.targetId
             ?: notification.entityId
@@ -102,6 +118,11 @@ class NotificationsFragment : Fragment() {
             ?: notification.metadata?.stringValue("exam_id")
             ?: notification.metadata?.stringValue("examId")
             ?: notification.link?.extractLastId()
+        if (!sheetId.isNullOrBlank() && (type.contains("GRADE") || link.contains("/results/", ignoreCase = true))) {
+            val bundle = Bundle().apply { putString("sheetId", sheetId) }
+            findNavController().navigate(R.id.resultDetailFragment, bundle)
+            return
+        }
         if ((type == "APPEAL_CREATED" || type == "APPEAL_UPDATED" || type == "APPEAL_NEW") && !appealId.isNullOrBlank()) {
             val bundle = Bundle().apply { putString("appealId", appealId) }
             findNavController().navigate(R.id.action_notifications_to_appeal_detail, bundle)
@@ -113,8 +134,11 @@ class NotificationsFragment : Fragment() {
             return
         }
 
-        val link = notification.link.orEmpty()
         when {
+            link.contains("results", ignoreCase = true) && !sheetId.isNullOrBlank() -> {
+                val bundle = Bundle().apply { putString("sheetId", sheetId) }
+                findNavController().navigate(R.id.resultDetailFragment, bundle)
+            }
             link.contains("appeals", ignoreCase = true) && !appealId.isNullOrBlank() -> {
                 val bundle = Bundle().apply { putString("appealId", appealId) }
                 findNavController().navigate(R.id.action_notifications_to_appeal_detail, bundle)
@@ -126,6 +150,42 @@ class NotificationsFragment : Fragment() {
                 findNavController().navigate(R.id.examListFragment)
             }
             else -> Unit
+        }
+    }
+
+    private fun updateContentState(notifications: List<AppNotification>) {
+        val showSkeleton = isLoading && notifications.isEmpty()
+        val showEmpty = !isLoading && notifications.isEmpty()
+        binding.loadingSkeleton.visibility = if (showSkeleton) View.VISIBLE else View.GONE
+        binding.emptyState.visibility = if (showEmpty) View.VISIBLE else View.GONE
+        binding.swipeRefresh.visibility = if (showEmpty || showSkeleton) View.GONE else View.VISIBLE
+    }
+
+    private fun showFilterMenu() {
+        PopupMenu(requireContext(), binding.btnNotificationFilter).apply {
+            menu.add(0, MENU_FILTER_ALL, 0, R.string.notifications_filter_all)
+            menu.add(0, MENU_FILTER_UNREAD, 1, R.string.notifications_filter_unread)
+            menu.add(0, MENU_FILTER_READ, 2, R.string.notifications_filter_read)
+            menu.setGroupCheckable(0, true, true)
+            menu.findItem(menuIdForFilter(selectedFilter))?.isChecked = true
+            setOnMenuItemClickListener { item ->
+                selectedFilter = when (item.itemId) {
+                    MENU_FILTER_UNREAD -> NotificationsViewModel.NotificationFilter.UNREAD
+                    MENU_FILTER_READ -> NotificationsViewModel.NotificationFilter.READ
+                    else -> NotificationsViewModel.NotificationFilter.ALL
+                }
+                viewModel.setFilter(selectedFilter)
+                true
+            }
+            show()
+        }
+    }
+
+    private fun menuIdForFilter(filter: NotificationsViewModel.NotificationFilter): Int {
+        return when (filter) {
+            NotificationsViewModel.NotificationFilter.UNREAD -> MENU_FILTER_UNREAD
+            NotificationsViewModel.NotificationFilter.READ -> MENU_FILTER_READ
+            NotificationsViewModel.NotificationFilter.ALL -> MENU_FILTER_ALL
         }
     }
 
@@ -142,5 +202,11 @@ class NotificationsFragment : Fragment() {
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null
+    }
+
+    private companion object {
+        const val MENU_FILTER_ALL = 1
+        const val MENU_FILTER_UNREAD = 2
+        const val MENU_FILTER_READ = 3
     }
 }

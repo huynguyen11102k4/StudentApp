@@ -7,7 +7,6 @@ import com.examhub.student.model.response.notification.FcmTokenResponse
 import com.examhub.student.model.response.notification.NotificationMarkAllReadResponse
 import com.examhub.student.model.response.notification.NotificationReadResponse
 import com.examhub.student.model.response.notification.NotificationResponse
-import com.examhub.student.model.response.notification.NotificationUnreadCountResponse
 import com.examhub.student.model.response.common.PagedEnvelope
 import retrofit2.Response
 import retrofit2.http.Body
@@ -32,9 +31,6 @@ interface NotificationApiService {
     // PATCH kept for backward-compat
     @PATCH("student/notifications/{notificationId}/read")
     suspend fun markAsReadLegacy(@Path("notificationId") notificationId: String): Response<ApiEnvelope<NotificationReadResponse>>
-
-    @GET("student/notifications/unread-count")
-    suspend fun getUnreadCount(): Response<ApiEnvelope<NotificationUnreadCountResponse>>
 
     @POST("student/notifications/mark-all-read")
     suspend fun markAllAsRead(): Response<ApiEnvelope<NotificationMarkAllReadResponse>>

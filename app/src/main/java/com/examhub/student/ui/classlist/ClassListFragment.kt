@@ -2,10 +2,12 @@ package com.examhub.student.ui.classlist
 
 import android.os.Bundle
 import android.text.Editable
+import android.text.InputType
 import android.text.TextWatcher
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.LinearLayout
 import androidx.core.os.bundleOf
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
@@ -16,8 +18,8 @@ import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
 import com.examhub.student.R
 import com.examhub.student.databinding.FragmentClassListBinding
-import com.examhub.student.ui.applySystemWindowInsets
-import com.examhub.student.ui.collectOnStarted
+import com.examhub.student.extension.applySystemWindowInsets
+import com.examhub.student.extension.collectOnStarted
 import kotlinx.coroutines.launch
 import org.koin.androidx.viewmodel.ext.android.viewModel
 
@@ -102,20 +104,49 @@ class ClassListFragment : Fragment() {
     }
 
     private fun showJoinClassDialog() {
-        val inputLayout = TextInputLayout(requireContext()).apply {
-            hint = getString(R.string.class_list_join_code_sample)
+        val container = LinearLayout(requireContext()).apply {
+            orientation = LinearLayout.VERTICAL
             setPadding(32, 8, 32, 0)
         }
-        val joinCodeInput = TextInputEditText(inputLayout.context)
-        inputLayout.addView(joinCodeInput)
-        MaterialAlertDialogBuilder(requireContext())
+        val joinCodeLayout = TextInputLayout(requireContext()).apply {
+            hint = getString(R.string.class_list_join_code_sample)
+        }
+        val joinCodeInput = TextInputEditText(joinCodeLayout.context).apply {
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS
+        }
+        joinCodeLayout.addView(joinCodeInput)
+        val studentCodeLayout = TextInputLayout(requireContext()).apply {
+            hint = getString(R.string.class_list_student_code_hint)
+        }
+        val studentCodeInput = TextInputEditText(studentCodeLayout.context).apply {
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS
+            setText(viewModel.defaultStudentCode.value)
+            setSelection(text?.length ?: 0)
+        }
+        studentCodeLayout.addView(studentCodeInput)
+        container.addView(joinCodeLayout)
+        container.addView(studentCodeLayout)
+        val dialog = MaterialAlertDialogBuilder(requireContext())
             .setTitle(R.string.student_join_class_title)
-            .setView(inputLayout)
-            .setPositiveButton(R.string.student_join_class_action) { _, _ ->
-                viewModel.joinClass(joinCodeInput.text?.toString().orEmpty())
-            }
+            .setView(container)
+            .setPositiveButton(R.string.student_join_class_action, null)
             .setNegativeButton(R.string.common_cancel, null)
-            .show()
+            .create()
+        dialog.setOnShowListener {
+            dialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                val joinCode = joinCodeInput.text?.toString().orEmpty()
+                val studentCode = studentCodeInput.text?.toString().orEmpty()
+                joinCodeLayout.error = if (joinCode.isBlank()) getString(R.string.class_list_join_code_empty) else null
+                studentCodeLayout.error = if (studentCode.isBlank()) getString(R.string.class_list_student_code_empty) else null
+                if (joinCode.isBlank() || studentCode.isBlank()) return@setOnClickListener
+                viewModel.joinClass(
+                    joinCode = joinCode,
+                    studentCode = studentCode
+                )
+                dialog.dismiss()
+            }
+        }
+        dialog.show()
     }
 
     override fun onDestroyView() {

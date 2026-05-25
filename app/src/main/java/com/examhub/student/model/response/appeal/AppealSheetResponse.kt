@@ -6,12 +6,15 @@ data class AppealSheetResponse(
     @SerializedName("id")
     val id: String,
 
-    @SerializedName("total_score")
+    @SerializedName(value = "total_score", alternate = ["totalScore"])
     val totalScore: Double?,
 
-    @SerializedName("processed_image_url")
+    @SerializedName(value = "processed_image_url", alternate = ["processedImageUrl"])
     val processedImageUrl: String?,
 
-    @SerializedName("dewarped_image_url")
-    val dewarpedImageUrl: String?
+    @SerializedName(value = "dewarped_image_url", alternate = ["dewarpedImageUrl"])
+    val dewarpedImageUrl: String?,
+
+    @SerializedName("exam")
+    val exam: AppealExamResponse? = null
 )

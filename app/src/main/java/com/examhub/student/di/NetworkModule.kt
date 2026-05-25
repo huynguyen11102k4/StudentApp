@@ -22,6 +22,7 @@ import com.examhub.student.service.TokenManager
 import com.examhub.student.service.UnauthorizedInterceptor
 import com.examhub.student.service.OfflineCacheManager
 import com.examhub.student.service.ViolationQueueManager
+import com.examhub.student.ui.ResourceProvider
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
@@ -35,6 +36,7 @@ import java.util.concurrent.TimeUnit
 object NetworkModule {
     val module = module {
         single { GsonBuilder().create() }
+        single { ResourceProvider(androidContext()) }
         single { TokenManager(androidContext()) }
         single { NotificationPreferenceManager(androidContext()) }
         single { FcmTokenRegistrar(get(), get(), get(), androidContext()) }

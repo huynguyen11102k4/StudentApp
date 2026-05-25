@@ -22,54 +22,9 @@
             app:itemIconTint="?attr/colorOnSurfaceVariant"
             app:menu="@menu/menu_exam_list_toolbar"
             app:title="@string/exam_list_default_title"
-            app:titleTextColor="@color/text_primary" />
+            app:titleTextColor="@color/text_primary"
+        app:titleTextAppearance="@style/Text_Toolbar_Title_Bold" />
 
-        <HorizontalScrollView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:clipToPadding="false"
-            android:overScrollMode="never"
-            android:paddingHorizontal="@dimen/spacing_16"
-            android:paddingBottom="@dimen/spacing_12"
-            android:scrollbars="none">
-
-            <com.google.android.material.chip.ChipGroup
-                android:id="@+id/chipGroupFilters"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                app:singleSelection="true"
-                app:selectionRequired="true">
-
-                <com.google.android.material.chip.Chip
-                    android:id="@+id/chipAll"
-                    style="@style/Chip_Filter"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:checked="true"
-                    android:text="@string/exam_list_filter_all" />
-
-                <com.google.android.material.chip.Chip
-                    android:id="@+id/chipReady"
-                    style="@style/Chip_Filter"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/exam_list_filter_ready" />
-
-                <com.google.android.material.chip.Chip
-                    android:id="@+id/chipProcessing"
-                    style="@style/Chip_Filter"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/exam_list_filter_processing" />
-
-                <com.google.android.material.chip.Chip
-                    android:id="@+id/chipClosed"
-                    style="@style/Chip_Filter"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/exam_list_filter_closed" />
-            </com.google.android.material.chip.ChipGroup>
-        </HorizontalScrollView>
     </com.google.android.material.appbar.AppBarLayout>
 
     <androidx.recyclerview.widget.RecyclerView

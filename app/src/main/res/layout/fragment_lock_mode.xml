@@ -103,14 +103,6 @@
                         android:textColor="@color/white"
                         android:textSize="24sp"
                         android:textStyle="bold" />
-
-                    <TextView
-                        android:id="@+id/tvStudentCodeMode"
-                        style="@style/Text_Body_Small"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="@string/lock_mode_student_code_mode_unknown"
-                        android:textColor="@color/status_processing_text" />
                 </LinearLayout>
 
                 <LinearLayout
@@ -160,15 +152,6 @@
             android:gravity="center"
             android:textColor="@color/white" />
 
-        <TextView
-            android:id="@+id/tvViolationQueue"
-            style="@style/Text_Body_Small"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/spacing_8"
-            android:gravity="center"
-            android:textColor="@color/status_processing_text" />
-
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnOpenCamera"
             style="@style/Student.PrimaryButton"
@@ -177,14 +160,5 @@
             android:layout_marginTop="@dimen/spacing_32"
             android:text="@string/lock_mode_open_camera"
             app:icon="@drawable/ic_camera" />
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnSubmit"
-            style="@style/Student.SecondaryButton"
-            android:layout_width="match_parent"
-            android:layout_height="@dimen/button_height_large"
-            android:layout_marginTop="@dimen/spacing_12"
-            android:text="@string/lock_mode_submit"
-            app:icon="@drawable/ic_check" />
     </LinearLayout>
 </androidx.constraintlayout.widget.ConstraintLayout>

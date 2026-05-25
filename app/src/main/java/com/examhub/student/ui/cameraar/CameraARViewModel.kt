@@ -5,6 +5,7 @@ import android.graphics.Bitmap
 import android.util.Base64
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.examhub.student.model.ApiException
 import com.examhub.student.model.ApiResult
 import com.examhub.student.model.request.lock.LockHeartbeatRequest
 import com.examhub.student.model.request.lock.LockViolationRequest
@@ -72,6 +73,7 @@ class CameraARViewModel(
     private var currentExamId: String = ""
     private var currentSessionId: String = ""
     private var heartbeatJob: Job? = null
+    private var stopped = false
 
     fun setExamId(examId: String) {
         currentExamId = examId
@@ -79,6 +81,7 @@ class CameraARViewModel(
 
     fun setSessionId(sessionId: String) {
         currentSessionId = sessionId
+        stopped = false
         startHeartbeatIfNeeded()
     }
 
@@ -157,6 +160,7 @@ class CameraARViewModel(
     }
 
     fun logViolation(type: String, evidence: Map<String, Any?> = emptyMap()) {
+        if (stopped) return
         val sessionId = currentSessionId.takeIf { it.isNotBlank() } ?: return
         viewModelScope.launch {
             lockModeRepository.logViolation(
@@ -168,7 +172,7 @@ class CameraARViewModel(
                 )
             ).collect { result ->
                 if (result is ApiResult.Error) {
-                    _toastMessage.tryEmit(result.exception.message ?: "Không thể ghi nhận vi phạm lock mode")
+                    // Violation sync is intentionally silent for students.
                 }
             }
         }
@@ -186,7 +190,7 @@ class CameraARViewModel(
     private fun startHeartbeatIfNeeded() {
         if (currentSessionId.isBlank() || heartbeatJob?.isActive == true) return
         heartbeatJob = viewModelScope.launch {
-            while (true) {
+            while (!stopped) {
                 lockModeRepository.heartbeat(
                     currentSessionId,
                     LockHeartbeatRequest(
@@ -195,12 +199,25 @@ class CameraARViewModel(
                     )
                 ).collect { result ->
                     if (result is ApiResult.Error) {
-                        _toastMessage.tryEmit(result.exception.message ?: "Không thể gửi heartbeat")
+                        if (result.exception.isTerminalSessionStatusError()) {
+                            stopSessionWork()
+                            return@collect
+                        }
                     }
                 }
                 delay(30_000)
             }
         }
+    }
+
+    fun stopSessionWork() {
+        stopped = true
+        heartbeatJob?.cancel()
+        heartbeatJob = null
+    }
+
+    private fun ApiException.isTerminalSessionStatusError(): Boolean {
+        return code == "INVALID_SESSION_STATUS" || message.contains("VIOLATED", ignoreCase = true)
     }
 
     private fun nowIso(): String {

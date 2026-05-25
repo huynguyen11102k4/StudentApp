@@ -30,9 +30,9 @@ object ViewModelModule {
 
         // Auth
         viewModel { LoginViewModel(get(), get()) }
-        viewModel { RegisterViewModel(get(), get()) }
-        viewModel { ForgotPasswordViewModel(get()) }
-        viewModel { ProfileViewModel(get()) }
+        viewModel { RegisterViewModel(get(), get(), get()) }
+        viewModel { ForgotPasswordViewModel(get(), get()) }
+        viewModel { ProfileViewModel(get(), get()) }
 
         // Dashboard
         viewModel { DashboardViewModel(get(), get(), get(), get(), get()) }
@@ -41,13 +41,13 @@ object ViewModelModule {
         viewModel { ExamDetailViewModel(get(), get(), get(), get(), get(), get()) }
         viewModel { ExamListViewModel(get(), get(), get()) }
         viewModel { ExamStartViewModel(get(), get(), get(), get(), get(), get()) }
-        viewModel { LockModeViewModel(get(), get(), get(), get(), get()) }
+        viewModel { LockModeViewModel(get(), get(), get(), get(), get(), get()) }
         viewModel { ResultsListViewModel(get(), get()) }
         viewModel { ResultDetailViewModel(get(), get(), get()) }
 
         // Classes
-        viewModel { ClassListViewModel(get(), get()) }
-        viewModel { ClassDetailViewModel(get()) }
+        viewModel { ClassListViewModel(get(), get(), get(), get()) }
+        viewModel { ClassDetailViewModel(get(), get(), get(), get()) }
 
         // OMR confirm/review
         viewModel { SmartReviewViewModel(get(), get()) }
@@ -60,7 +60,7 @@ object ViewModelModule {
         viewModel { AppealDetailViewModel(get()) }
 
         // Others (no repository dependencies)
-        viewModel { SettingsViewModel(get(), get(), get(), get()) }
+        viewModel { SettingsViewModel(get(), get(), get(), get(), get()) }
         viewModel { CameraARViewModel(get(), get(), get(), get()) }
     }
 }

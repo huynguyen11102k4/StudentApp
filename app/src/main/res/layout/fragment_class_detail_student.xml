@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/background">
@@ -8,7 +9,8 @@
     <com.google.android.material.appbar.AppBarLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@color/surface">
+        android:background="@color/surface"
+        app:elevation="@dimen/elevation_level0">
 
         <com.google.android.material.appbar.MaterialToolbar
             android:id="@+id/toolbar"
@@ -18,14 +20,15 @@
             app:navigationIcon="@drawable/ic_chevron_left"
             app:navigationIconTint="@color/text_primary"
             app:title="@string/class_detail_student_title"
-            app:titleTextColor="@color/text_primary" />
+            app:titleTextColor="@color/text_primary"
+        app:titleTextAppearance="@style/Text_Toolbar_Title_Bold" />
     </com.google.android.material.appbar.AppBarLayout>
 
     <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:clipToPadding="false"
-        android:paddingBottom="@dimen/spacing_32"
+        android:paddingBottom="@dimen/screen_bottom_content_padding"
         app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
         <LinearLayout
@@ -34,32 +37,56 @@
             android:orientation="vertical"
             android:padding="@dimen/spacing_16">
 
-            <TextView
-                android:id="@+id/tvClassName"
-                style="@style/Text_Headline_Small"
+            <com.google.android.material.card.MaterialCardView
+                style="@style/Student.Card"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:textColor="@color/text_primary" />
+                app:contentPadding="@dimen/spacing_20">
 
-            <TextView
-                android:id="@+id/tvSubject"
-                style="@style/Text_Body_Medium"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/spacing_6"
-                android:textColor="@color/text_secondary" />
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:id="@+id/tvClassName"
+                        style="@style/Text_Headline_Small"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:textColor="@color/text_primary"
+                        tools:text="Lớp 12A1" />
+
+                    <TextView
+                        android:id="@+id/tvSubject"
+                        style="@style/Text_Body_Medium"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/spacing_6"
+                        android:textColor="@color/text_secondary"
+                        tools:text="Toán • Khối 12 • 2025-2026" />
+
+                    <TextView
+                        android:id="@+id/tvDescription"
+                        style="@style/Text_Body_Medium"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/spacing_16"
+                        android:textColor="@color/text_primary"
+                        tools:text="Lớp ôn tập và làm bài kiểm tra định kỳ." />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/spacing_16"
+                android:layout_marginTop="@dimen/spacing_12"
                 android:orientation="horizontal">
 
                 <com.google.android.material.card.MaterialCardView
                     style="@style/Student.Card"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_marginEnd="@dimen/spacing_8"
+                    android:layout_marginEnd="@dimen/spacing_6"
                     android:layout_weight="1"
                     app:contentPadding="@dimen/spacing_16">
 
@@ -73,7 +100,8 @@
                             android:id="@+id/tvStudentCount"
                             style="@style/Text_Headline_Small"
                             android:layout_width="wrap_content"
-                            android:layout_height="wrap_content" />
+                            android:layout_height="wrap_content"
+                            tools:text="42" />
 
                         <TextView
                             style="@style/Text_Label_Medium"
@@ -88,7 +116,7 @@
                     style="@style/Student.Card"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="@dimen/spacing_8"
+                    android:layout_marginStart="@dimen/spacing_6"
                     android:layout_weight="1"
                     app:contentPadding="@dimen/spacing_16">
 
@@ -102,7 +130,8 @@
                             android:id="@+id/tvExamCount"
                             style="@style/Text_Headline_Small"
                             android:layout_width="wrap_content"
-                            android:layout_height="wrap_content" />
+                            android:layout_height="wrap_content"
+                            tools:text="6" />
 
                         <TextView
                             style="@style/Text_Label_Medium"
@@ -118,7 +147,7 @@
                 style="@style/Student.Card"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/spacing_16"
+                android:layout_marginTop="@dimen/spacing_12"
                 app:contentPadding="@dimen/spacing_16">
 
                 <LinearLayout
@@ -127,18 +156,10 @@
                     android:orientation="vertical">
 
                     <TextView
-                        android:id="@+id/tvDescription"
-                        style="@style/Text_Body_Medium"
+                        style="@style/Text_Title_Medium"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:textColor="@color/text_primary" />
-
-                    <TextView
-                        android:id="@+id/tvGradeYear"
-                        style="@style/Text_Body_Small"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="@dimen/spacing_12" />
+                        android:text="@string/class_detail_student_list" />
 
                     <TextView
                         style="@style/Text_Label_Medium"
@@ -153,40 +174,77 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="@dimen/spacing_4"
-                        android:textColor="@color/text_primary" />
+                        android:textColor="@color/text_primary"
+                        tools:text="Nguyễn Văn B&#10;teacher@school.edu.vn" />
 
                     <TextView
                         style="@style/Text_Label_Medium"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="@dimen/spacing_16"
-                        android:text="@string/class_detail_status_label" />
+                        android:text="@string/class_detail_join_code_label" />
 
                     <TextView
-                        android:id="@+id/tvStatus"
+                        android:id="@+id/tvClassCode"
                         style="@style/Text_Body_Medium"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="@dimen/spacing_4"
-                        android:textColor="@color/text_primary" />
-
-                    <TextView
-                        android:id="@+id/tvJoinCode"
-                        style="@style/Text_Body_Small"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="@dimen/spacing_16"
-                        android:textColor="@color/text_secondary"
-                        android:visibility="gone" />
+                        android:textColor="@color/text_primary"
+                        tools:text="12A1-MATH" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
+
+            <TextView
+                style="@style/Text_Title_Medium"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/spacing_24"
+                android:text="@string/class_detail_exam_list" />
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/rvClassExams"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/spacing_12"
+                android:nestedScrollingEnabled="false"
+                tools:itemCount="3"
+                tools:listitem="@layout/item_exam" />
+
+            <LinearLayout
+                android:id="@+id/emptyExams"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/spacing_12"
+                android:gravity="center"
+                android:orientation="vertical"
+                android:padding="@dimen/spacing_24"
+                android:visibility="gone"
+                tools:visibility="visible">
+
+                <TextView
+                    style="@style/Text_Title_Small"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:text="@string/class_detail_exam_empty_title" />
+
+                <TextView
+                    style="@style/Text_Body_Small"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/spacing_6"
+                    android:gravity="center"
+                    android:text="@string/class_detail_exam_empty_subtitle" />
+            </LinearLayout>
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
 
-    <ProgressBar
+    <com.google.android.material.progressindicator.CircularProgressIndicator
         android:id="@+id/progressBar"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center"
-        android:visibility="gone" />
+        android:visibility="gone"
+        app:indicatorColor="@color/primary" />
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

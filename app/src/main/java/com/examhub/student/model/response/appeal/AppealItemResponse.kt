@@ -6,13 +6,13 @@ data class AppealItemResponse(
     @SerializedName("id")
     val id: String,
 
-    @SerializedName("question_number")
+    @SerializedName(value = "question_number", alternate = ["questionNumber"])
     val questionNumber: Int,
 
-    @SerializedName("student_message")
+    @SerializedName(value = "student_message", alternate = ["studentMessage"])
     val studentMessage: String?,
 
-    @SerializedName("teacher_response")
+    @SerializedName(value = "teacher_response", alternate = ["teacherResponse"])
     val teacherResponse: String?,
 
     @SerializedName("status")

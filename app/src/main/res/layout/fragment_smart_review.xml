@@ -14,7 +14,8 @@
         app:navigationIcon="@drawable/ic_close"
         app:navigationIconTint="@color/on_primary"
         app:title="@string/smart_review_title"
-        app:titleTextColor="@color/on_primary" />
+        app:titleTextColor="@color/on_primary"
+        app:titleTextAppearance="@style/Text_Toolbar_Title_Bold" />
 
     <ScrollView
         android:layout_width="match_parent"

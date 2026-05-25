@@ -17,8 +17,8 @@ import com.google.android.gms.common.api.ApiException
 import com.google.android.material.snackbar.Snackbar
 import com.examhub.student.R
 import com.examhub.student.databinding.FragmentLoginBinding
-import com.examhub.student.ui.add3DTouch
-import com.examhub.student.ui.collectOnStarted
+import com.examhub.student.extension.add3DTouch
+import com.examhub.student.extension.collectOnStarted
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 

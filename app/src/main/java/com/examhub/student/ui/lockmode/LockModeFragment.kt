@@ -6,13 +6,13 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import androidx.navigation.navOptions
 import com.google.android.material.snackbar.Snackbar
 import com.examhub.student.MainActivity
 import com.examhub.student.R
 import com.examhub.student.databinding.FragmentLockModeBinding
 import com.examhub.student.kiosk.KioskModeState
-import com.examhub.student.ui.collectOnStarted
+import com.examhub.student.extension.collectOnStarted
 import kotlinx.coroutines.launch
 import org.koin.androidx.viewmodel.ext.android.viewModel
 
@@ -36,10 +36,11 @@ class LockModeFragment : Fragment() {
             val bundle = Bundle().apply {
                 putString("examId", examId)
                 putString("sessionId", sessionId)
+                putInt("remainingSeconds", viewModel.remainingSeconds.value)
+                putLong("timerStartedAt", System.currentTimeMillis())
             }
             findNavController().navigate(R.id.action_lock_mode_to_camera_ar, bundle)
         }
-        binding.btnSubmit.setOnClickListener { showSubmitHintDialog() }
         setupMonitor()
 
         collectOnStarted {
@@ -49,28 +50,19 @@ class LockModeFragment : Fragment() {
                 }
             }
             launch {
-                viewModel.message.collect { Snackbar.make(binding.root, it, Snackbar.LENGTH_LONG).show() }
-            }
-            launch {
                 viewModel.omrCodes.collect { codes ->
                     binding.tvStudentCode.text = codes.studentCode.ifBlank { getString(R.string.lock_mode_code_empty) }
-                    binding.tvStudentCodeMode.text = getString(R.string.lock_mode_student_code_mode_format, codes.studentCodeMode)
                     binding.tvClassCode.text = codes.classCode.ifBlank { getString(R.string.lock_mode_code_empty) }
                 }
             }
             launch {
-                viewModel.queuedViolationCount.collect { count ->
-                    binding.tvViolationQueue.text = if (count > 0) {
-                        getString(R.string.lock_mode_queue_format, count)
-                    } else {
-                        ""
-                    }
+                viewModel.timeExpired.collect {
+                    finishExpiredSession()
                 }
             }
             launch {
-                viewModel.timeExpired.collect {
-                    binding.btnOpenCamera.isEnabled = false
-                    Snackbar.make(binding.root, R.string.lock_mode_time_expired, Snackbar.LENGTH_INDEFINITE).show()
+                viewModel.blankSubmissionFinished.collect {
+                    navigateToSubmissionEnd()
                 }
             }
         }
@@ -78,6 +70,7 @@ class LockModeFragment : Fragment() {
             sessionId = sessionId,
             examId = examId,
             initialSeconds = arguments?.getInt("remainingSeconds") ?: 0,
+            questionCount = arguments?.getInt("questionCount") ?: 0,
             argCodes = LockModeOmrCodes(
                 classCode = arguments?.getString("classCode").orEmpty(),
                 studentCode = arguments?.getString("studentCode").orEmpty(),
@@ -102,24 +95,52 @@ class LockModeFragment : Fragment() {
         monitor = LockModeMonitor(
             context = requireContext().applicationContext,
             onNetworkLost = {
-                viewModel.logViolation("untrusted", mapOf("reason" to "network_lost", "screen" to "lock_mode"))
+                viewModel.logViolation(
+                    "network_lost",
+                    mapOf(
+                        "reason" to "network_lost",
+                        "screen" to "lock_mode",
+                        "violation_label" to "Mất kết nối mạng trong lúc làm bài",
+                        "teacher_message" to "Thiết bị của học sinh bị mất kết nối mạng trong lúc làm bài."
+                    )
+                )
             },
             onNetworkAvailable = {
                 viewModel.flushViolations()
             },
             onScreenOff = {
-                viewModel.logViolation("screen_off", mapOf("screen" to "lock_mode"))
+                viewModel.logViolation(
+                    "screen_off",
+                    mapOf(
+                        "screen" to "lock_mode",
+                        "violation_label" to "Tắt màn hình trong lúc làm bài",
+                        "teacher_message" to "Học sinh đã tắt màn hình hoặc thiết bị bị khóa trong lúc làm bài."
+                    )
+                )
             }
         ).also { it.start() }
     }
 
-    private fun showSubmitHintDialog() {
-        MaterialAlertDialogBuilder(requireContext())
-            .setTitle(R.string.lock_mode_submit_hint_title)
-            .setMessage(R.string.lock_mode_submit_hint_message)
-            .setNegativeButton(R.string.lock_mode_submit_hint_close, null)
-            .setPositiveButton(R.string.lock_mode_submit_hint_open_camera) { _, _ -> binding.btnOpenCamera.performClick() }
-            .show()
+    private fun finishExpiredSession() {
+        binding.btnOpenCamera.isEnabled = false
+        viewModel.submitBlankOnTimeout()
+        viewModel.stopSessionWork()
+        (requireActivity() as? MainActivity)?.exitKioskMode()
+        Snackbar.make(binding.root, R.string.lock_mode_time_expired, Snackbar.LENGTH_SHORT).show()
+    }
+
+    private fun navigateToSubmissionEnd() {
+        if (_binding == null) return
+        findNavController().navigate(
+            R.id.submissionEndFragment,
+            Bundle().apply {
+                putString("examId", examId)
+                putString("sheetId", "")
+            },
+            navOptions {
+                popUpTo(R.id.lockModeFragment) { inclusive = true }
+            }
+        )
     }
 
     private fun formatTimer(totalSeconds: Int): String {
@@ -132,6 +153,7 @@ class LockModeFragment : Fragment() {
         super.onDestroyView()
         monitor?.stop()
         monitor = null
+        viewModel.stopSessionWork()
         _binding = null
     }
 }

@@ -16,6 +16,8 @@ data class StudentResultDetailResponse(
     val source: String? = null,
     @SerializedName(value = "graded_at", alternate = ["gradedAt"])
     val gradedAt: String? = null,
+    @SerializedName(value = "created_at", alternate = ["createdAt"])
+    val createdAt: String? = null,
     val exam: StudentResultExamResponse? = null,
     @SerializedName(value = "answer_details", alternate = ["answerDetails"])
     val answerDetails: List<StudentResultAnswerResponse> = emptyList()

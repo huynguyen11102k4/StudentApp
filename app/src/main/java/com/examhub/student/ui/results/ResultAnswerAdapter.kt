@@ -23,7 +23,7 @@ class ResultAnswerAdapter : ListAdapter<StudentResultAnswerResponse, ResultAnswe
         fun bind(answer: StudentResultAnswerResponse) {
             binding.tvQuestion.text = binding.root.context.getString(R.string.result_answer_question_format, answer.questionNumber)
             binding.tvStudentAnswer.text = answer.studentAnswer ?: "-"
-            binding.tvCorrectAnswer.text = answer.correctAnswer ?: "-"
+            binding.tvCorrectAnswer.text = answer.correctAnswerText() ?: "-"
             val context = binding.root.context
             when (answer.isCorrect) {
                 true -> {

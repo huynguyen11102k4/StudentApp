@@ -1,6 +1,8 @@
 package com.examhub.student.ui.notifications
 
+import android.content.Context
 import android.view.LayoutInflater
+import android.view.View
 import android.view.ViewGroup
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.DiffUtil
@@ -25,23 +27,30 @@ class NotificationAdapter(
             onClick: (AppNotification) -> Unit,
             onMarkRead: (AppNotification) -> Unit
         ) {
-            val ctx = binding.root.context
-            binding.tvNotificationTitle.text = notification.title
-            binding.tvNotificationContent.text = notification.content
-            binding.tvNotificationTime.text = formatRelativeTime(notification.createdAt)
+            val context = binding.root.context
+            binding.tvNotificationTitle.text = notification.title.toReadableTitle(context, notification.type)
+            binding.tvNotificationContent.text = notification.content.toReadableContent(context, notification.type)
+            binding.tvNotificationTime.text = formatRelativeTime(context, notification.createdAt)
+            binding.btnPrimaryAction.text = getActionText(context, notification)
 
-            // Type icon
             binding.ivNotificationType.setImageResource(getTypeIcon(notification.type))
             binding.ivNotificationType.setColorFilter(
-                ContextCompat.getColor(ctx, getTypeColor(notification.type))
+                ContextCompat.getColor(context, getTypeColor(notification.type))
             )
 
-            // Unread indicator
-            binding.dotUnread.visibility = if (notification.isRead) android.view.View.GONE else android.view.View.VISIBLE
-            binding.root.alpha = if (notification.isRead) 0.6f else 1.0f
+            val unread = !notification.isRead
+            binding.dotUnread.visibility = if (unread) View.VISIBLE else View.GONE
+            binding.btnMarkRead.visibility = if (unread) View.VISIBLE else View.GONE
+            binding.cardNotification.strokeColor = ContextCompat.getColor(
+                context,
+                if (unread) R.color.primary_container else R.color.divider_soft
+            )
+            binding.tvNotificationTitle.alpha = if (unread) 1f else 0.78f
+            binding.tvNotificationContent.alpha = if (unread) 1f else 0.82f
+
             binding.root.setOnClickListener { onClick(notification) }
+            binding.btnPrimaryAction.setOnClickListener { onClick(notification) }
             binding.btnMarkRead.setOnClickListener { onMarkRead(notification) }
-            binding.btnMarkRead.visibility = if (notification.isRead) android.view.View.GONE else android.view.View.VISIBLE
         }
     }
 
@@ -60,28 +69,69 @@ class NotificationAdapter(
     }
 
     companion object {
+        private val isoFormatWithMillis = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US).apply {
+            timeZone = TimeZone.getTimeZone("UTC")
+        }
         private val isoFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US).apply {
             timeZone = TimeZone.getTimeZone("UTC")
         }
 
-        fun formatRelativeTime(isoTime: String): String {
+        fun formatRelativeTime(context: Context, isoTime: String): String {
             return try {
-                val date = isoFormat.parse(isoTime) ?: return isoTime
-                val now = Date()
-                val diffMs = now.time - date.time
-                val diffMin = diffMs / 60000
+                val date = parseIsoDate(isoTime) ?: return isoTime
+                val diffMs = Date().time - date.time
+                val diffMin = diffMs / 60_000
                 val diffHour = diffMin / 60
                 val diffDay = diffHour / 24
 
                 when {
-                    diffMin < 1 -> "Vừa xong"
-                    diffMin < 60 -> "${diffMin} phút trước"
-                    diffHour < 24 -> "${diffHour} giờ trước"
-                    diffDay < 7 -> "${diffDay} ngày trước"
+                    diffMin < 1 -> context.getString(R.string.notifications_just_now)
+                    diffMin < 60 -> context.getString(R.string.notifications_minutes_ago, diffMin)
+                    diffHour < 24 -> context.getString(R.string.notifications_hours_ago, diffHour)
+                    diffDay < 7 -> context.getString(R.string.notifications_days_ago, diffDay)
                     else -> SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(date)
                 }
             } catch (e: Exception) {
                 isoTime
+            }
+        }
+
+        private fun parseIsoDate(isoTime: String): Date? {
+            if (isoTime.isBlank()) return null
+            return runCatching { isoFormatWithMillis.parse(isoTime) }.getOrNull()
+                ?: runCatching { isoFormat.parse(isoTime) }.getOrNull()
+        }
+
+        private fun getActionText(context: Context, notification: AppNotification): String {
+            val type = notification.type.lowercase(Locale.ROOT)
+            val link = notification.link.orEmpty().lowercase(Locale.ROOT)
+            return if (type.contains("grade") || link.contains("result")) {
+                context.getString(R.string.notifications_view_result)
+            } else {
+                context.getString(R.string.notifications_view_detail)
+            }
+        }
+
+        private fun String.toReadableTitle(context: Context, type: String): String {
+            val normalizedType = type.lowercase(Locale.ROOT)
+            return when {
+                normalizedType.contains("grade") && isBlank() -> context.getString(R.string.notifications_grade_default_title)
+                else -> this
+            }
+        }
+
+        private fun String.toReadableContent(context: Context, type: String): String {
+            val normalizedType = type.lowercase(Locale.ROOT)
+            return when {
+                normalizedType.contains("grade") && contains(context.getString(R.string.notifications_grade_old_phrase), ignoreCase = true) ->
+                    replace(
+                        context.getString(R.string.notifications_grade_old_sentence),
+                        context.getString(R.string.notifications_grade_new_sentence)
+                    ).replace(
+                        context.getString(R.string.notifications_grade_old_phrase),
+                        context.getString(R.string.notifications_grade_new_phrase)
+                    )
+                else -> this
             }
         }
 
@@ -96,11 +146,11 @@ class NotificationAdapter(
 
         fun getTypeColor(type: String): Int = when (type.lowercase(Locale.ROOT)) {
             "submission_pending" -> R.color.primary
-            "appeal_new", "appeal_updated", "appeal_created" -> R.color.error
+            "appeal_new", "appeal_updated", "appeal_created" -> R.color.warning
             "exam_closed", "exam_created" -> R.color.tertiary
             "class_invite" -> R.color.secondary
             "system" -> R.color.text_secondary
-            else -> R.color.text_secondary
+            else -> R.color.primary
         }
     }
 }

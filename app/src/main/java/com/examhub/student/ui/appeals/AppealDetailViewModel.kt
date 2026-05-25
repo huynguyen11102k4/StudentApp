@@ -3,6 +3,8 @@ package com.examhub.student.ui.appeals
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.examhub.student.data.model.Appeal
+import com.examhub.student.extension.replaceTechnicalLabels
+import com.examhub.student.extension.toFriendlyAppealItemStatus
 import com.examhub.student.model.ApiResult
 import com.examhub.student.model.response.appeal.AppealSummaryResponse
 import com.examhub.student.repository.AppealsRepository
@@ -38,7 +40,7 @@ class AppealDetailViewModel(
                     }
                     is ApiResult.Error -> {
                         _isLoading.value = false
-                        _message.tryEmit(result.exception.message ?: "Không thể tải chi tiết khiếu nại")
+                        _message.tryEmit((result.exception.message ?: "Không thể tải chi tiết khiếu nại").replaceTechnicalLabels())
                     }
                 }
             }
@@ -46,14 +48,15 @@ class AppealDetailViewModel(
     }
 
     private fun AppealSummaryResponse.toUiModel(): Appeal {
+        val resolvedExam = exam ?: sheet?.exam
         return Appeal(
             id = id,
             studentId = student?.id.orEmpty(),
             studentName = student?.name.orEmpty(),
             studentCode = student?.code.orEmpty(),
-            examId = exam?.id.orEmpty(),
-            examName = exam?.name.orEmpty(),
-            subject = exam?.subject.orEmpty(),
+            examId = resolvedExam?.id.orEmpty(),
+            examName = resolvedExam?.name.orEmpty(),
+            subject = resolvedExam?.subject.orEmpty(),
             sheetId = sheet?.id.orEmpty(),
             oldScore = oldScore ?: sheet?.totalScore ?: 0.0,
             newScore = newScore,
@@ -64,7 +67,10 @@ class AppealDetailViewModel(
             processedImageUrl = sheet?.processedImageUrl,
             dewarpedImageUrl = sheet?.dewarpedImageUrl,
             itemMessages = items.orEmpty().joinToString("\n") { item ->
-                "Cau ${item.questionNumber}: ${item.studentMessage.orEmpty().ifBlank { item.status }}"
+                listOf(
+                    "Câu ${item.questionNumber}: ${item.studentMessage.orEmpty().ifBlank { item.status.toFriendlyAppealItemStatus() }}",
+                    item.teacherResponse?.takeIf { it.isNotBlank() }?.let { "Phản hồi: $it" }
+                ).filterNotNull().joinToString("\n")
             }
         )
     }

@@ -5,7 +5,6 @@ import com.examhub.student.model.ApiResult
 import com.examhub.student.model.response.notification.NotificationMarkAllReadResponse
 import com.examhub.student.model.response.notification.NotificationReadResponse
 import com.examhub.student.model.response.notification.NotificationResponse
-import com.examhub.student.model.response.notification.NotificationUnreadCountResponse
 import com.examhub.student.model.response.common.PagedEnvelope
 import com.examhub.student.repository.NotificationRepository
 import com.examhub.student.service.NotificationApiService
@@ -24,9 +23,6 @@ class NotificationRepositoryImpl(
 
     override fun markAsRead(notificationId: String): Flow<ApiResult<NotificationReadResponse>> =
         safeEnvelopeFlow(gson) { apiService.markAsRead(notificationId) }
-
-    override fun getUnreadCount(): Flow<ApiResult<NotificationUnreadCountResponse>> =
-        safeEnvelopeFlow(gson) { apiService.getUnreadCount() }
 
     override fun markAllAsRead(): Flow<ApiResult<NotificationMarkAllReadResponse>> =
         safeEnvelopeFlow(gson) { apiService.markAllAsRead() }

@@ -20,8 +20,8 @@ import com.examhub.student.BuildConfig
 import com.examhub.student.R
 import com.examhub.student.databinding.FragmentSettingsBinding
 import com.examhub.student.service.ThemePreferenceManager
-import com.examhub.student.ui.applySystemWindowInsets
-import com.examhub.student.ui.collectOnStarted
+import com.examhub.student.extension.applySystemWindowInsets
+import com.examhub.student.extension.collectOnStarted
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
@@ -150,20 +150,27 @@ class SettingsFragment : Fragment() {
         }
         val currentPassword = passwordField(R.string.settings_current_password_hint)
         val newPassword = passwordField(R.string.settings_new_password_hint)
+        val confirmPassword = passwordField(R.string.settings_confirm_password_hint)
         container.addView(currentPassword.layout)
         container.addView(newPassword.layout)
+        container.addView(confirmPassword.layout)
 
-        MaterialAlertDialogBuilder(requireContext())
+        val dialog = MaterialAlertDialogBuilder(requireContext())
             .setTitle(R.string.settings_change_password)
             .setView(container)
-            .setPositiveButton(R.string.common_confirm) { _, _ ->
-                viewModel.changePassword(
-                    currentPassword.editText.text?.toString().orEmpty(),
-                    newPassword.editText.text?.toString().orEmpty()
-                )
-            }
+            .setPositiveButton(R.string.common_confirm, null)
             .setNegativeButton(R.string.common_cancel, null)
             .show()
+        dialog.getButton(android.content.DialogInterface.BUTTON_POSITIVE).setOnClickListener {
+            val current = currentPassword.editText.text?.toString().orEmpty()
+            val new = newPassword.editText.text?.toString().orEmpty()
+            val confirm = confirmPassword.editText.text?.toString().orEmpty()
+            val isValid = validatePasswordDialog(currentPassword, newPassword, confirmPassword, current, new, confirm)
+            if (isValid) {
+                viewModel.changePassword(current, new)
+                dialog.dismiss()
+            }
+        }
     }
 
     private fun passwordField(hintRes: Int): PasswordField {
@@ -176,6 +183,37 @@ class SettingsFragment : Fragment() {
             addView(editText)
         }
         return PasswordField(layout, editText)
+    }
+
+    private fun validatePasswordDialog(
+        currentPassword: PasswordField,
+        newPassword: PasswordField,
+        confirmPassword: PasswordField,
+        current: String,
+        new: String,
+        confirm: String
+    ): Boolean {
+        currentPassword.layout.error = null
+        newPassword.layout.error = null
+        confirmPassword.layout.error = null
+
+        var valid = true
+        if (current.isBlank()) {
+            currentPassword.layout.error = getString(R.string.settings_current_password_required)
+            valid = false
+        }
+        if (new.length < 6) {
+            newPassword.layout.error = getString(R.string.register_validation_password_short)
+            valid = false
+        } else if (new == current) {
+            newPassword.layout.error = getString(R.string.settings_new_password_same)
+            valid = false
+        }
+        if (confirm != new) {
+            confirmPassword.layout.error = getString(R.string.register_validation_password_mismatch)
+            valid = false
+        }
+        return valid
     }
 
     private fun bindAvatar(avatarUrl: String?) {

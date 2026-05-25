@@ -5,15 +5,14 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
-import org.koin.androidx.viewmodel.ext.android.viewModel
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.examhub.student.R
 import com.examhub.student.databinding.FragmentAppealsListBinding
-import com.examhub.student.ui.applySystemWindowInsets
-import com.examhub.student.ui.collectOnStarted
-import kotlinx.coroutines.flow.collect
+import com.examhub.student.extension.applySystemWindowInsets
+import com.examhub.student.extension.collectOnStarted
 import kotlinx.coroutines.launch
+import org.koin.androidx.viewmodel.ext.android.viewModel
 
 class AppealsListFragment : Fragment() {
 
@@ -44,12 +43,20 @@ class AppealsListFragment : Fragment() {
             launch {
                 viewModel.appeals.collect { appeals ->
                     adapter.submitList(appeals)
-                    binding.toolbar.subtitle = "${appeals.size} khiếu nại"
+                    binding.toolbar.subtitle = getString(R.string.appeals_list_count, appeals.size)
                     binding.emptyState.visibility = if (appeals.isEmpty()) View.VISIBLE else View.GONE
+                    binding.rvAppeals.visibility = if (appeals.isEmpty()) View.GONE else View.VISIBLE
+                }
+            }
+            launch {
+                viewModel.isLoading.collect { loading ->
+                    binding.progressBar.visibility = if (loading) View.VISIBLE else View.GONE
                 }
             }
         }
-        viewModel.loadAppeals(arguments?.getString("examId").orEmpty())
+        viewModel.loadAppeals(
+            examId = arguments?.getString("examId").orEmpty()
+        )
     }
 
     override fun onDestroyView() {

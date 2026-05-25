@@ -15,9 +15,10 @@ import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
 import com.examhub.student.R
 import com.examhub.student.databinding.FragmentResultDetailBinding
+import com.examhub.student.model.response.result.StudentResultAnswerResponse
 import com.examhub.student.model.response.result.StudentResultDetailResponse
-import com.examhub.student.ui.applySystemWindowInsets
-import com.examhub.student.ui.collectOnStarted
+import com.examhub.student.extension.applySystemWindowInsets
+import com.examhub.student.extension.collectOnStarted
 import kotlinx.coroutines.launch
 import org.koin.androidx.viewmodel.ext.android.viewModel
 import java.text.SimpleDateFormat
@@ -30,6 +31,9 @@ class ResultDetailFragment : Fragment() {
     private val viewModel: ResultDetailViewModel by viewModel()
     private val adapter = ResultAnswerAdapter()
     private val sheetId: String get() = arguments?.getString("sheetId").orEmpty()
+    private var currentResult: StudentResultDetailResponse? = null
+    private var answersExpanded = false
+    private var answerDetails = emptyList<StudentResultAnswerResponse>()
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentResultDetailBinding.inflate(inflater, container, false)
@@ -40,11 +44,18 @@ class ResultDetailFragment : Fragment() {
         binding.toolbar.applySystemWindowInsets(top = true)
         binding.toolbar.setNavigationOnClickListener { findNavController().navigateUp() }
         binding.rvAnswers.adapter = adapter
+        binding.answersHeader.setOnClickListener { setAnswersExpanded(!answersExpanded) }
+        binding.btnToggleAnswers.setOnClickListener { setAnswersExpanded(!answersExpanded) }
         binding.btnCreateAppeal.setOnClickListener { showCreateAppealDialog() }
+        binding.cardAppealNotice.setOnClickListener {
+            val bundle = bundleOf("examId" to currentResult?.exam?.id.orEmpty())
+            findNavController().navigate(R.id.action_result_detail_to_appeals_list, bundle)
+        }
         collectOnStarted {
             launch { viewModel.result.collect { it?.let(::bindResult) } }
             launch { viewModel.isLoading.collect { binding.progressBar.visibility = if (it) View.VISIBLE else View.GONE } }
             launch { viewModel.message.collect { Snackbar.make(binding.root, it, Snackbar.LENGTH_LONG).show() } }
+            launch { viewModel.appealCount.collect(::bindAppealNotice) }
             launch {
                 viewModel.appealCreated.collect { appealId ->
                     findNavController().navigate(R.id.action_result_detail_to_appeal_detail, bundleOf("appealId" to appealId))
@@ -55,6 +66,7 @@ class ResultDetailFragment : Fragment() {
     }
 
     private fun bindResult(result: StudentResultDetailResponse) {
+        currentResult = result
         binding.tvExamName.text = result.exam?.name ?: getString(R.string.result_detail_default_title)
         binding.tvSubject.text = result.exam?.subject.orEmpty()
         binding.tvScore.text = result.totalScore?.let { String.format(Locale.US, "%.1f", it) } ?: "--"
@@ -65,7 +77,8 @@ class ResultDetailFragment : Fragment() {
             ?.let { getString(R.string.result_detail_duration_format, it) }
             ?: ""
         binding.tvGradedAt.text = formatGradedAt(result.gradedAt)
-        adapter.submitList(result.answerDetails)
+        answerDetails = result.answerDetails
+        setAnswersExpanded(false)
         val imageUrl = result.processedImageUrl ?: result.dewarpedImageUrl ?: result.rawImageUrl
         if (imageUrl.isNullOrBlank()) {
             binding.imageCard.visibility = View.GONE
@@ -75,6 +88,42 @@ class ResultDetailFragment : Fragment() {
             binding.ivResult.visibility = View.VISIBLE
             Glide.with(this).load(imageUrl).into(binding.ivResult)
         }
+    }
+
+    private fun bindAppealNotice(count: Int) {
+        binding.cardAppealNotice.visibility = if (count > 0) View.VISIBLE else View.GONE
+        binding.tvAppealNotice.text = if (count > 1) {
+            getString(R.string.result_detail_has_appeals_notice, count)
+        } else {
+            getString(R.string.result_detail_has_appeal_notice)
+        }
+    }
+
+    private fun setAnswersExpanded(expanded: Boolean) {
+        answersExpanded = expanded
+        binding.btnToggleAnswers.setIconResource(
+            if (expanded) R.drawable.ic_keyboard_arrow_up else R.drawable.ic_keyboard_arrow_down
+        )
+        binding.rvAnswers.visibility = if (expanded) View.VISIBLE else View.GONE
+        if (expanded) {
+            binding.rvAnswers.layoutParams = binding.rvAnswers.layoutParams.apply {
+                height = answerListHeightPx(answerDetails.size)
+            }
+            adapter.submitList(answerDetails)
+        } else {
+            adapter.submitList(emptyList())
+            binding.rvAnswers.layoutParams = binding.rvAnswers.layoutParams.apply {
+                height = 0
+            }
+        }
+    }
+
+    private fun answerListHeightPx(itemCount: Int): Int {
+        if (itemCount <= 0) return 0
+        val density = resources.displayMetrics.density
+        val estimatedItemHeight = (96 * density).toInt()
+        val maxHeight = (420 * density).toInt()
+        return (itemCount * estimatedItemHeight).coerceAtMost(maxHeight)
     }
 
     private fun formatGradedAt(value: String?): String {
@@ -96,7 +145,16 @@ class ResultDetailFragment : Fragment() {
             orientation = LinearLayout.VERTICAL
             setPadding(32, 8, 32, 0)
         }
-        val reasonInput = TextInputEditText(context)
+        val intro = android.widget.TextView(context).apply {
+            text = getString(R.string.result_detail_appeal_dialog_message)
+            setTextColor(androidx.core.content.ContextCompat.getColor(context, R.color.text_secondary))
+            textSize = 14f
+            setPadding(0, 0, 0, 16)
+        }
+        val reasonInput = TextInputEditText(context).apply {
+            minLines = 2
+            maxLines = 4
+        }
         val reasonLayout = TextInputLayout(context).apply {
             hint = getString(R.string.result_detail_appeal_reason_hint)
             addView(reasonInput)
@@ -111,22 +169,31 @@ class ResultDetailFragment : Fragment() {
             hint = getString(R.string.result_detail_appeal_message_hint)
             addView(messageInput)
         }
+        container.addView(intro)
         container.addView(reasonLayout)
         container.addView(questionLayout)
         container.addView(messageLayout)
 
-        MaterialAlertDialogBuilder(context)
+        val dialog = MaterialAlertDialogBuilder(context)
             .setTitle(R.string.result_detail_appeal_dialog_title)
             .setView(container)
             .setNegativeButton(android.R.string.cancel, null)
-            .setPositiveButton(R.string.result_detail_appeal_send) { _, _ ->
+            .setPositiveButton(R.string.result_detail_appeal_send, null)
+            .create()
+        dialog.setOnShowListener {
+            dialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                val reason = reasonInput.text?.toString().orEmpty()
+                reasonLayout.error = if (reason.isBlank()) getString(R.string.result_detail_reason_required) else null
+                if (reason.isBlank()) return@setOnClickListener
                 viewModel.createAppeal(
-                    reason = reasonInput.text?.toString().orEmpty(),
+                    reason = reason,
                     questionNumber = questionInput.text?.toString()?.toIntOrNull(),
                     questionMessage = messageInput.text?.toString().orEmpty()
                 )
+                dialog.dismiss()
             }
-            .show()
+        }
+        dialog.show()
     }
 
     override fun onDestroyView() {

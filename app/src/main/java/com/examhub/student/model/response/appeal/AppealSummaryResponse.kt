@@ -12,7 +12,7 @@ data class AppealSummaryResponse(
     @SerializedName("reason")
     val reason: String?,
 
-    @SerializedName("teacher_note")
+    @SerializedName(value = "teacherResponse", alternate = ["teacher_response", "teacherNote", "teacher_note"])
     val teacherNote: String?,
 
     @SerializedName(value = "old_score", alternate = ["oldScore"])
@@ -31,7 +31,7 @@ data class AppealSummaryResponse(
     val student: AppealStudentResponse?,
 
     @SerializedName("exam")
-    val exam: AppealExamResponse?,
+    val exam: AppealExamResponse? = null,
 
     @SerializedName("sheet")
     val sheet: AppealSheetResponse?,

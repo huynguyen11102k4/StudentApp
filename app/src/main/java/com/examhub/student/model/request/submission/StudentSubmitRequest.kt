@@ -4,7 +4,7 @@ import com.google.gson.annotations.SerializedName
 
 data class StudentSubmitRequest(
     @SerializedName("raw_image_url")
-    val rawImageUrl: String,
+    val rawImageUrl: String? = null,
     @SerializedName("dewarped_image_url")
     val dewarpedImageUrl: String? = null,
     @SerializedName("processed_image_url")

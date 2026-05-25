@@ -12,8 +12,8 @@
 
     <item
         android:id="@+id/actionExamTypeFilter"
-        android:contentDescription="@string/exam_list_type_filter"
+        android:contentDescription="@string/class_list_filter"
         android:icon="@drawable/ic_filter_list"
-        android:title="@string/exam_list_type_filter"
+        android:title="@string/class_list_filter"
         app:showAsAction="always" />
 </menu>

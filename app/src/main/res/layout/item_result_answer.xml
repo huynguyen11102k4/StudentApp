@@ -39,53 +39,79 @@
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
-        <TextView
-            android:id="@+id/tvStudentAnswerLabel"
-            style="@style/Text_Label_Small"
-            android:layout_width="wrap_content"
+        <LinearLayout
+            android:id="@+id/answerRow"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/spacing_12"
-            android:text="@string/result_answer_student_label"
-            android:textColor="@color/text_secondary"
+            android:baselineAligned="false"
+            android:orientation="horizontal"
+            app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/tvStatus" />
+            app:layout_constraintTop_toBottomOf="@id/tvStatus">
 
-        <TextView
-            android:id="@+id/tvCorrectAnswerLabel"
-            style="@style/Text_Label_Small"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="@dimen/spacing_8"
-            android:text="@string/result_answer_correct_label"
-            android:textColor="@color/text_secondary"
-            app:layout_constraintBaseline_toBaselineOf="@id/tvStudentAnswerLabel"
-            app:layout_constraintStart_toEndOf="@id/tvStudentAnswer" />
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
 
-        <TextView
-            android:id="@+id/tvStudentAnswer"
-            style="@style/Text_Title_Medium"
-            android:layout_width="48dp"
-            android:layout_height="40dp"
-            android:layout_marginTop="@dimen/spacing_4"
-            android:background="@drawable/bg_answer_value"
-            android:gravity="center"
-            android:textColor="@color/text_primary"
-            android:textStyle="bold"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/tvStudentAnswerLabel" />
+                <TextView
+                    android:id="@+id/tvStudentAnswerLabel"
+                    style="@style/Text_Label_Small"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/result_answer_student_label"
+                    android:textColor="@color/text_secondary" />
 
-        <TextView
-            android:id="@+id/tvCorrectAnswer"
-            style="@style/Text_Title_Medium"
-            android:layout_width="48dp"
-            android:layout_height="40dp"
-            android:layout_marginStart="@dimen/spacing_8"
-            android:background="@drawable/bg_answer_value"
-            android:gravity="center"
-            android:textColor="@color/text_secondary"
-            android:textStyle="bold"
-            app:layout_constraintBottom_toBottomOf="@id/tvStudentAnswer"
-            app:layout_constraintStart_toEndOf="@id/tvStudentAnswer"
-            app:layout_constraintTop_toTopOf="@id/tvStudentAnswer" />
+                <TextView
+                    android:id="@+id/tvStudentAnswer"
+                    style="@style/Text_Title_Medium"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/spacing_4"
+                    android:background="@drawable/bg_answer_value"
+                    android:gravity="center"
+                    android:minHeight="40dp"
+                    android:paddingStart="@dimen/spacing_8"
+                    android:paddingTop="@dimen/spacing_8"
+                    android:paddingEnd="@dimen/spacing_8"
+                    android:paddingBottom="@dimen/spacing_8"
+                    android:textColor="@color/text_primary"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="@dimen/spacing_8"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/tvCorrectAnswerLabel"
+                    style="@style/Text_Label_Small"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/result_answer_correct_label"
+                    android:textColor="@color/text_secondary" />
+
+                <TextView
+                    android:id="@+id/tvCorrectAnswer"
+                    style="@style/Text_Title_Medium"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/spacing_4"
+                    android:background="@drawable/bg_answer_value"
+                    android:gravity="center"
+                    android:minHeight="40dp"
+                    android:paddingStart="@dimen/spacing_8"
+                    android:paddingTop="@dimen/spacing_8"
+                    android:paddingEnd="@dimen/spacing_8"
+                    android:paddingBottom="@dimen/spacing_8"
+                    android:textColor="@color/text_secondary"
+                    android:textStyle="bold" />
+            </LinearLayout>
+        </LinearLayout>
     </androidx.constraintlayout.widget.ConstraintLayout>
 </com.google.android.material.card.MaterialCardView>
