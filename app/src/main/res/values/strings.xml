@@ -108,7 +108,7 @@
     <string name="dashboard_view_classes">Xem lớp học</string>
     <string name="dashboard_sync_now">Cập nhật ngay</string>
     <string name="dashboard_syncing">Đang cập nhật...</string>
-    <string name="dashboard_recent_exams">Kỳ thi của bạn</string>
+    <string name="dashboard_recent_exams">Kỳ thi gần đây</string>
     <string name="dashboard_offline_ready">Offline</string>
     <string name="dashboard_load_error">Không thể tải dữ liệu trang chủ</string>
 
@@ -175,6 +175,7 @@
     <string name="exam_detail_submissions_title">Bài làm của bạn</string>
     <string name="exam_detail_submission_empty">Bạn chưa nộp bài cho kỳ thi này</string>
     <string name="exam_detail_pending_appeals">Khiếu nại của bạn đang chờ</string>
+    <string name="exam_start_inactive">Kỳ thi chưa mở hoặc chưa tải dữ liệu kỳ thi</string>
 
     <!-- Camera AR Screen -->
     <string name="camera_ar_title">Quét OMR</string>
@@ -266,6 +267,9 @@
     <string name="result_detail_has_appeal_notice">Bạn có khiếu nại đã được gửi cho bài làm này. Nhấn để xem danh sách.</string>
     <string name="result_detail_has_appeals_notice">%d khiếu nại đã được gửi cho bài làm này. Nhấn để xem danh sách.</string>
     <string name="result_detail_appeal_dialog_message">Mô tả vấn đề bạn muốn giáo viên kiểm tra lại.</string>
+    <string name="result_detail_pending_message">Bài đang chờ chấm</string>
+    <string name="result_detail_appeal_closed_exam">Kỳ thi đã đóng nên không thể tạo khiếu nại</string>
+    <string name="result_detail_student_code_format">Mã HS: %1$s</string>
 
     <!-- Appeal Detail Screen -->
     <string name="appeal_detail_title">Chi tiết khiếu nại</string>

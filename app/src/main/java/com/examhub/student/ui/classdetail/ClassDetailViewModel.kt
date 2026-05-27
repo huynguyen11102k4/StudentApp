@@ -59,7 +59,7 @@ class ClassDetailViewModel(
 
     private fun loadClassExams(classDetail: MobileClassResponse) {
         viewModelScope.launch {
-            examRepository.getExams(limit = "100").collect { result ->
+            examRepository.getExams(limit = "100", excludeClosed = false).collect { result ->
                 when (result) {
                     is ApiResult.Loading -> Unit
                     is ApiResult.Success -> {
@@ -67,6 +67,7 @@ class ClassDetailViewModel(
                         _classExams.value = result.data.data
                             .filter { it.belongsToClass(classDetail) }
                             .map { it.toExam(resultSheetByExamId) }
+                            .sortedByDescending { it.date }
                     }
                     is ApiResult.Error -> {
                         _message.tryEmit(result.exception.message ?: "Không thể tải danh sách kỳ thi của lớp")
@@ -115,7 +116,7 @@ class ClassDetailViewModel(
             gradedCount = count?.answerSheets ?: 0,
             totalStudents = 0,
             isOfflineReady = offlineCacheManager.getTemplate(id) != null,
-            date = onlineConfig?.startTime ?: onlineConfig?.endTime.orEmpty(),
+            date = displayTime,
             resultSheetId = resultSheetId,
             hasSubmitted = resultSheetId != null || hasSubmittedStatus()
         )

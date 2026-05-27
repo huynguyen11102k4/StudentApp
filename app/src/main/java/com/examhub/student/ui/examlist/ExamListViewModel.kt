@@ -32,7 +32,7 @@ class ExamListViewModel(
             val cached = offlineCacheManager.getCachedExamBasics()
 
             examRepository.getExams(
-                excludeClosed = null,
+                excludeClosed = false,
                 gradingType = gradingType.takeIf { it.isNotBlank() }
             ).collect { result ->
                 when (result) {
@@ -61,7 +61,7 @@ class ExamListViewModel(
                                 gradedCount = exam.count?.answerSheets ?: 0,
                                 totalStudents = 0,
                                 isOfflineReady = offlineCacheManager.getTemplate(exam.id) != null,
-                                date = exam.onlineConfig?.startTime ?: exam.onlineConfig?.endTime.orEmpty(),
+                                date = exam.displayTime,
                                 resultSheetId = resultSheetId,
                                 hasSubmitted = resultSheetId != null || exam.hasSubmittedStatus()
                             )
@@ -69,7 +69,9 @@ class ExamListViewModel(
                         val missingSubmittedExams = resultSummaries
                             .filter { summary -> summary.exam?.id?.let { id -> examsFromUpcoming.none { it.id == id } } == true }
                             .mapNotNull { it.toSubmittedExam() }
-                        val exams = examsFromUpcoming + missingSubmittedExams
+                        val exams = (examsFromUpcoming + missingSubmittedExams)
+                            .distinctBy { it.id }
+                            .sortedByDescending { it.date }
                         offlineCacheManager.saveExamBasics(exams)
                         _exams.value = exams
                     }

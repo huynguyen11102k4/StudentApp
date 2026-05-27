@@ -25,6 +25,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Locale
+import java.util.TimeZone
 
 class ExamDetailViewModel(
     private val examRepository: ExamRepository,
@@ -69,12 +72,17 @@ class ExamDetailViewModel(
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
     private val _isStartingSession = MutableStateFlow(false)
     val isStartingSession: StateFlow<Boolean> = _isStartingSession.asStateFlow()
+    private val _canStartExam = MutableStateFlow(false)
+    val canStartExam: StateFlow<Boolean> = _canStartExam.asStateFlow()
     private val _toastMessage = MutableSharedFlow<String>(extraBufferCapacity = 1)
     val toastMessage: SharedFlow<String> = _toastMessage.asSharedFlow()
     private val _sessionStarted = MutableSharedFlow<StartExamSessionResponse>(extraBufferCapacity = 1)
     val sessionStarted: SharedFlow<StartExamSessionResponse> = _sessionStarted.asSharedFlow()
 
     private var currentExamId: String = ""
+    private var currentExamStatus: String = ""
+    private var currentStartTime: String? = null
+    private var currentEndTime: String? = null
 
     fun loadExam(examId: String) {
         currentExamId = examId
@@ -101,6 +109,9 @@ class ExamDetailViewModel(
     }
 
     private fun bindExam(exam: MobileExamDetailResponse) {
+        currentExamStatus = exam.status.orEmpty()
+        currentStartTime = exam.onlineConfig?.startTime
+        currentEndTime = exam.onlineConfig?.endTime
         _examName.value = exam.name
         _subject.value = exam.subject
         _duration.value = exam.durationMinutes
@@ -113,6 +124,7 @@ class ExamDetailViewModel(
         _gradingType.value = exam.gradingType.toFriendlyGradingType().ifBlank { "Học sinh nộp bài" }
         _templateName.value = exam.template?.name ?: "Mẫu OMR đã sẵn sàng khi bắt đầu bài"
         _progressText.value = "Sẵn sàng nộp bài"
+        refreshCanStartExam()
         offlineCacheManager.saveExamClassCode(exam.id, exam.classInfo?.classCode)
         offlineCacheManager.saveExamBasic(exam.toCachedExam())
     }
@@ -137,6 +149,7 @@ class ExamDetailViewModel(
                     is ApiResult.Success -> {
                         offlineCacheManager.saveTemplate(currentExamId, gson.toJson(result.data.toCacheMap()))
                         _isOfflineReady.value = offlineCacheManager.isOfflineReady(currentExamId)
+                        refreshCanStartExam()
                         _downloadStep.value = ""
                         _isDownloading.value = false
                         _toastMessage.tryEmit("Đã tải mẫu OMR. Dữ liệu phiên thi sẽ tải khi bắt đầu bài.")
@@ -153,6 +166,14 @@ class ExamDetailViewModel(
 
     fun startSession() {
         if (currentExamId.isBlank() || _isStartingSession.value) return
+        if (!_canStartExam.value) {
+            _toastMessage.tryEmit("Hãy tải dữ liệu kỳ thi và chỉ bắt đầu khi kỳ thi đang mở")
+            return
+        }
+        if (!currentExamStatus.equals("ACTIVE", ignoreCase = true)) {
+            _toastMessage.tryEmit("Chỉ có thể bắt đầu khi kỳ thi đang mở")
+            return
+        }
         viewModelScope.launch {
             examRepository.startSession(currentExamId).collect { result ->
                 when (result) {
@@ -217,9 +238,13 @@ class ExamDetailViewModel(
         )
         offlineCacheManager.markOfflineReady(currentExamId)
         _isOfflineReady.value = true
+        refreshCanStartExam()
     }
 
     private fun applyCachedExam(exam: Exam) {
+        currentExamStatus = exam.status
+        currentStartTime = exam.date
+        currentEndTime = null
         _examName.value = exam.name
         _subject.value = exam.subject
         _duration.value = exam.duration
@@ -232,6 +257,39 @@ class ExamDetailViewModel(
             "Chưa có mẫu OMR"
         }
         _isOfflineReady.value = offlineCacheManager.getTemplate(exam.id) != null
+        refreshCanStartExam()
+    }
+
+    private fun refreshCanStartExam() {
+        _canStartExam.value = currentExamStatus.equals("ACTIVE", ignoreCase = true) &&
+            _isOfflineReady.value &&
+            isWithinExamWindow(currentStartTime, currentEndTime)
+    }
+
+    private fun isWithinExamWindow(startTime: String?, endTime: String?): Boolean {
+        val now = System.currentTimeMillis()
+        val start = parseTimeMillis(startTime)
+        val end = parseTimeMillis(endTime)
+        if (start != null && now < start) return false
+        if (end != null && now > end) return false
+        return true
+    }
+
+    private fun parseTimeMillis(value: String?): Long? {
+        if (value.isNullOrBlank()) return null
+        val patterns = listOf(
+            "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",
+            "yyyy-MM-dd'T'HH:mm:ss'Z'",
+            "yyyy-MM-dd'T'HH:mm:ss.SSSXXX",
+            "yyyy-MM-dd'T'HH:mm:ssXXX"
+        )
+        return patterns.firstNotNullOfOrNull { pattern ->
+            runCatching {
+                SimpleDateFormat(pattern, Locale.US).apply {
+                    timeZone = TimeZone.getTimeZone("UTC")
+                }.parse(value)?.time
+            }.getOrNull()
+        }
     }
 
     private fun MobileExamDetailResponse.toCachedExam(): Exam {

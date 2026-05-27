@@ -33,6 +33,8 @@ class ResultDetailViewModel(
     val appealCreated: SharedFlow<String> = _appealCreated.asSharedFlow()
     private val _appealCount = MutableStateFlow(0)
     val appealCount: StateFlow<Int> = _appealCount.asStateFlow()
+    private val _isResultPending = MutableStateFlow(false)
+    val isResultPending: StateFlow<Boolean> = _isResultPending.asStateFlow()
 
     fun loadResult(sheetId: String) {
         viewModelScope.launch {
@@ -42,7 +44,10 @@ class ResultDetailViewModel(
                     is ApiResult.Success -> {
                         _isLoading.value = false
                         _result.value = result.data
-                        loadAppealCount(result.data)
+                        _isResultPending.value = result.data.isPending()
+                        if (!result.data.isPending()) {
+                            loadAppealCount(result.data)
+                        }
                     }
                     is ApiResult.Error -> {
                         _isLoading.value = false
@@ -54,9 +59,14 @@ class ResultDetailViewModel(
     }
 
     fun createAppeal(reason: String, questionNumber: Int?, questionMessage: String) {
-        val sheetId = _result.value?.id.orEmpty()
+        val result = _result.value
+        val sheetId = result?.id.orEmpty()
         if (sheetId.isBlank()) {
             _message.tryEmit(context.getString(R.string.result_detail_missing_sheet))
+            return
+        }
+        if (result?.exam?.status.equals("CLOSED", ignoreCase = true)) {
+            _message.tryEmit(context.getString(R.string.result_detail_appeal_closed_exam))
             return
         }
         val normalizedReason = reason.trim()
@@ -94,5 +104,9 @@ class ResultDetailViewModel(
                 }
             }
         }
+    }
+
+    private fun StudentResultDetailResponse.isPending(): Boolean {
+        return resultStatus.equals("PENDING", ignoreCase = true) && id.isNullOrBlank()
     }
 }

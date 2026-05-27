@@ -31,12 +31,14 @@ class ExamDetailFragment : Fragment() {
 
         binding.toolbar.applySystemWindowInsets(top = true)
         binding.toolbar.setNavigationOnClickListener { findNavController().navigateUp() }
-        binding.btnStartScanning.isEnabled = true
+        binding.btnStartScanning.isEnabled = false
         binding.btnStartScanning.setOnClickListener {
             val isDownloading = viewModel.isDownloading.value
 
             if (isDownloading) {
                 Snackbar.make(binding.root, R.string.exam_detail_start_locked, Snackbar.LENGTH_SHORT).show()
+            } else if (!viewModel.canStartExam.value) {
+                Snackbar.make(binding.root, R.string.exam_start_inactive, Snackbar.LENGTH_SHORT).show()
             } else {
                 val bundle = Bundle().apply { putString("examId", examId) }
                 findNavController().navigate(R.id.action_exam_detail_to_exam_start, bundle)
@@ -77,15 +79,21 @@ class ExamDetailFragment : Fragment() {
             launch {
                 viewModel.isDownloading.collect { downloading ->
                     binding.btnDownloadOffline.isEnabled = !downloading
-                    binding.btnStartScanning.isEnabled = !downloading && !viewModel.isStartingSession.value
+                    binding.btnStartScanning.isEnabled = viewModel.canStartExam.value && !downloading && !viewModel.isStartingSession.value
                     binding.progressDownload.visibility = if (downloading) View.VISIBLE else View.GONE
                 }
             }
             launch {
                 viewModel.isStartingSession.collect { starting ->
-                    binding.btnStartScanning.isEnabled = !starting && !viewModel.isDownloading.value
+                    binding.btnStartScanning.isEnabled = viewModel.canStartExam.value && !starting && !viewModel.isDownloading.value
                     binding.btnStartScanning.text = if (starting) "Đang bắt đầu..." else getString(R.string.exam_detail_start_scanning)
                     if (starting) binding.btnStartScanning.alpha = 0.7f
+                }
+            }
+            launch {
+                viewModel.canStartExam.collect { canStart ->
+                    binding.btnStartScanning.isEnabled = canStart && !viewModel.isDownloading.value && !viewModel.isStartingSession.value
+                    binding.btnStartScanning.alpha = if (canStart) 1.0f else 0.55f
                 }
             }
             launch {
@@ -103,10 +111,10 @@ class ExamDetailFragment : Fragment() {
                     if (ready) {
                         binding.btnDownloadOffline.text = getString(R.string.exam_detail_offline_ready)
                         binding.btnDownloadOffline.icon = null
-                        binding.btnStartScanning.alpha = 1.0f
+                        binding.btnStartScanning.alpha = if (viewModel.canStartExam.value) 1.0f else 0.55f
                     } else {
                         binding.btnDownloadOffline.text = getString(R.string.exam_detail_download_template)
-                        binding.btnStartScanning.alpha = 1.0f
+                        binding.btnStartScanning.alpha = if (viewModel.canStartExam.value) 1.0f else 0.55f
                     }
                     binding.cardOfflineAlert.visibility = if (ready) View.GONE else View.VISIBLE
                     binding.btnStartScanning.visibility = View.VISIBLE

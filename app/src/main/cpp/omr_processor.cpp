@@ -115,33 +115,23 @@ AnswerReadResult buildAnswerResult(
     ar.question_number = questionNumber;
     ar.flag = 0;
 
-    if (selectionMode == "multiple") {
-        if (top1Val < densityThreshold) {
-            ar.answer = "";
-            return ar;
-        }
-
-        const float relativeThreshold = std::max(densityThreshold, top1Val - diffThreshold);
-        std::string multiAnswer;
-        for (size_t i = 0; i < densities.size(); i++) {
-            if (densities[i] >= relativeThreshold) {
-                if (!multiAnswer.empty()) multiAnswer += ',';
-                multiAnswer += static_cast<char>('A' + i);
-            } else if (densities[i] >= densityThreshold) {
-                ar.flag = 1;
-            }
-        }
-        ar.answer = multiAnswer;
+    if (top1Val < densityThreshold) {
+        ar.answer = "";
         return ar;
     }
 
-    if (top1Val >= densityThreshold) {
-        ar.answer = std::string(1, static_cast<char>('A' + top1Idx));
-        if (top2Idx >= 0 && (top1Val - top2Val) < diffThreshold) {
-            ar.flag = 1;
+    std::string markedAnswer;
+    for (size_t i = 0; i < densities.size(); i++) {
+        if (densities[i] >= densityThreshold) {
+            if (!markedAnswer.empty()) markedAnswer += ',';
+            markedAnswer += static_cast<char>('A' + i);
         }
-    } else {
-        ar.answer = "";
+    }
+
+    ar.answer = markedAnswer;
+    if (countAnswerOptions(markedAnswer) > 1 ||
+        (top2Idx >= 0 && top2Val >= densityThreshold && (top1Val - top2Val) < diffThreshold)) {
+        ar.flag = 1;
     }
     return ar;
 }

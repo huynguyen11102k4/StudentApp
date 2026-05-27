@@ -84,12 +84,16 @@ class DashboardViewModel(
         }
 
         viewModelScope.launch {
-            examRepository.getExams(excludeClosed = null).collect { result ->
+            examRepository.getExams(excludeClosed = false).collect { result ->
                 when (result) {
                     is ApiResult.Loading -> _isLoading.value = cachedExams.isEmpty()
                     is ApiResult.Success -> {
                         _isLoading.value = false
-                        val resultSheetByExamId = loadResultSheetByExamId()
+                        val resultSummaries = loadResultSummaries()
+                        val resultSheetByExamId = resultSummaries.mapNotNull { summary ->
+                            val examId = summary.exam?.id?.takeIf { it.isNotBlank() }
+                            if (examId == null) null else examId to summary.id
+                        }.toMap()
                         result.data.data.forEach { exam ->
                             offlineCacheManager.saveExamClassCode(exam.id, exam.classInfo?.classCode)
                         }
@@ -107,13 +111,19 @@ class DashboardViewModel(
                                 gradedCount = exam.count?.answerSheets ?: 0,
                                 totalStudents = 0,
                                 isOfflineReady = offlineCacheManager.getTemplate(exam.id) != null,
-                                date = exam.onlineConfig?.startTime ?: exam.onlineConfig?.endTime.orEmpty(),
+                                date = exam.displayTime,
                                 resultSheetId = resultSheetId,
                                 hasSubmitted = resultSheetId != null || exam.hasSubmittedStatus()
                             )
                         }
-                        offlineCacheManager.saveExamBasics(exams)
-                        _recentExams.value = exams.take(5)
+                        val missingSubmittedExams = resultSummaries
+                            .filter { summary -> summary.exam?.id?.let { id -> exams.none { it.id == id } } == true }
+                            .mapNotNull { it.toSubmittedExam() }
+                        val allExams = (exams + missingSubmittedExams)
+                            .distinctBy { it.id }
+                            .sortedByDescending { it.date }
+                        offlineCacheManager.saveExamBasics(allExams)
+                        _recentExams.value = allExams.take(5)
                     }
                     is ApiResult.Error -> {
                         _isLoading.value = false
@@ -135,14 +145,31 @@ class DashboardViewModel(
         return classInfo?.classCode.orEmpty()
     }
 
-    private suspend fun loadResultSheetByExamId(): Map<String, String> {
+    private suspend fun loadResultSummaries(): List<com.examhub.student.model.response.result.StudentResultSummaryResponse> {
         return when (val result = resultsRepository.getResults(limit = "100").first { it !is ApiResult.Loading }) {
-            is ApiResult.Success -> result.data.data.mapNotNull { summary ->
-                val examId = summary.exam?.id?.takeIf { it.isNotBlank() }
-                if (examId == null) null else examId to summary.id
-            }.toMap()
-            else -> emptyMap()
+            is ApiResult.Success -> result.data.data
+            else -> emptyList()
         }
+    }
+
+    private fun com.examhub.student.model.response.result.StudentResultSummaryResponse.toSubmittedExam(): Exam? {
+        val exam = exam ?: return null
+        val examId = exam.id?.takeIf { it.isNotBlank() } ?: return null
+        return Exam(
+            id = examId,
+            name = exam.name.orEmpty().ifBlank { "Bài kiểm tra đã nộp" },
+            subject = exam.subject.orEmpty(),
+            className = "Kết quả học sinh",
+            duration = exam.duration ?: 0,
+            questionCount = exam.totalQuestions ?: 0,
+            status = "SUBMITTED",
+            gradedCount = 1,
+            totalStudents = 0,
+            isOfflineReady = false,
+            date = gradedAt ?: createdAt.orEmpty(),
+            resultSheetId = id,
+            hasSubmitted = true
+        )
     }
 
     private fun com.examhub.student.model.response.exam.MobileExamSummaryResponse.hasSubmittedStatus(): Boolean {

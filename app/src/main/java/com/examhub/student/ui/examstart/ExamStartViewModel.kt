@@ -22,6 +22,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Locale
+import java.util.TimeZone
 
 class ExamStartViewModel(
     private val examRepository: ExamRepository,
@@ -42,8 +45,13 @@ class ExamStartViewModel(
 
     private val _message = MutableSharedFlow<String>(extraBufferCapacity = 1)
     val message: SharedFlow<String> = _message.asSharedFlow()
+    private val _canStartExam = MutableStateFlow(false)
+    val canStartExam: StateFlow<Boolean> = _canStartExam.asStateFlow()
 
     private var currentExamId: String = ""
+    private var currentExamStatus: String = ""
+    private var currentStartTime: String? = null
+    private var currentEndTime: String? = null
 
     fun load(examId: String) {
         currentExamId = examId
@@ -54,12 +62,20 @@ class ExamStartViewModel(
                     is ApiResult.Success -> {
                         _isLoading.value = false
                         offlineCacheManager.saveExamClassCode(examId, result.data.classInfo?.classCode)
+                        currentExamStatus = result.data.status.orEmpty()
+                        currentStartTime = result.data.onlineConfig?.startTime
+                        currentEndTime = result.data.onlineConfig?.endTime
+                        refreshCanStartExam()
                         _exam.value = result.data
                     }
                     is ApiResult.Error -> {
                         _isLoading.value = false
                         offlineCacheManager.getCachedExamBasic(examId)?.let { cached ->
                             _exam.value = cached.toExamDetail()
+                            currentExamStatus = cached.status
+                            currentStartTime = cached.date
+                            currentEndTime = null
+                            refreshCanStartExam()
                         } ?: _message.tryEmit(result.exception.message ?: context.getString(R.string.exam_start_load_failed))
                     }
                 }
@@ -69,6 +85,10 @@ class ExamStartViewModel(
 
     fun startSession() {
         if (currentExamId.isBlank() || _isLoading.value) return
+        if (!_canStartExam.value) {
+            _message.tryEmit(context.getString(R.string.exam_start_inactive))
+            return
+        }
         viewModelScope.launch {
             examRepository.startSession(currentExamId).collect { result ->
                 when (result) {
@@ -89,7 +109,13 @@ class ExamStartViewModel(
     private suspend fun validateIfNeeded(session: StartExamSessionResponse) {
         if (!session.isLockedMode) {
             _isLoading.value = false
-            _sessionStarted.tryEmit(ExamStartSessionUiEvent(session, resolveOmrCodes(session)))
+            _sessionStarted.tryEmit(
+                ExamStartSessionUiEvent(
+                    session = session,
+                    omrCodes = resolveOmrCodes(session),
+                    remainingSeconds = session.remainingSeconds
+                )
+            )
             return
         }
 
@@ -100,7 +126,13 @@ class ExamStartViewModel(
                 is ApiResult.Success -> {
                     _isLoading.value = false
                     if (result.data.valid) {
-                        _sessionStarted.tryEmit(ExamStartSessionUiEvent(session, resolveOmrCodes(session)))
+                        _sessionStarted.tryEmit(
+                            ExamStartSessionUiEvent(
+                                session = session,
+                                omrCodes = resolveOmrCodes(session),
+                                remainingSeconds = result.data.remainingSeconds ?: session.remainingSeconds
+                            )
+                        )
                     } else {
                         _message.tryEmit(result.data.reason ?: context.getString(R.string.exam_start_lock_invalid))
                     }
@@ -141,14 +173,16 @@ class ExamStartViewModel(
                 profile?.student?.internalId,
                 profile?.student?.id
             ).firstOrNull { it.isNotBlank() }.orEmpty()
-            StudentIdentifierMode.EXTERNAL -> profile?.student?.studentCode.orEmpty()
+            StudentIdentifierMode.EXTERNAL -> session.studentIdentifierCode?.takeIf { it.isNotBlank() }
+                ?: profile?.student?.studentCode.orEmpty()
             StudentIdentifierMode.UNKNOWN -> listOfNotNull(
+                session.studentIdentifierCode,
                 profile?.student?.studentCode,
                 profile?.student?.internalId,
                 profile?.student?.id
             ).firstOrNull { it.isNotBlank() }.orEmpty()
         }
-        val classCode = resolveClassCode()
+        val classCode = resolveClassCode(session)
         offlineCacheManager.saveExamClassCode(currentExamId, classCode)
         return LockModeOmrCodes(
             classCode = classCode,
@@ -157,7 +191,9 @@ class ExamStartViewModel(
         )
     }
 
-    private fun resolveClassCode(): String {
+    private fun resolveClassCode(session: StartExamSessionResponse): String {
+        session.studentIdentifierClassCode?.takeIf { it.isNotBlank() }?.let { return it }
+        session.examClassCode?.takeIf { it.isNotBlank() }?.let { return it }
         _exam.value?.classInfo?.classCode?.takeIf { it.isNotBlank() }?.let { return it }
         offlineCacheManager.getExamClassCode(currentExamId)?.takeIf { it.isNotBlank() }?.let { return it }
 
@@ -170,12 +206,7 @@ class ExamStartViewModel(
                 ?.let { return it }
         }
 
-        return cachedClasses
-            .takeIf { it.size == 1 }
-            ?.firstOrNull()
-            ?.classCode
-            ?.takeIf { it.isNotBlank() }
-            .orEmpty()
+        return ""
     }
 
     private fun readStudentIdentifierModeFromCache(): StudentIdentifierMode {
@@ -187,6 +218,38 @@ class ExamStartViewModel(
                 root.optString("identification_mode")
             ).firstNotNullOfOrNull { StudentIdentifierMode.from(it) } ?: StudentIdentifierMode.UNKNOWN
         }.getOrDefault(StudentIdentifierMode.UNKNOWN)
+    }
+
+    private fun refreshCanStartExam() {
+        _canStartExam.value = currentExamStatus.equals("ACTIVE", ignoreCase = true) &&
+            offlineCacheManager.getTemplate(currentExamId) != null &&
+            isWithinExamWindow(currentStartTime, currentEndTime)
+    }
+
+    private fun isWithinExamWindow(startTime: String?, endTime: String?): Boolean {
+        val now = System.currentTimeMillis()
+        val start = parseTimeMillis(startTime)
+        val end = parseTimeMillis(endTime)
+        if (start != null && now < start) return false
+        if (end != null && now > end) return false
+        return true
+    }
+
+    private fun parseTimeMillis(value: String?): Long? {
+        if (value.isNullOrBlank()) return null
+        val patterns = listOf(
+            "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",
+            "yyyy-MM-dd'T'HH:mm:ss'Z'",
+            "yyyy-MM-dd'T'HH:mm:ss.SSSXXX",
+            "yyyy-MM-dd'T'HH:mm:ssXXX"
+        )
+        return patterns.firstNotNullOfOrNull { pattern ->
+            runCatching {
+                SimpleDateFormat(pattern, Locale.US).apply {
+                    timeZone = TimeZone.getTimeZone("UTC")
+                }.parse(value)?.time
+            }.getOrNull()
+        }
     }
 
     private fun Exam.toExamDetail(): MobileExamDetailResponse {
@@ -207,7 +270,8 @@ class ExamStartViewModel(
 
 data class ExamStartSessionUiEvent(
     val session: StartExamSessionResponse,
-    val omrCodes: LockModeOmrCodes
+    val omrCodes: LockModeOmrCodes,
+    val remainingSeconds: Int
 )
 
 data class LockModeOmrCodes(

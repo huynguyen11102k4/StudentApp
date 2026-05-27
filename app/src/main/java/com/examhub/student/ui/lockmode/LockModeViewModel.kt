@@ -240,11 +240,7 @@ class LockModeViewModel(
             ).firstOrNull { it.isNotBlank() }.orEmpty()
         }
         val cachedClassCode = offlineCacheManager.getExamClassCode(examId)
-            ?: offlineCacheManager.getCachedClassBasics()
-                .takeIf { it.size == 1 }
-                ?.firstOrNull()
-                ?.classCode
-                .orEmpty()
+            .orEmpty()
         _omrCodes.value = LockModeOmrCodes(
             classCode = argCodes.classCode.ifBlank { cachedClassCode },
             studentCode = argCodes.studentCode.ifBlank { cachedStudentCode },

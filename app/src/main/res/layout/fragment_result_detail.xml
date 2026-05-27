@@ -64,6 +64,15 @@
                         android:layout_marginTop="@dimen/spacing_4"
                         android:textColor="@color/text_secondary" />
 
+                    <TextView
+                        android:id="@+id/tvStudentName"
+                        style="@style/Text_Body_Medium"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/spacing_4"
+                        android:textColor="@color/text_secondary"
+                        android:visibility="gone" />
+
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"

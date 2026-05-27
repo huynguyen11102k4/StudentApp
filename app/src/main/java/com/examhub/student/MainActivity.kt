@@ -197,7 +197,7 @@ class MainActivity : AppCompatActivity() {
                 navOptions { launchSingleTop = true }
             )
             intent.replaceExtras(Bundle())
-        } else if (isExamNotification(route, type) && !examId.isNullOrBlank()) {
+        } else if ((isExamNotification(route, type) || isExamLink(extras.getString("link").orEmpty())) && !examId.isNullOrBlank()) {
             navController.navigate(
                 R.id.examDetailFragment,
                 bundleOf("examId" to examId),
@@ -212,6 +212,12 @@ class MainActivity : AppCompatActivity() {
             route.equals("exam", ignoreCase = true) ||
             listOf("exam_created", "exam_opened", "exam_upcoming", "exam_reminder", "exam_assigned")
                 .any { type.equals(it, ignoreCase = true) }
+    }
+
+    private fun isExamLink(link: String): Boolean {
+        return link.contains("/exams/", ignoreCase = true) ||
+            link.contains("examId=", ignoreCase = true) ||
+            link.contains("exam_id=", ignoreCase = true)
     }
 
     private fun isResultNotification(route: String, type: String, link: String): Boolean {
@@ -311,7 +317,12 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun String.extractLastId(): String? {
-        return split('/', '?', '#')
+        Regex("[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}")
+            .findAll(this)
+            .lastOrNull()
+            ?.value
+            ?.let { return it }
+        return split('/', '?', '#', '&', '=')
             .asReversed()
             .firstOrNull { it.length >= 16 && it.any(Char::isDigit) }
     }

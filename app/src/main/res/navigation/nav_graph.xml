@@ -190,6 +190,7 @@
         tools:layout="@layout/fragment_submission_end">
         <argument android:name="examId" app:argType="string" android:defaultValue="" />
         <argument android:name="sheetId" app:argType="string" android:defaultValue="" />
+        <argument android:name="submissionId" app:argType="string" android:defaultValue="" />
         <action android:id="@+id/action_submission_end_to_results" app:destination="@id/resultsListFragment" />
         <action android:id="@+id/action_submission_end_to_result_detail" app:destination="@id/resultDetailFragment" />
     </fragment>

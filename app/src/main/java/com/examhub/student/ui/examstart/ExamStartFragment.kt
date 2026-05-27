@@ -38,7 +38,11 @@ class ExamStartFragment : Fragment() {
             launch { viewModel.exam.collect { it?.let(::bindExam) } }
             launch { viewModel.isLoading.collect { loading ->
                 binding.progressBar.visibility = if (loading) View.VISIBLE else View.GONE
-                binding.btnStart.isEnabled = !loading
+                binding.btnStart.isEnabled = !loading && viewModel.canStartExam.value
+            } }
+            launch { viewModel.canStartExam.collect { canStart ->
+                binding.btnStart.isEnabled = canStart && !viewModel.isLoading.value
+                binding.btnStart.alpha = if (canStart) 1.0f else 0.55f
             } }
             launch { viewModel.message.collect { Snackbar.make(binding.root, it, Snackbar.LENGTH_LONG).show() } }
             launch { viewModel.sessionStarted.collect { event ->
@@ -46,7 +50,7 @@ class ExamStartFragment : Fragment() {
                 val bundle = Bundle().apply {
                     putString("examId", examId)
                     putString("sessionId", session.sessionId)
-                    putInt("remainingSeconds", session.remainingSeconds)
+                    putInt("remainingSeconds", event.remainingSeconds)
                     putInt("questionCount", viewModel.exam.value?.totalQuestions ?: 0)
                     putBoolean("isLockedMode", session.isLockedMode)
                     putString("classCode", event.omrCodes.classCode)
@@ -76,6 +80,10 @@ class ExamStartFragment : Fragment() {
     }
 
     private fun showStartConfirmDialog() {
+        if (!viewModel.canStartExam.value) {
+            Snackbar.make(binding.root, R.string.exam_start_inactive, Snackbar.LENGTH_SHORT).show()
+            return
+        }
         MaterialAlertDialogBuilder(requireContext())
             .setTitle(R.string.exam_start_confirm_title)
             .setMessage(R.string.exam_start_confirm_message)

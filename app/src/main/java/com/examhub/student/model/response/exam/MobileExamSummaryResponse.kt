@@ -19,6 +19,10 @@ data class MobileExamSummaryResponse(
     @SerializedName("grading_type")
     val gradingType: String? = null,
     val status: String? = null,
+    @SerializedName(value = "start_time", alternate = ["startTime"])
+    val startTime: String? = null,
+    @SerializedName(value = "end_time", alternate = ["endTime"])
+    val endTime: String? = null,
     @SerializedName("online_config")
     val onlineConfig: ExamOnlineConfigResponse? = null,
     @SerializedName("class")
@@ -32,4 +36,7 @@ data class MobileExamSummaryResponse(
     val submissionStatus: String? = null,
     @SerializedName(value = "result_id", alternate = ["resultId", "sheet_id", "sheetId", "answer_sheet_id", "answerSheetId"])
     val resultId: String? = null
-)
+) {
+    val displayTime: String
+        get() = startTime ?: onlineConfig?.startTime ?: endTime ?: onlineConfig?.endTime.orEmpty()
+}

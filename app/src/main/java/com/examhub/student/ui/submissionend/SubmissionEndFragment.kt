@@ -22,11 +22,12 @@ class SubmissionEndFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         (requireActivity() as? MainActivity)?.exitKioskMode()
         binding.btnResults.setOnClickListener {
-            val sheetId = arguments?.getString("sheetId").orEmpty()
-            if (sheetId.isNotBlank()) {
+            val resultLookupId = arguments?.getString("submissionId").orEmpty()
+                .ifBlank { arguments?.getString("sheetId").orEmpty() }
+            if (resultLookupId.isNotBlank()) {
                 findNavController().navigate(
                     R.id.action_submission_end_to_result_detail,
-                    Bundle().apply { putString("sheetId", sheetId) }
+                    Bundle().apply { putString("sheetId", resultLookupId) }
                 )
             } else {
                 findNavController().navigate(R.id.action_submission_end_to_results)

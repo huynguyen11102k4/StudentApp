@@ -56,6 +56,7 @@ class ResultDetailFragment : Fragment() {
             launch { viewModel.isLoading.collect { binding.progressBar.visibility = if (it) View.VISIBLE else View.GONE } }
             launch { viewModel.message.collect { Snackbar.make(binding.root, it, Snackbar.LENGTH_LONG).show() } }
             launch { viewModel.appealCount.collect(::bindAppealNotice) }
+            launch { viewModel.isResultPending.collect(::bindPendingState) }
             launch {
                 viewModel.appealCreated.collect { appealId ->
                     findNavController().navigate(R.id.action_result_detail_to_appeal_detail, bundleOf("appealId" to appealId))
@@ -67,8 +68,13 @@ class ResultDetailFragment : Fragment() {
 
     private fun bindResult(result: StudentResultDetailResponse) {
         currentResult = result
+        if (result.resultStatus.equals("PENDING", ignoreCase = true) && result.id.isNullOrBlank()) {
+            bindPendingResult(result)
+            return
+        }
         binding.tvExamName.text = result.exam?.name ?: getString(R.string.result_detail_default_title)
         binding.tvSubject.text = result.exam?.subject.orEmpty()
+        bindStudentInfo(result)
         binding.tvScore.text = result.totalScore?.let { String.format(Locale.US, "%.1f", it) } ?: "--"
         binding.tvQuestionCount.text = result.exam?.totalQuestions
             ?.let { getString(R.string.result_detail_question_count_format, it) }
@@ -88,6 +94,50 @@ class ResultDetailFragment : Fragment() {
             binding.ivResult.visibility = View.VISIBLE
             Glide.with(this).load(imageUrl).into(binding.ivResult)
         }
+        binding.answersHeader.visibility = View.VISIBLE
+        binding.btnToggleAnswers.visibility = View.VISIBLE
+        binding.btnCreateAppeal.visibility = if (canCreateAppeal(result)) View.VISIBLE else View.GONE
+    }
+
+    private fun bindPendingResult(result: StudentResultDetailResponse) {
+        binding.tvExamName.text = result.exam?.name ?: getString(R.string.result_detail_default_title)
+        binding.tvSubject.text = result.exam?.subject ?: getString(R.string.result_detail_pending_message)
+        bindStudentInfo(result)
+        binding.tvScore.text = "--"
+        binding.tvQuestionCount.text = ""
+        binding.tvDuration.text = ""
+        binding.tvGradedAt.text = getString(R.string.result_detail_pending_message)
+        binding.imageCard.visibility = View.GONE
+        binding.ivResult.visibility = View.GONE
+        binding.answersHeader.visibility = View.GONE
+        binding.btnToggleAnswers.visibility = View.GONE
+        binding.rvAnswers.visibility = View.GONE
+        binding.cardAppealNotice.visibility = View.GONE
+        binding.btnCreateAppeal.visibility = View.GONE
+        answerDetails = emptyList()
+        adapter.submitList(emptyList())
+    }
+
+    private fun bindPendingState(isPending: Boolean) {
+        if (isPending) {
+            binding.btnCreateAppeal.visibility = View.GONE
+            binding.cardAppealNotice.visibility = View.GONE
+        }
+    }
+
+    private fun bindStudentInfo(result: StudentResultDetailResponse) {
+        val name = result.displayStudentName()
+        val code = result.displayStudentCode()
+        val text = listOfNotNull(
+            name,
+            code?.let { getString(R.string.result_detail_student_code_format, it) }
+        ).joinToString(" - ")
+        binding.tvStudentName.text = text
+        binding.tvStudentName.visibility = if (text.isBlank()) View.GONE else View.VISIBLE
+    }
+
+    private fun canCreateAppeal(result: StudentResultDetailResponse): Boolean {
+        return !result.id.isNullOrBlank() && !result.exam?.status.equals("CLOSED", ignoreCase = true)
     }
 
     private fun bindAppealNotice(count: Int) {
@@ -140,6 +190,16 @@ class ResultDetailFragment : Fragment() {
     }
 
     private fun showCreateAppealDialog() {
+        val result = currentResult
+        if (result == null || !canCreateAppeal(result)) {
+            val messageRes = if (result?.exam?.status.equals("CLOSED", ignoreCase = true)) {
+                R.string.result_detail_appeal_closed_exam
+            } else {
+                R.string.result_detail_missing_sheet
+            }
+            Snackbar.make(binding.root, messageRes, Snackbar.LENGTH_SHORT).show()
+            return
+        }
         val context = requireContext()
         val container = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL

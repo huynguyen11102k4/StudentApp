@@ -147,7 +147,12 @@ class NotificationsFragment : Fragment() {
                 findNavController().navigate(R.id.action_notifications_to_appeals_list)
             }
             link.contains("grading", ignoreCase = true) || link.contains("exams", ignoreCase = true) -> {
-                findNavController().navigate(R.id.examListFragment)
+                if (!examId.isNullOrBlank()) {
+                    val bundle = Bundle().apply { putString("examId", examId) }
+                    findNavController().navigate(R.id.examDetailFragment, bundle)
+                } else {
+                    findNavController().navigate(R.id.examListFragment)
+                }
             }
             else -> Unit
         }
@@ -190,7 +195,12 @@ class NotificationsFragment : Fragment() {
     }
 
     private fun String.extractLastId(): String? {
-        return split('/', '?', '#')
+        Regex("[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}")
+            .findAll(this)
+            .lastOrNull()
+            ?.value
+            ?.let { return it }
+        return split('/', '?', '#', '&', '=')
             .asReversed()
             .firstOrNull { it.length >= 16 && it.any(Char::isDigit) }
     }

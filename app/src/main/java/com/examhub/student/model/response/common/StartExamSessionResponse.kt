@@ -28,7 +28,10 @@ data class StartExamSessionResponse(
     private val legacyIsLockedMode: Boolean? = null
 ) {
     val sessionId: String get() = session?.sessionId ?: legacySessionId.orEmpty()
-    val studentCodeType: String? get() = exam?.studentCodeType
+    val studentCodeType: String? get() = exam?.studentCodeType ?: exam?.studentIdentifier?.mode
+    val studentIdentifierCode: String? get() = exam?.studentIdentifier?.code
+    val studentIdentifierClassCode: String? get() = exam?.studentIdentifier?.classCode
+    val examClassCode: String? get() = exam?.classInfo?.classCode
     val attemptNo: Int get() = session?.attemptNo ?: legacyAttemptNo ?: 0
     val startTime: String get() = session?.startTime ?: legacyStartTime.orEmpty()
     val endTime: String get() = session?.endTime ?: legacyEndTime.orEmpty()
