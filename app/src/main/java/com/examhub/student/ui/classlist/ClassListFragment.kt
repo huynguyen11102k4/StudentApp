@@ -18,8 +18,8 @@ import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
 import com.examhub.student.R
 import com.examhub.student.databinding.FragmentClassListBinding
-import com.examhub.student.extension.applySystemWindowInsets
-import com.examhub.student.extension.collectOnStarted
+import com.examhub.student.util.extension.applySystemWindowInsets
+import com.examhub.student.util.extension.collectOnStarted
 import kotlinx.coroutines.launch
 import org.koin.androidx.viewmodel.ext.android.viewModel
 

@@ -10,7 +10,7 @@ import com.examhub.student.model.request.auth.OtpVerifyRequest
 import com.examhub.student.model.request.auth.StudentRegisterRequest
 import com.examhub.student.repository.AuthRepository
 import com.examhub.student.service.FcmTokenRegistrar
-import com.examhub.student.ui.ResourceProvider
+import com.examhub.student.util.helper.ResourceProvider
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow

@@ -15,7 +15,7 @@ import androidx.navigation.fragment.findNavController
 import com.google.android.material.snackbar.Snackbar
 import com.examhub.student.R
 import com.examhub.student.databinding.FragmentForgotPasswordBinding
-import com.examhub.student.extension.collectOnStarted
+import com.examhub.student.util.extension.collectOnStarted
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 

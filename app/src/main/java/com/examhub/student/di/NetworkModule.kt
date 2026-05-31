@@ -21,8 +21,9 @@ import com.examhub.student.service.TokenAuthenticator
 import com.examhub.student.service.TokenManager
 import com.examhub.student.service.UnauthorizedInterceptor
 import com.examhub.student.service.OfflineCacheManager
+import com.examhub.student.service.ActiveExamSessionStore
 import com.examhub.student.service.ViolationQueueManager
-import com.examhub.student.ui.ResourceProvider
+import com.examhub.student.util.helper.ResourceProvider
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
@@ -42,6 +43,7 @@ object NetworkModule {
         single { FcmTokenRegistrar(get(), get(), get(), androidContext()) }
         single { ETagCacheManager(androidContext()) }
         single { OfflineCacheManager(androidContext()) }
+        single { ActiveExamSessionStore(androidContext()) }
         single { ViolationQueueManager(androidContext(), get()) }
         single { AuthInterceptor(get()) }
         single { UnauthorizedInterceptor(get()) }

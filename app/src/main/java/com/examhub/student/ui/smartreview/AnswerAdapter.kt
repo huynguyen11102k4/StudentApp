@@ -15,28 +15,8 @@ class AnswerAdapter(
     class ViewHolder(private val binding: ItemAnswerBinding) : RecyclerView.ViewHolder(binding.root) {
         fun bind(answer: Answer, onEditClick: (Answer) -> Unit) {
             binding.tvQuestionNo.text = answer.questionNo.toString()
-            val display = when (answer.status) {
-                "correct" -> "HS: ${answer.studentAnswer ?: "---"} → ĐA: ${answer.correctAnswer}"
-                "wrong" -> "HS: ${answer.studentAnswer ?: "---"} → ĐA: ${answer.correctAnswer}"
-                "empty" -> "HS: --- → ĐA: ${answer.correctAnswer}"
-                else -> "HS: ${answer.studentAnswer ?: "---"} → ĐA: ${answer.correctAnswer}"
-            }
-            binding.tvStudentAnswer.text = display
-            binding.ivStatusIcon.visibility = android.view.View.VISIBLE
-            binding.ivStatusIcon.setImageResource(
-                when (answer.status) {
-                    "correct" -> com.examhub.student.R.drawable.ic_check
-                    "wrong" -> com.examhub.student.R.drawable.ic_close
-                    else -> com.examhub.student.R.drawable.ic_check
-                }
-            )
-            binding.ivStatusIcon.setColorFilter(
-                when (answer.status) {
-                    "correct" -> android.graphics.Color.parseColor("#4CAF50")
-                    "wrong" -> android.graphics.Color.parseColor("#F44336")
-                    else -> android.graphics.Color.parseColor("#FFC107")
-                }
-            )
+            binding.tvStudentAnswer.text = "HS: ${answer.studentAnswer ?: "---"}"
+            binding.ivStatusIcon.visibility = android.view.View.GONE
             binding.btnEditAnswer.setOnClickListener { onEditClick(answer) }
         }
     }

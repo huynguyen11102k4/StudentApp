@@ -8,7 +8,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.examhub.student.R
 import com.examhub.student.data.model.Exam
 import com.examhub.student.databinding.ItemExamBinding
-import com.examhub.student.extension.toFriendlyExamStatus
+import com.examhub.student.util.extension.toFriendlyExamStatus
 import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.TimeZone

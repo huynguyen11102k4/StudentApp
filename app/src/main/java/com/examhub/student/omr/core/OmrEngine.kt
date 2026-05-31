@@ -1,114 +1,15 @@
-package com.examhub.student
+package com.examhub.student.omr.core
 
 import android.graphics.Bitmap
 import android.util.Log
-import org.json.JSONArray
+import com.examhub.student.omr.model.AnswerResult
+import com.examhub.student.omr.model.IdResult
+import com.examhub.student.omr.model.OmrEngineOptions
+import com.examhub.student.omr.model.OmrOutput
+import com.examhub.student.omr.model.ScoreData
+import com.examhub.student.omr.model.ScoreDetail
+import com.examhub.student.omr.nativebridge.NativeLib
 import org.json.JSONObject
-
-// ─── Result Data Classes ───────────────────────────────────────────
-
-data class IdResult(
-    val studentId: String,
-    val classCode: String,
-    val examCode: String,
-    val ok: Boolean,
-    val error: String = ""
-)
-
-data class AnswerResult(
-    val questionNumber: Int,
-    val answer: String,        // "A", "C", "A,C", "" (no answer)
-    val flag: Int = 0          // 0=OK, 1=ambiguous/erasure
-)
-
-data class ScoreDetail(
-    val questionNumber: Int,
-    val studentAnswer: String,
-    val correctAnswer: String,
-    val isCorrect: Boolean,
-    val flag: Int = 0
-)
-
-data class ScoreData(
-    val totalQuestions: Int,
-    val correctCount: Int,
-    val totalScore: Double,
-    val details: List<ScoreDetail>
-)
-
-data class OmrOutput(
-    val success: Boolean,
-    val errorCode: String = "",
-    val errorMessage: String = "",
-    val warnings: List<String> = emptyList(),
-    val idResult: IdResult = IdResult("", "", "", false),
-    val answers: List<AnswerResult> = emptyList(),
-    val scored: Boolean = false,
-    val scoreResult: ScoreData? = null,
-    val laplacianVariance: Float = 0f,
-    val meanBrightness: Float = 0f,
-    val dewarpedImageBase64: String = "",
-    val debugImageBase64: String = ""      // JPEG base64 (only if enableDebugImage=true)
-)
-
-// ─── Options ───────────────────────────────────────────────────────
-
-data class OmrEngineOptions(
-    val densityThreshold: Float = 0.40f,
-    val diffThreshold: Float = 0.20f,
-    val enableScoring: Boolean = false,
-    val enableDebugImage: Boolean = false,
-
-    // ─── Adaptive threshold ──────────────────────────────────
-    /** When true: use cv::adaptiveThreshold before reading bubbles.
-     *  Handles uneven lighting better than fixed 128 grayscale cutoff. */
-    val useAdaptiveThreshold: Boolean = false,
-    /** Block size (odd, 3-255). Larger = more stable in low-light. */
-    val adaptiveBlockSize: Int = 31,
-    /** Constant subtracted from mean. Higher = less sensitive to faint marks. */
-    val adaptiveC: Float = 8.0f,
-
-    // ─── Preprocessing pipeline ───────────────────────────────
-    /** Bilateral + CLAHE on input before marker detection.
-     *  Matches Python pipeline B1.5+B2. Better for wrinkled paper. */
-    val preprocessMarkers: Boolean = false,
-    /** Bilateral + GaussianBlur on warped image before threshold.
-     *  Matches Python pipeline B5+B6. Reduces paper texture noise. */
-    val preprocessPostWarp: Boolean = false,
-    /** Morphological close+open+Otsu after adaptive threshold.
-     *  Matches Python pipeline B7-B10. Removes fold/crease noise. */
-    val morphCleanup: Boolean = false,
-
-    // ─── Auto-adaptive mode ──────────────────────────────────
-    /** When true: app auto-decides ALL preprocessing flags
-     *  based on laplacian variance and mean brightness.
-     *  Teacher just shoots — no manual tuning needed.
-     *  Overrides preprocessMarkers/postWarp/morphCleanup
-     *  and useAdaptiveThreshold. */
-    val autoAdaptive: Boolean = true
-) {
-    companion object {
-        /** Fastest: no preprocessing. For flatbed-scanned sheets. */
-        val presetFast = OmrEngineOptions(autoAdaptive = false)
-
-        /** Balanced: adaptive threshold only. Good default for camera. */
-        val presetPhoto = OmrEngineOptions(autoAdaptive = false,
-            useAdaptiveThreshold = true)
-
-        /** Full preprocessing: bilateral+CLAHE+adaptive+morph.
-         *  For wrinkled / low-light paper. */
-        val presetWrinkled = OmrEngineOptions(autoAdaptive = false,
-            useAdaptiveThreshold = true,
-            preprocessMarkers = true, preprocessPostWarp = true,
-            morphCleanup = true)
-
-        /** Auto-adaptive: app decides. Recommended for teacher usage. */
-        val presetAuto = OmrEngineOptions(autoAdaptive = true)
-    }
-}
-
-// ─── Engine ────────────────────────────────────────────────────────
-
 /**
  * OmrEngine — High-level Kotlin wrapper around the native OMR pipeline.
  *
@@ -227,7 +128,6 @@ class OmrEngine {
                                     ScoreDetail(
                                         questionNumber = dObj.getInt("question_number"),
                                         studentAnswer = dObj.optString("student_answer", ""),
-                                        correctAnswer = dObj.optString("correct_answer", ""),
                                         isCorrect = dObj.getBoolean("is_correct"),
                                         flag = dObj.optInt("flag", 0)
                                     )

@@ -38,10 +38,10 @@ object ViewModelModule {
         viewModel { DashboardViewModel(get(), get(), get(), get(), get()) }
 
         // Exams
-        viewModel { ExamDetailViewModel(get(), get(), get(), get(), get(), get()) }
+        viewModel { ExamDetailViewModel(get(), get(), get(), get(), get(), get(), get()) }
         viewModel { ExamListViewModel(get(), get(), get()) }
-        viewModel { ExamStartViewModel(get(), get(), get(), get(), get(), get()) }
-        viewModel { LockModeViewModel(get(), get(), get(), get(), get(), get()) }
+        viewModel { ExamStartViewModel(get(), get(), get(), get(), get(), get(), get()) }
+        viewModel { LockModeViewModel(get(), get(), get(), get(), get(), get(), get()) }
         viewModel { ResultsListViewModel(get(), get()) }
         viewModel { ResultDetailViewModel(get(), get(), get()) }
 
@@ -50,7 +50,7 @@ object ViewModelModule {
         viewModel { ClassDetailViewModel(get(), get(), get(), get()) }
 
         // OMR confirm/review
-        viewModel { SmartReviewViewModel(get(), get()) }
+        viewModel { SmartReviewViewModel(get(), get(), get(), get()) }
 
         // Notifications
         viewModel { NotificationsViewModel(get(), get()) }
@@ -61,6 +61,6 @@ object ViewModelModule {
 
         // Others (no repository dependencies)
         viewModel { SettingsViewModel(get(), get(), get(), get(), get()) }
-        viewModel { CameraARViewModel(get(), get(), get(), get()) }
+        viewModel { CameraARViewModel(get(), get(), get(), get(), get(), get()) }
     }
 }

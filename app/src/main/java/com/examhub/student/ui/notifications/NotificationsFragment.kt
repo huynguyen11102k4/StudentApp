@@ -12,8 +12,8 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.examhub.student.R
 import com.examhub.student.data.model.AppNotification
 import com.examhub.student.databinding.FragmentNotificationsBinding
-import com.examhub.student.extension.applySystemWindowInsets
-import com.examhub.student.extension.collectOnStarted
+import com.examhub.student.util.extension.applySystemWindowInsets
+import com.examhub.student.util.extension.collectOnStarted
 import com.google.android.material.snackbar.Snackbar
 import kotlinx.coroutines.launch
 import org.koin.androidx.viewmodel.ext.android.viewModel
@@ -109,6 +109,10 @@ class NotificationsFragment : Fragment() {
             ?: notification.metadata?.stringValue("sheetId")
             ?: notification.metadata?.stringValue("answer_sheet_id")
             ?: notification.metadata?.stringValue("answerSheetId")
+            ?: notification.data?.stringValue("result_id")
+            ?: notification.data?.stringValue("resultId")
+            ?: notification.metadata?.stringValue("result_id")
+            ?: notification.metadata?.stringValue("resultId")
             ?: link.takeIf { it.contains("/results/", ignoreCase = true) }?.extractLastId()
         val appealId = notification.appealId ?: notification.link?.extractLastId()
         val examId = notification.targetId
@@ -118,12 +122,12 @@ class NotificationsFragment : Fragment() {
             ?: notification.metadata?.stringValue("exam_id")
             ?: notification.metadata?.stringValue("examId")
             ?: notification.link?.extractLastId()
-        if (!sheetId.isNullOrBlank() && (type.contains("GRADE") || link.contains("/results/", ignoreCase = true))) {
+        if (!sheetId.isNullOrBlank() && isResultNotification(type, link)) {
             val bundle = Bundle().apply { putString("sheetId", sheetId) }
             findNavController().navigate(R.id.resultDetailFragment, bundle)
             return
         }
-        if ((type == "APPEAL_CREATED" || type == "APPEAL_UPDATED" || type == "APPEAL_NEW") && !appealId.isNullOrBlank()) {
+        if ((type == "APPEAL_CREATED" || type == "APPEAL_UPDATED" || type == "APPEAL_NEW" || type == "APPEAL_RESOLVED" || type == "APPEAL_REPLIED") && !appealId.isNullOrBlank()) {
             val bundle = Bundle().apply { putString("appealId", appealId) }
             findNavController().navigate(R.id.action_notifications_to_appeal_detail, bundle)
             return
@@ -203,6 +207,13 @@ class NotificationsFragment : Fragment() {
         return split('/', '?', '#', '&', '=')
             .asReversed()
             .firstOrNull { it.length >= 16 && it.any(Char::isDigit) }
+    }
+
+    private fun isResultNotification(type: String, link: String): Boolean {
+        return type.contains("GRADE") ||
+            type.contains("RESULT") ||
+            type == "EXAM_GRADED" ||
+            link.contains("/results/", ignoreCase = true)
     }
 
     private fun com.google.gson.JsonObject.stringValue(key: String): String? {

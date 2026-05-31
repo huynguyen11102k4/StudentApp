@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 class ResultDetailViewModel(
@@ -59,14 +60,10 @@ class ResultDetailViewModel(
     }
 
     fun createAppeal(reason: String, questionNumber: Int?, questionMessage: String) {
-        val result = _result.value
-        val sheetId = result?.id.orEmpty()
+        val initialResult = _result.value
+        val sheetId = initialResult?.id.orEmpty()
         if (sheetId.isBlank()) {
             _message.tryEmit(context.getString(R.string.result_detail_missing_sheet))
-            return
-        }
-        if (result?.exam?.status.equals("CLOSED", ignoreCase = true)) {
-            _message.tryEmit(context.getString(R.string.result_detail_appeal_closed_exam))
             return
         }
         val normalizedReason = reason.trim()
@@ -79,6 +76,28 @@ class ResultDetailViewModel(
         }.orEmpty()
 
         viewModelScope.launch {
+            val refreshed = resultsRepository.getResultDetail(sheetId).first { it !is ApiResult.Loading }
+            val result = when (refreshed) {
+                is ApiResult.Success -> {
+                    _result.value = refreshed.data
+                    refreshed.data
+                }
+                else -> initialResult
+            }
+            if (!result?.exam?.status.isAppealOpenStatus()) {
+                _message.tryEmit(context.getString(R.string.result_detail_appeal_closed_exam))
+                return@launch
+            }
+            if (result == null) {
+                _message.tryEmit(context.getString(R.string.result_detail_missing_sheet))
+                return@launch
+            }
+            val pendingCount = countPendingAppealsForResult(result)
+            _appealCount.value = pendingCount
+            if (pendingCount > 0) {
+                _message.tryEmit(context.getString(R.string.result_detail_appeal_pending_exists))
+                return@launch
+            }
             appealsRepository.createAppeal(StudentAppealRequest(sheetId, normalizedReason, items)).collect { result ->
                 when (result) {
                     is ApiResult.Loading -> _isLoading.value = true
@@ -97,16 +116,33 @@ class ResultDetailViewModel(
     }
 
     private fun loadAppealCount(result: StudentResultDetailResponse) {
+        val sheetId = result.id.orEmpty()
+        if (sheetId.isBlank()) {
+            _appealCount.value = 0
+            return
+        }
         viewModelScope.launch {
-            appealsRepository.getAppeals(examId = result.exam?.id).collect { response ->
-                if (response is ApiResult.Success) {
-                    _appealCount.value = response.data.data.size
-                }
-            }
+            _appealCount.value = countPendingAppealsForResult(result)
+        }
+    }
+
+    private suspend fun countPendingAppealsForResult(result: StudentResultDetailResponse): Int {
+        val sheetId = result.id.orEmpty()
+        if (sheetId.isBlank()) return 0
+        val response = appealsRepository.getAppeals(status = "PENDING", examId = result.exam?.id)
+            .first { it !is ApiResult.Loading }
+        return if (response is ApiResult.Success) {
+            response.data.data.count { it.sheet?.id == sheetId }
+        } else {
+            _appealCount.value
         }
     }
 
     private fun StudentResultDetailResponse.isPending(): Boolean {
         return resultStatus.equals("PENDING", ignoreCase = true) && id.isNullOrBlank()
+    }
+
+    private fun String?.isAppealOpenStatus(): Boolean {
+        return equals("ACTIVE", ignoreCase = true) || equals("END", ignoreCase = true)
     }
 }

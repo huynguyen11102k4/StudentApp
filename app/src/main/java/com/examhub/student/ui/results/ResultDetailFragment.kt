@@ -8,17 +8,15 @@ import android.widget.LinearLayout
 import androidx.core.os.bundleOf
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
-import com.bumptech.glide.Glide
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
 import com.examhub.student.R
 import com.examhub.student.databinding.FragmentResultDetailBinding
-import com.examhub.student.model.response.result.StudentResultAnswerResponse
 import com.examhub.student.model.response.result.StudentResultDetailResponse
-import com.examhub.student.extension.applySystemWindowInsets
-import com.examhub.student.extension.collectOnStarted
+import com.examhub.student.util.extension.applySystemWindowInsets
+import com.examhub.student.util.extension.collectOnStarted
 import kotlinx.coroutines.launch
 import org.koin.androidx.viewmodel.ext.android.viewModel
 import java.text.SimpleDateFormat
@@ -29,11 +27,8 @@ class ResultDetailFragment : Fragment() {
     private var _binding: FragmentResultDetailBinding? = null
     private val binding get() = _binding!!
     private val viewModel: ResultDetailViewModel by viewModel()
-    private val adapter = ResultAnswerAdapter()
     private val sheetId: String get() = arguments?.getString("sheetId").orEmpty()
     private var currentResult: StudentResultDetailResponse? = null
-    private var answersExpanded = false
-    private var answerDetails = emptyList<StudentResultAnswerResponse>()
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentResultDetailBinding.inflate(inflater, container, false)
@@ -43,9 +38,6 @@ class ResultDetailFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         binding.toolbar.applySystemWindowInsets(top = true)
         binding.toolbar.setNavigationOnClickListener { findNavController().navigateUp() }
-        binding.rvAnswers.adapter = adapter
-        binding.answersHeader.setOnClickListener { setAnswersExpanded(!answersExpanded) }
-        binding.btnToggleAnswers.setOnClickListener { setAnswersExpanded(!answersExpanded) }
         binding.btnCreateAppeal.setOnClickListener { showCreateAppealDialog() }
         binding.cardAppealNotice.setOnClickListener {
             val bundle = bundleOf("examId" to currentResult?.exam?.id.orEmpty())
@@ -55,7 +47,12 @@ class ResultDetailFragment : Fragment() {
             launch { viewModel.result.collect { it?.let(::bindResult) } }
             launch { viewModel.isLoading.collect { binding.progressBar.visibility = if (it) View.VISIBLE else View.GONE } }
             launch { viewModel.message.collect { Snackbar.make(binding.root, it, Snackbar.LENGTH_LONG).show() } }
-            launch { viewModel.appealCount.collect(::bindAppealNotice) }
+            launch {
+                viewModel.appealCount.collect { count ->
+                    bindAppealNotice(count)
+                    updateAppealButton()
+                }
+            }
             launch { viewModel.isResultPending.collect(::bindPendingState) }
             launch {
                 viewModel.appealCreated.collect { appealId ->
@@ -75,7 +72,7 @@ class ResultDetailFragment : Fragment() {
         binding.tvExamName.text = result.exam?.name ?: getString(R.string.result_detail_default_title)
         binding.tvSubject.text = result.exam?.subject.orEmpty()
         bindStudentInfo(result)
-        binding.tvScore.text = result.totalScore?.let { String.format(Locale.US, "%.1f", it) } ?: "--"
+        binding.tvScore.text = result.totalScore?.let { String.format(Locale.US, "%.2f", it) } ?: "--"
         binding.tvQuestionCount.text = result.exam?.totalQuestions
             ?.let { getString(R.string.result_detail_question_count_format, it) }
             ?: ""
@@ -83,20 +80,7 @@ class ResultDetailFragment : Fragment() {
             ?.let { getString(R.string.result_detail_duration_format, it) }
             ?: ""
         binding.tvGradedAt.text = formatGradedAt(result.gradedAt)
-        answerDetails = result.answerDetails
-        setAnswersExpanded(false)
-        val imageUrl = result.processedImageUrl ?: result.dewarpedImageUrl ?: result.rawImageUrl
-        if (imageUrl.isNullOrBlank()) {
-            binding.imageCard.visibility = View.GONE
-            binding.ivResult.visibility = View.GONE
-        } else {
-            binding.imageCard.visibility = View.VISIBLE
-            binding.ivResult.visibility = View.VISIBLE
-            Glide.with(this).load(imageUrl).into(binding.ivResult)
-        }
-        binding.answersHeader.visibility = View.VISIBLE
-        binding.btnToggleAnswers.visibility = View.VISIBLE
-        binding.btnCreateAppeal.visibility = if (canCreateAppeal(result)) View.VISIBLE else View.GONE
+        updateAppealButton()
     }
 
     private fun bindPendingResult(result: StudentResultDetailResponse) {
@@ -107,15 +91,8 @@ class ResultDetailFragment : Fragment() {
         binding.tvQuestionCount.text = ""
         binding.tvDuration.text = ""
         binding.tvGradedAt.text = getString(R.string.result_detail_pending_message)
-        binding.imageCard.visibility = View.GONE
-        binding.ivResult.visibility = View.GONE
-        binding.answersHeader.visibility = View.GONE
-        binding.btnToggleAnswers.visibility = View.GONE
-        binding.rvAnswers.visibility = View.GONE
         binding.cardAppealNotice.visibility = View.GONE
         binding.btnCreateAppeal.visibility = View.GONE
-        answerDetails = emptyList()
-        adapter.submitList(emptyList())
     }
 
     private fun bindPendingState(isPending: Boolean) {
@@ -137,7 +114,14 @@ class ResultDetailFragment : Fragment() {
     }
 
     private fun canCreateAppeal(result: StudentResultDetailResponse): Boolean {
-        return !result.id.isNullOrBlank() && !result.exam?.status.equals("CLOSED", ignoreCase = true)
+        return !result.id.isNullOrBlank() &&
+            result.exam?.status.isAppealOpenStatus() &&
+            viewModel.appealCount.value == 0
+    }
+
+    private fun updateAppealButton() {
+        val result = currentResult
+        binding.btnCreateAppeal.visibility = if (result != null && canCreateAppeal(result)) View.VISIBLE else View.GONE
     }
 
     private fun bindAppealNotice(count: Int) {
@@ -147,33 +131,6 @@ class ResultDetailFragment : Fragment() {
         } else {
             getString(R.string.result_detail_has_appeal_notice)
         }
-    }
-
-    private fun setAnswersExpanded(expanded: Boolean) {
-        answersExpanded = expanded
-        binding.btnToggleAnswers.setIconResource(
-            if (expanded) R.drawable.ic_keyboard_arrow_up else R.drawable.ic_keyboard_arrow_down
-        )
-        binding.rvAnswers.visibility = if (expanded) View.VISIBLE else View.GONE
-        if (expanded) {
-            binding.rvAnswers.layoutParams = binding.rvAnswers.layoutParams.apply {
-                height = answerListHeightPx(answerDetails.size)
-            }
-            adapter.submitList(answerDetails)
-        } else {
-            adapter.submitList(emptyList())
-            binding.rvAnswers.layoutParams = binding.rvAnswers.layoutParams.apply {
-                height = 0
-            }
-        }
-    }
-
-    private fun answerListHeightPx(itemCount: Int): Int {
-        if (itemCount <= 0) return 0
-        val density = resources.displayMetrics.density
-        val estimatedItemHeight = (96 * density).toInt()
-        val maxHeight = (420 * density).toInt()
-        return (itemCount * estimatedItemHeight).coerceAtMost(maxHeight)
     }
 
     private fun formatGradedAt(value: String?): String {
@@ -192,10 +149,11 @@ class ResultDetailFragment : Fragment() {
     private fun showCreateAppealDialog() {
         val result = currentResult
         if (result == null || !canCreateAppeal(result)) {
-            val messageRes = if (result?.exam?.status.equals("CLOSED", ignoreCase = true)) {
-                R.string.result_detail_appeal_closed_exam
-            } else {
-                R.string.result_detail_missing_sheet
+            val messageRes = when {
+                result?.id.isNullOrBlank() -> R.string.result_detail_missing_sheet
+                !result?.exam?.status.isAppealOpenStatus() -> R.string.result_detail_appeal_closed_exam
+                viewModel.appealCount.value > 0 -> R.string.result_detail_appeal_pending_exists
+                else -> R.string.result_detail_missing_sheet
             }
             Snackbar.make(binding.root, messageRes, Snackbar.LENGTH_SHORT).show()
             return
@@ -259,5 +217,9 @@ class ResultDetailFragment : Fragment() {
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null
+    }
+
+    private fun String?.isAppealOpenStatus(): Boolean {
+        return equals("ACTIVE", ignoreCase = true) || equals("END", ignoreCase = true)
     }
 }

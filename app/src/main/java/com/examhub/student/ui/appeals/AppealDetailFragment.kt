@@ -11,9 +11,9 @@ import com.examhub.student.BuildConfig
 import com.examhub.student.R
 import com.examhub.student.data.model.Appeal
 import com.examhub.student.databinding.FragmentAppealDetailBinding
-import com.examhub.student.extension.applySystemWindowInsets
-import com.examhub.student.extension.collectOnStarted
-import com.examhub.student.extension.toFriendlyAppealStatus
+import com.examhub.student.util.extension.applySystemWindowInsets
+import com.examhub.student.util.extension.collectOnStarted
+import com.examhub.student.util.extension.toFriendlyAppealStatus
 import com.google.android.material.snackbar.Snackbar
 import kotlinx.coroutines.launch
 import org.koin.androidx.viewmodel.ext.android.viewModel

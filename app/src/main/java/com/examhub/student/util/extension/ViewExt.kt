@@ -1,4 +1,4 @@
-package com.examhub.student.extension
+package com.examhub.student.util.extension
 
 import android.view.View
 import androidx.core.view.ViewCompat

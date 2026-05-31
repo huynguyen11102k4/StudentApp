@@ -12,7 +12,8 @@ import com.examhub.student.MainActivity
 import com.examhub.student.R
 import com.examhub.student.databinding.FragmentLockModeBinding
 import com.examhub.student.kiosk.KioskModeState
-import com.examhub.student.extension.collectOnStarted
+import com.examhub.student.util.extension.collectOnStarted
+import com.examhub.student.util.helper.protectScreenFromCapture
 import kotlinx.coroutines.launch
 import org.koin.androidx.viewmodel.ext.android.viewModel
 
@@ -31,12 +32,14 @@ class LockModeFragment : Fragment() {
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        protectScreenFromCapture()
         enterKioskMode()
         binding.btnOpenCamera.setOnClickListener {
             val bundle = Bundle().apply {
                 putString("examId", examId)
                 putString("sessionId", sessionId)
                 putInt("remainingSeconds", viewModel.remainingSeconds.value)
+                putInt("questionCount", arguments?.getInt("questionCount") ?: 0)
                 putLong("timerStartedAt", System.currentTimeMillis())
             }
             findNavController().navigate(R.id.action_lock_mode_to_camera_ar, bundle)

@@ -13,19 +13,19 @@ data class StartExamSessionResponse(
     @SerializedName("server_time")
     val serverTime: String? = null,
     @SerializedName("session_id")
-    private val legacySessionId: String? = null,
+    val legacySessionId: String? = null,
     @SerializedName("attempt_no")
-    private val legacyAttemptNo: Int? = null,
+    val legacyAttemptNo: Int? = null,
     @SerializedName("start_time")
-    private val legacyStartTime: String? = null,
+    val legacyStartTime: String? = null,
     @SerializedName("end_time")
-    private val legacyEndTime: String? = null,
+    val legacyEndTime: String? = null,
     @SerializedName("remaining_seconds")
-    private val legacyRemainingSeconds: Int? = null,
+    val legacyRemainingSeconds: Int? = null,
     @SerializedName("lock_config")
-    private val legacyLockConfig: JsonElement? = null,
+    val legacyLockConfig: JsonElement? = null,
     @SerializedName("is_locked_mode")
-    private val legacyIsLockedMode: Boolean? = null
+    val legacyIsLockedMode: Boolean? = null
 ) {
     val sessionId: String get() = session?.sessionId ?: legacySessionId.orEmpty()
     val studentCodeType: String? get() = exam?.studentCodeType ?: exam?.studentIdentifier?.mode

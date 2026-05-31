@@ -3,7 +3,7 @@ package com.examhub.student.ui.forgotpassword
 import androidx.lifecycle.ViewModel
 import com.examhub.student.R
 import com.examhub.student.repository.AuthRepository
-import com.examhub.student.ui.ResourceProvider
+import com.examhub.student.util.helper.ResourceProvider
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow

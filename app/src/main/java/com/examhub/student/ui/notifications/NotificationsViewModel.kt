@@ -39,6 +39,7 @@ class NotificationsViewModel(
 
     fun loadNotifications() {
         viewModelScope.launch {
+            val dismissedIds = offlineCacheManager.getDismissedNotificationIds().toSet()
             val cached = offlineCacheManager.getCachedNotifications()
             if (cached.isNotEmpty()) {
                 allNotifications = cached
@@ -54,28 +55,30 @@ class NotificationsViewModel(
                     is ApiResult.Success -> {
                         _isLoading.value = false
                         _isRefreshing.value = false
-                        val mapped = result.data.data.map { notif ->
-                            AppNotification(
-                                id = notif.id,
-                                type = notif.type,
-                                title = notif.title,
-                                content = notif.content,
-                                link = notif.link,
-                                appealId = notif.appealId
-                                    ?: notif.targetId
-                                    ?: notif.entityId
-                                    ?: notif.metadata.stringValue("appealId")
-                                    ?: notif.metadata.stringValue("appeal_id")
-                                    ?: notif.data.stringValue("appealId")
-                                    ?: notif.data.stringValue("appeal_id"),
-                                targetId = notif.targetId,
-                                entityId = notif.entityId,
-                                metadata = notif.metadata,
-                                data = notif.data,
-                                isRead = notif.isRead == true,
-                                createdAt = notif.createdAt.orEmpty()
-                            )
-                        }
+                        val mapped = result.data.data
+                            .filterNot { notif -> notif.id in dismissedIds }
+                            .map { notif ->
+                                AppNotification(
+                                    id = notif.id,
+                                    type = notif.type,
+                                    title = notif.title,
+                                    content = notif.content,
+                                    link = notif.link,
+                                    appealId = notif.appealId
+                                        ?: notif.targetId
+                                        ?: notif.entityId
+                                        ?: notif.metadata.stringValue("appealId")
+                                        ?: notif.metadata.stringValue("appeal_id")
+                                        ?: notif.data.stringValue("appealId")
+                                        ?: notif.data.stringValue("appeal_id"),
+                                    targetId = notif.targetId,
+                                    entityId = notif.entityId,
+                                    metadata = notif.metadata,
+                                    data = notif.data,
+                                    isRead = notif.isRead == true,
+                                    createdAt = notif.createdAt.orEmpty()
+                                )
+                            }
                         allNotifications = when (currentFilter) {
                             NotificationFilter.UNREAD -> mergeNotifications(
                                 existing = allNotifications,
@@ -84,7 +87,11 @@ class NotificationsViewModel(
                             else -> mapped
                         }
                         applyFilter()
-                        _unreadCount.value = result.data.meta?.unreadCount ?: mapped.count { !it.isRead }
+                        _unreadCount.value = if (dismissedIds.isEmpty()) {
+                            result.data.meta?.unreadCount ?: mapped.count { !it.isRead }
+                        } else {
+                            mapped.count { !it.isRead }
+                        }
                         offlineCacheManager.saveNotifications(allNotifications)
                     }
                     is ApiResult.Error -> {
@@ -131,6 +138,7 @@ class NotificationsViewModel(
     fun markAllAsRead() {
         if (allNotifications.none { !it.isRead } && _unreadCount.value == 0) return
 
+        val unreadIds = allNotifications.filterNot { it.isRead }.map { it.id }
         allNotifications = allNotifications.map { it.copy(isRead = true) }
         applyFilter()
         _unreadCount.value = 0
@@ -139,10 +147,7 @@ class NotificationsViewModel(
             notificationRepository.markAllAsRead().collect { result ->
                 when (result) {
                     is ApiResult.Success -> Unit
-                    is ApiResult.Error -> {
-                        _errorMessage.tryEmit(result.exception.message ?: "Không thể đánh dấu tất cả đã đọc")
-                        loadNotifications()
-                    }
+                    is ApiResult.Error -> markNotificationsAsReadIndividually(unreadIds)
                     else -> {}
                 }
             }
@@ -150,10 +155,24 @@ class NotificationsViewModel(
     }
 
     fun clearNotifications() {
+        offlineCacheManager.dismissNotifications(allNotifications.map { it.id })
         allNotifications = emptyList()
         _notifications.value = emptyList()
         _unreadCount.value = 0
         offlineCacheManager.clearNotifications()
+    }
+
+    private fun markNotificationsAsReadIndividually(notificationIds: List<String>) {
+        if (notificationIds.isEmpty()) return
+        viewModelScope.launch {
+            notificationIds.forEach { notificationId ->
+                notificationRepository.markAsRead(notificationId).collect { result ->
+                    if (result is ApiResult.Error) {
+                        _errorMessage.tryEmit(result.exception.message ?: "Không thể đánh dấu đã đọc")
+                    }
+                }
+            }
+        }
     }
 
     private fun unreadOnlyQuery(): Boolean? {

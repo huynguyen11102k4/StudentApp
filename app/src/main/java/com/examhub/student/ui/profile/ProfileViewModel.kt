@@ -7,7 +7,7 @@ import com.examhub.student.model.ApiResult
 import com.examhub.student.model.request.profile.UpdateProfileRequest
 import com.examhub.student.model.response.profile.UserResponse
 import com.examhub.student.repository.AuthRepository
-import com.examhub.student.ui.ResourceProvider
+import com.examhub.student.util.helper.ResourceProvider
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow

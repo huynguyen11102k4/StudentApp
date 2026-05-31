@@ -9,8 +9,8 @@ import androidx.navigation.fragment.findNavController
 import com.google.android.material.snackbar.Snackbar
 import com.examhub.student.R
 import com.examhub.student.databinding.FragmentExamDetailBinding
-import com.examhub.student.extension.applySystemWindowInsets
-import com.examhub.student.extension.collectOnStarted
+import com.examhub.student.util.extension.applySystemWindowInsets
+import com.examhub.student.util.extension.collectOnStarted
 import kotlinx.coroutines.launch
 import org.koin.androidx.viewmodel.ext.android.viewModel
 
@@ -70,6 +70,12 @@ class ExamDetailFragment : Fragment() {
                 }
             }
             launch { viewModel.templateName.collect { binding.tvTemplateName.text = it } }
+            launch {
+                viewModel.examWindowNotice.collect { notice ->
+                    binding.tvExamWindowNotice.text = notice
+                    binding.tvExamWindowNotice.visibility = if (notice.isBlank()) View.GONE else View.VISIBLE
+                }
+            }
             launch {
                 viewModel.pendingAppealCount.collect { count ->
                     binding.tvPendingAppeals.text = getString(R.string.appeal_detail_pending_count, count)

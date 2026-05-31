@@ -3,12 +3,11 @@ package com.examhub.student.omr
 import android.graphics.Bitmap
 import android.util.Log
 import com.google.gson.Gson
-import com.google.gson.JsonElement
-import com.examhub.student.OmrEngine
-import com.examhub.student.OmrEngineOptions
 import com.examhub.student.data.model.Answer
-import com.examhub.student.model.response.exam.AnswerKeysResponse
 import com.examhub.student.model.response.profile.UserResponse
+import com.examhub.student.omr.core.OmrEngine
+import com.examhub.student.omr.model.IdResult
+import com.examhub.student.omr.model.OmrEngineOptions
 import com.examhub.student.service.OfflineCacheManager
 import com.examhub.student.service.TokenManager
 import kotlinx.coroutines.Dispatchers
@@ -59,12 +58,12 @@ class OmrProcessor(
         }
 
         validateIdZone(output.idResult, enabledIdFields, studentIdentifierMode, examId)
+        val studentName = resolveStudentNameForReview(output.idResult, enabledIdFields)
 
         val answers = output.answers.map { answer ->
             Answer(
                 questionNo = answer.questionNumber,
                 studentAnswer = answer.answer.ifBlank { null },
-                correctAnswer = "",
                 status = if (answer.answer.isBlank()) "empty" else "unknown"
             )
         }
@@ -80,7 +79,7 @@ class OmrProcessor(
             examCodeEnabled = enabledIdFields.examCode,
             idOk = isEnabledIdResultReadable(output.idResult, enabledIdFields),
             idError = output.idResult.error.ifBlank { null },
-            studentName = null,
+            studentName = studentName,
             answers = answers,
             totalScore = null,
             rawImageBase64 = "",
@@ -123,27 +122,8 @@ class OmrProcessor(
         }
     }
 
-    private fun normalizeAnswerKeyJson(rawJson: String): String {
-        return runCatching {
-            val response = gson.fromJson(rawJson, AnswerKeysResponse::class.java)
-            JSONObject().apply {
-                put("answerKeys", JSONObject().apply {
-                    response.versions.forEach { version ->
-                        put(version.versionCode, JSONObject().apply {
-                            version.answerKey.forEach { (questionNo, answer) ->
-                                put(questionNo, answer.toAnswerString())
-                            }
-                        })
-                    }
-                })
-            }.toString()
-        }.getOrElse {
-            rawJson
-        }
-    }
-
     private fun validateIdZone(
-        idResult: com.examhub.student.IdResult,
+        idResult: IdResult,
         enabledFields: EnabledIdFields,
         studentIdentifierMode: StudentIdentifierMode,
         examId: String
@@ -184,7 +164,7 @@ class OmrProcessor(
     }
 
     private fun isEnabledIdResultReadable(
-        idResult: com.examhub.student.IdResult,
+        idResult: IdResult,
         enabledFields: EnabledIdFields
     ): Boolean {
         return (!enabledFields.studentId || isReadableCode(idResult.studentId)) &&
@@ -221,9 +201,7 @@ class OmrProcessor(
     }
 
     private fun getExpectedStudentCodes(mode: StudentIdentifierMode): List<String> {
-        val profile = tokenManager.getCachedProfileJson()
-            ?.let { raw -> runCatching { gson.fromJson(raw, UserResponse::class.java) }.getOrNull() }
-            ?: return emptyList()
+        val profile = getCachedProfile() ?: return emptyList()
 
         val externalCodes = listOfNotNull(profile.student?.studentCode)
         val internalCodes = buildList {
@@ -236,6 +214,19 @@ class OmrProcessor(
             StudentIdentifierMode.INTERNAL -> internalCodes
             StudentIdentifierMode.UNKNOWN -> externalCodes + internalCodes + profile.id
         }.filter { it.isNotBlank() }.distinctBy { it.trim().uppercase() }
+    }
+
+    private fun resolveStudentNameForReview(
+        idResult: IdResult,
+        enabledFields: EnabledIdFields
+    ): String? {
+        if (enabledFields.studentId && !isReadableCode(idResult.studentId)) return null
+        return getCachedProfile()?.fullName?.takeIf { it.isNotBlank() }
+    }
+
+    private fun getCachedProfile(): UserResponse? {
+        return tokenManager.getCachedProfileJson()
+            ?.let { raw -> runCatching { gson.fromJson(raw, UserResponse::class.java) }.getOrNull() }
     }
 
     private fun readStudentIdentifierMode(rawTemplateJson: String): StudentIdentifierMode {
@@ -311,23 +302,6 @@ class OmrProcessor(
                     else -> null
                 }
             }
-        }
-    }
-
-    private fun JsonElement.toAnswerString(): String {
-        return when {
-            isJsonPrimitive -> asString
-            isJsonArray -> asJsonArray.joinToString(",") { it.asString }
-            isJsonObject -> {
-                val obj = asJsonObject
-                when {
-                    obj.has("answer") -> obj.get("answer").toAnswerString()
-                    obj.has("correctAnswer") -> obj.get("correctAnswer").toAnswerString()
-                    obj.has("correct_answer") -> obj.get("correct_answer").toAnswerString()
-                    else -> obj.toString()
-                }
-            }
-            else -> ""
         }
     }
 

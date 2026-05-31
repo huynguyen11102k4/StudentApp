@@ -7,6 +7,7 @@ import android.graphics.Matrix
 import android.graphics.Rect
 import android.graphics.YuvImage
 import android.util.Log
+import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.Camera
 import androidx.camera.core.CameraControl
 import androidx.camera.core.CameraSelector
@@ -18,6 +19,12 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleOwner
+import org.opencv.android.OpenCVLoader
+import org.opencv.core.CvType
+import org.opencv.core.Mat
+import org.opencv.objdetect.ArucoDetector
+import org.opencv.objdetect.DetectorParameters
+import org.opencv.objdetect.Objdetect
 import java.io.ByteArrayOutputStream
 import java.lang.IllegalStateException
 import java.util.concurrent.ExecutorService
@@ -30,10 +37,17 @@ class CameraManager(
     private val lifecycleOwner: LifecycleOwner,
     private val previewView: PreviewView,
     private val onImageCaptured: (Bitmap) -> Unit,
-    private val onCaptureFailed: (Throwable) -> Unit = {}
+    private val onCaptureFailed: (Throwable) -> Unit = {},
+    private val onMarkersDetected: (detected: Int, expected: Int) -> Unit = { _, _ -> },
+    private val onAutoCaptureReady: () -> Unit = {}
 ) {
     companion object {
         private const val TAG = "CameraManager"
+        private const val EXPECTED_MARKERS = 12
+        private const val STABLE_FRAMES_FOR_AUTO_CAPTURE = 3
+        private const val ANALYSIS_THROTTLE_MS = 300L
+        private const val AUTO_CAPTURE_COOLDOWN_MS = 4_000L
+        @Volatile private var openCvLoaded = false
     }
 
     private var imageCapture: ImageCapture? = null
@@ -44,6 +58,10 @@ class CameraManager(
     private var flashMode = ImageCapture.FLASH_MODE_OFF
     private var lensFacing = CameraSelector.LENS_FACING_BACK
     private var isTakingPicture = false
+    private var stableFullMarkerFrames = 0
+    private var lastAnalysisAt = 0L
+    private var lastAutoCaptureAt = 0L
+    private var arucoDetector: ArucoDetector? = null
 
     fun startCamera() {
         val cameraProviderFuture = ProcessCameraProvider.getInstance(previewView.context)
@@ -73,12 +91,22 @@ class CameraManager(
             .setFlashMode(flashMode)
             .build()
 
+        val imageAnalysis = ImageAnalysis.Builder()
+            .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+            .build()
+            .also { analysis ->
+                analysis.setAnalyzer(cameraExecutor) { image ->
+                    analyzeMarkers(image)
+                }
+            }
+
         try {
             camera = cameraProvider.bindToLifecycle(
                 lifecycleOwner,
                 cameraSelector,
                 preview,
-                imageCapture
+                imageCapture,
+                imageAnalysis
             )
             cameraControl = camera?.cameraControl
         } catch (e: Exception) {
@@ -139,6 +167,97 @@ class CameraManager(
     fun shutdown() {
         cameraProvider?.unbindAll()
         cameraExecutor.shutdown()
+    }
+
+    private fun analyzeMarkers(image: ImageProxy) {
+        try {
+            val detector = getArucoDetector() ?: return
+            val now = System.currentTimeMillis()
+            if (now - lastAnalysisAt < ANALYSIS_THROTTLE_MS || isTakingPicture) return
+            lastAnalysisAt = now
+
+            val gray = imageProxyToGrayMat(image) ?: return
+            val corners = ArrayList<Mat>()
+            val ids = Mat()
+            val rejected = ArrayList<Mat>()
+            try {
+                detector.detectMarkers(gray, corners, ids, rejected)
+                val detected = corners.size
+                ContextCompat.getMainExecutor(previewView.context).execute {
+                    onMarkersDetected(detected, EXPECTED_MARKERS)
+                }
+
+                if (detected >= EXPECTED_MARKERS) {
+                    stableFullMarkerFrames += 1
+                } else {
+                    stableFullMarkerFrames = 0
+                }
+
+                if (
+                    stableFullMarkerFrames >= STABLE_FRAMES_FOR_AUTO_CAPTURE &&
+                    now - lastAutoCaptureAt >= AUTO_CAPTURE_COOLDOWN_MS
+                ) {
+                    stableFullMarkerFrames = 0
+                    lastAutoCaptureAt = now
+                    ContextCompat.getMainExecutor(previewView.context).execute {
+                        onAutoCaptureReady()
+                    }
+                }
+            } finally {
+                gray.release()
+                ids.release()
+                corners.forEach { it.release() }
+                rejected.forEach { it.release() }
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Marker analysis failed", e)
+        } finally {
+            image.close()
+        }
+    }
+
+    private fun getArucoDetector(): ArucoDetector? {
+        arucoDetector?.let { return it }
+        if (!openCvLoaded) {
+            openCvLoaded = runCatching { OpenCVLoader.initLocal() }.getOrDefault(false)
+            if (!openCvLoaded) {
+                Log.w(TAG, "OpenCV native library is not loaded; live marker detection disabled")
+                return null
+            }
+        }
+        return runCatching {
+            ArucoDetector(
+                Objdetect.getPredefinedDictionary(Objdetect.DICT_APRILTAG_16h5),
+                DetectorParameters()
+            )
+        }.onSuccess {
+            arucoDetector = it
+        }.onFailure {
+            Log.w(TAG, "Failed to initialize ArUco detector", it)
+        }.getOrNull()
+    }
+
+    private fun imageProxyToGrayMat(image: ImageProxy): Mat? {
+        if (image.format != ImageFormat.YUV_420_888) return null
+        val plane = image.planes.firstOrNull() ?: return null
+        val buffer = plane.buffer
+        val width = image.width
+        val height = image.height
+        val rowStride = plane.rowStride
+        val mat = Mat(height, width, CvType.CV_8UC1)
+
+        return try {
+            val row = ByteArray(rowStride)
+            for (y in 0 until height) {
+                buffer.position(y * rowStride)
+                buffer.get(row, 0, rowStride)
+                mat.put(y, 0, row.copyOf(width))
+            }
+            mat
+        } catch (e: Exception) {
+            mat.release()
+            null
+        }
     }
 
     private fun imageProxyToBitmap(image: ImageProxy): Bitmap? {

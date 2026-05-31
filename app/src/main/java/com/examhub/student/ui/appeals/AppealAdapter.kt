@@ -8,7 +8,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.examhub.student.R
 import com.examhub.student.data.model.Appeal
 import com.examhub.student.databinding.ItemAppealBinding
-import com.examhub.student.extension.toFriendlyAppealStatus
+import com.examhub.student.util.extension.toFriendlyAppealStatus
 
 class AppealAdapter(
     private val onItemClick: (Appeal) -> Unit

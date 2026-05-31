@@ -1,7 +1,6 @@
 package com.examhub.student.model.response.result
 
 import com.google.gson.annotations.SerializedName
-import java.io.Serializable
 
 data class StudentResultDetailResponse(
     val id: String? = null,
@@ -9,12 +8,6 @@ data class StudentResultDetailResponse(
     val resultStatus: String? = null,
     @SerializedName(value = "total_score", alternate = ["totalScore"])
     val totalScore: Double? = null,
-    @SerializedName(value = "processed_image_url", alternate = ["processedImageUrl"])
-    val processedImageUrl: String? = null,
-    @SerializedName(value = "raw_image_url", alternate = ["rawImageUrl"])
-    val rawImageUrl: String? = null,
-    @SerializedName(value = "dewarped_image_url", alternate = ["dewarpedImageUrl"])
-    val dewarpedImageUrl: String? = null,
     val source: String? = null,
     @SerializedName(value = "graded_at", alternate = ["gradedAt"])
     val gradedAt: String? = null,
@@ -25,9 +18,7 @@ data class StudentResultDetailResponse(
     @SerializedName(value = "student_name", alternate = ["studentName", "full_name", "fullName"])
     val studentName: String? = null,
     @SerializedName(value = "student_code", alternate = ["studentCode"])
-    val studentCode: String? = null,
-    @SerializedName(value = "answer_details", alternate = ["answerDetails"])
-    val answerDetails: List<StudentResultAnswerResponse> = emptyList()
+    val studentCode: String? = null
 ) {
     fun displayStudentName(): String? {
         return listOf(student?.fullName, student?.name, studentName)

@@ -8,6 +8,7 @@ import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
 import com.examhub.student.R
 import com.examhub.student.databinding.FragmentManualCropBinding
+import com.examhub.student.util.helper.protectScreenFromCapture
 
 class ManualCropFragment : Fragment() {
 
@@ -22,6 +23,7 @@ class ManualCropFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        protectScreenFromCapture()
         binding.btnCancel.setOnClickListener { findNavController().navigateUp() }
         binding.btnConfirm.setOnClickListener {
             findNavController().navigate(R.id.action_manual_crop_to_smart_review)

@@ -11,8 +11,8 @@ import com.examhub.student.R
 import com.examhub.student.data.model.Exam
 import com.examhub.student.databinding.FragmentClassDetailStudentBinding
 import com.examhub.student.model.response.classroom.MobileClassResponse
-import com.examhub.student.extension.applySystemWindowInsets
-import com.examhub.student.extension.collectOnStarted
+import com.examhub.student.util.extension.applySystemWindowInsets
+import com.examhub.student.util.extension.collectOnStarted
 import com.examhub.student.ui.dashboard.RecentExamAdapter
 import com.google.android.material.snackbar.Snackbar
 import kotlinx.coroutines.launch

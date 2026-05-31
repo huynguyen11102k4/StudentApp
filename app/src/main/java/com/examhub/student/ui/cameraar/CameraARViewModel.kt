@@ -9,9 +9,14 @@ import com.examhub.student.model.ApiException
 import com.examhub.student.model.ApiResult
 import com.examhub.student.model.request.lock.LockHeartbeatRequest
 import com.examhub.student.model.request.lock.LockViolationRequest
+import com.examhub.student.model.request.submission.IdZoneResultRequest
+import com.examhub.student.model.request.submission.StudentAnswerRequest
+import com.examhub.student.model.request.submission.StudentSubmitRequest
 import com.examhub.student.omr.OmrProcessor
 import com.examhub.student.omr.OmrReviewStore
 import com.examhub.student.repository.LockModeRepository
+import com.examhub.student.repository.StudentSubmissionRepository
+import com.examhub.student.service.ActiveExamSessionStore
 import com.examhub.student.service.NetworkStatusProvider
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -34,7 +39,9 @@ class CameraARViewModel(
     private val omrProcessor: OmrProcessor,
     private val omrReviewStore: OmrReviewStore,
     private val lockModeRepository: LockModeRepository,
-    private val context: Context
+    private val context: Context,
+    private val activeSessionStore: ActiveExamSessionStore,
+    private val studentSubmissionRepository: StudentSubmissionRepository
 ) : ViewModel() {
 
     private val _flashMode = MutableStateFlow("off")
@@ -95,7 +102,7 @@ class CameraARViewModel(
 
     fun onCameraReady() {
         _cameraReady.value = true
-        _markerStatusText.value = "Bấm chụp để xử lý OMR"
+        _markerStatusText.value = "Căn đủ marker vào khung, app sẽ tự chụp"
     }
 
     fun onMarkersDetected(detectedCount: Int, totalExpected: Int = 12) {
@@ -107,10 +114,15 @@ class CameraARViewModel(
 
         _markerStatusText.value = when {
             detectedCount == 0 -> "Chưa thấy marker - đưa camera gần hơn"
-            allFound -> "Đã nhận diện đủ $detectedCount/$totalExpected marker - bấm chụp để xử lý"
-            detectedCount >= totalExpected * 0.75 -> "Gần đủ marker: $detectedCount/$totalExpected"
+            allFound -> "Đã đủ $detectedCount/$totalExpected marker - giữ nguyên tay để tự chụp"
+            detectedCount >= totalExpected * 0.75 -> "Gần đủ marker: $detectedCount/$totalExpected - giữ phiếu trong khung"
             else -> "Đã nhận diện $detectedCount/$totalExpected marker"
         }
+    }
+
+    fun onAutoCaptureStarting() {
+        if (_isProcessing.value) return
+        _markerStatusText.value = "Đã đủ marker - giữ nguyên tay, đang tự chụp..."
     }
 
     fun onImageCaptured(bitmap: Bitmap) {
@@ -146,7 +158,7 @@ class CameraARViewModel(
 
     fun resetProcessingState() {
         _isProcessing.value = false
-        _markerStatusText.value = "Bấm chụp để xử lý OMR"
+        _markerStatusText.value = "Căn đủ marker vào khung, app sẽ tự chụp"
     }
 
     fun onProcessingComplete() {
@@ -214,6 +226,46 @@ class CameraARViewModel(
         stopped = true
         heartbeatJob?.cancel()
         heartbeatJob = null
+    }
+
+    fun submitBlankOnTimeout(questionCount: Int) {
+        val sessionId = currentSessionId.takeIf { it.isNotBlank() } ?: return
+        val examId = currentExamId
+        viewModelScope.launch {
+            studentSubmissionRepository.submit(
+                sessionId,
+                StudentSubmitRequest(
+                    rawImageUrl = null,
+                    dewarpedImageUrl = null,
+                    processedImageUrl = null,
+                    scannedStudentId = null,
+                    scannedClassCode = null,
+                    scannedExamCode = null,
+                    idResult = IdZoneResultRequest(
+                        studentId = null,
+                        classCode = null,
+                        examCode = null,
+                        idOk = false,
+                        idError = "time_expired_no_scan"
+                    ),
+                    studentAnswers = (1..questionCount.coerceAtLeast(0)).map { questionNo ->
+                        StudentAnswerRequest(questionNumber = questionNo, answer = null)
+                    },
+                    capturedAt = nowIso(),
+                    imageQualityScore = 0,
+                    qualityFeedback = mapOf(
+                        "auto_submitted" to "true",
+                        "reason" to "time_expired_no_scan",
+                        "exam_id" to examId
+                    )
+                )
+            ).collect { result ->
+                if (result is ApiResult.Success) {
+                    activeSessionStore.clear(examId)
+                    activeSessionStore.clearBySessionId(sessionId)
+                }
+            }
+        }
     }
 
     private fun ApiException.isTerminalSessionStatusError(): Boolean {

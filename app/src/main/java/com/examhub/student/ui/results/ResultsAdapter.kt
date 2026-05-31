@@ -33,7 +33,7 @@ class ResultsAdapter(
                 result.exam?.subject?.takeIf { it.isNotBlank() },
                 result.source?.takeIf { it.isNotBlank() }
             ).joinToString(" • ")
-            binding.tvScore.text = result.totalScore?.let { String.format(Locale.US, "%.1f", it) } ?: "--"
+            binding.tvScore.text = result.totalScore?.let { String.format(Locale.US, "%.2f", it) } ?: "--"
             binding.tvStatus.text = formatDate(result.gradedAt ?: result.createdAt)
             binding.root.setOnClickListener { onClick(result) }
         }

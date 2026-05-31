@@ -160,22 +160,24 @@
 
     <!-- Exam Detail Screen -->
     <string name="exam_detail_progress">Trạng thái bài làm</string>
-    <string name="exam_detail_download_offline">Tải mẫu OMR</string>
+    <string name="exam_detail_download_offline">Tải dữ liệu kỳ thi</string>
     <string name="exam_detail_downloading">Đang tải...</string>
-    <string name="exam_detail_offline_ready">Mẫu OMR đã sẵn sàng</string>
+    <string name="exam_detail_offline_ready">Dữ liệu kỳ thi đã sẵn sàng</string>
     <string name="exam_detail_downloaded">Đã tải xong!</string>
     <string name="exam_detail_start_scanning">Bắt đầu làm bài</string>
     <string name="exam_detail_info">Thông tin kỳ thi</string>
     <string name="exam_detail_title">Chi tiết kỳ thi</string>
     <string name="exam_detail_duration_format">%d phút</string>
     <string name="exam_detail_question_count_format">%d câu</string>
-    <string name="exam_detail_need_template_data">Cần tải mẫu OMR trước khi quét phiếu.</string>
-    <string name="exam_detail_download_template">Tải mẫu OMR</string>
-    <string name="exam_detail_start_locked">Hãy tải mẫu OMR trước khi bắt đầu</string>
+    <string name="exam_detail_need_template_data">Cần tải dữ liệu kỳ thi trước khi quét phiếu.</string>
+    <string name="exam_detail_download_template">Tải dữ liệu kỳ thi</string>
+    <string name="exam_detail_start_locked">Hãy tải dữ liệu kỳ thi trước khi bắt đầu</string>
     <string name="exam_detail_submissions_title">Bài làm của bạn</string>
     <string name="exam_detail_submission_empty">Bạn chưa nộp bài cho kỳ thi này</string>
     <string name="exam_detail_pending_appeals">Khiếu nại của bạn đang chờ</string>
     <string name="exam_start_inactive">Kỳ thi chưa mở hoặc chưa tải dữ liệu kỳ thi</string>
+    <string name="exam_start_resume_local_session">Đang mở lại phiên làm bài chưa nộp</string>
+    <string name="exam_start_session_active_remote">Bạn đang có phiên làm bài chưa kết thúc</string>
 
     <!-- Camera AR Screen -->
     <string name="camera_ar_title">Quét OMR</string>
@@ -185,10 +187,10 @@
     <string name="camera_ar_flash_on">Flash: Bật</string>
     <string name="camera_ar_flash_auto">Flash: Tự động</string>
     <string name="camera_ar_gallery">Thư viện</string>
-    <string name="camera_ar_capture">Chụp</string>
+    <string name="camera_ar_capture">Chụp thủ công</string>
     <string name="camera_ar_close">Đóng camera</string>
-    <string name="camera_ar_marker_hint">Căn phiếu trong khung rồi bấm chụp</string>
-    <string name="camera_ar_instruction">Giữ điện thoại ổn định để xử lý OMR chính xác</string>
+    <string name="camera_ar_marker_hint">Căn phiếu trong khung, app sẽ tự chụp khi đủ marker</string>
+    <string name="camera_ar_instruction">Giữ nguyên tay khi app báo đã đủ marker</string>
     <string name="camera_ar_processing">Đang xử lý OMR...</string>
     <string name="camera_ar_permission_required">Cần quyền camera để quét OMR</string>
     <string name="camera_ar_permission_sheet">Cần quyền camera để quét phiếu trả lời OMR</string>
@@ -269,6 +271,7 @@
     <string name="result_detail_appeal_dialog_message">Mô tả vấn đề bạn muốn giáo viên kiểm tra lại.</string>
     <string name="result_detail_pending_message">Bài đang chờ chấm</string>
     <string name="result_detail_appeal_closed_exam">Kỳ thi đã đóng nên không thể tạo khiếu nại</string>
+    <string name="result_detail_appeal_pending_exists">Bạn đang có khiếu nại chờ xử lý cho bài này</string>
     <string name="result_detail_student_code_format">Mã HS: %1$s</string>
 
     <!-- Appeal Detail Screen -->

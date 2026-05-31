@@ -1,12 +1,8 @@
-package com.examhub.student
+package com.examhub.student.omr.core
 
 import org.opencv.core.*
 import org.opencv.imgproc.Imgproc
-
-data class WarpResult(
-    val warpedImage: Mat,
-    val transformMatrix: Mat
-)
+import com.examhub.student.omr.model.WarpResult
 
 class PerspectiveWarper {
 

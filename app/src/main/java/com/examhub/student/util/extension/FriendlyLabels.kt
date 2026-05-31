@@ -1,4 +1,4 @@
-package com.examhub.student.extension
+package com.examhub.student.util.extension
 
 import java.util.Locale
 
@@ -44,7 +44,11 @@ private val technicalLabelMap = mapOf(
 
 private val viLocale = Locale.forLanguageTag("vi-VN")
 
-fun String?.toFriendlyExamStatus(): String = friendlyEnumLabel(this, fallback = "Chưa xác định")
+fun String?.toFriendlyExamStatus(): String = friendlyEnumLabel(
+    value = this,
+    fallback = "Chưa xác định",
+    overrides = mapOf("END" to "Đã hết giờ làm bài")
+)
 
 fun String?.toFriendlyGradingType(): String = friendlyEnumLabel(
     value = this,

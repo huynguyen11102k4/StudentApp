@@ -10,7 +10,7 @@ import com.examhub.student.model.response.classroom.MobileClassResponse
 import com.examhub.student.repository.AuthRepository
 import com.examhub.student.repository.ClassRepository
 import com.examhub.student.service.OfflineCacheManager
-import com.examhub.student.ui.ResourceProvider
+import com.examhub.student.util.helper.ResourceProvider
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow

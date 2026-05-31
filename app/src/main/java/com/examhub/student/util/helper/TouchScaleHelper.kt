@@ -1,4 +1,4 @@
-package com.examhub.student.ui
+package com.examhub.student.util.helper
 
 import android.animation.AnimatorSet
 import android.animation.ObjectAnimator

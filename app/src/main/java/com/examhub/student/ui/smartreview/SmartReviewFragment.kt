@@ -24,8 +24,9 @@ import com.google.android.material.snackbar.Snackbar
 import com.examhub.student.MainActivity
 import com.examhub.student.R
 import com.examhub.student.databinding.FragmentSmartReviewBinding
-import com.examhub.student.extension.applySystemWindowInsets
-import com.examhub.student.extension.collectOnStarted
+import com.examhub.student.util.extension.applySystemWindowInsets
+import com.examhub.student.util.extension.collectOnStarted
+import com.examhub.student.util.helper.protectScreenFromCapture
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collect
@@ -57,6 +58,7 @@ class SmartReviewFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        protectScreenFromCapture()
         binding.topBar.applySystemWindowInsets(top = true)
         binding.topBar.setNavigationOnClickListener { findNavController().navigateUp() }
         binding.btnRetake.setOnClickListener { openCameraForCurrentExam() }

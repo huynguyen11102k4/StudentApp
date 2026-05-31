@@ -23,7 +23,8 @@ import com.google.android.material.snackbar.Snackbar
 import com.examhub.student.MainActivity
 import com.examhub.student.R
 import com.examhub.student.databinding.FragmentCameraArBinding
-import com.examhub.student.extension.collectOnStarted
+import com.examhub.student.util.extension.collectOnStarted
+import com.examhub.student.util.helper.protectScreenFromCapture
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collect
@@ -62,6 +63,7 @@ class CameraARFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        protectScreenFromCapture()
         viewModel.resetProcessingState()
         viewModel.setExamId(arguments?.getString("examId").orEmpty())
         viewModel.setSessionId(arguments?.getString("sessionId").orEmpty())
@@ -122,6 +124,12 @@ class CameraARFragment : Fragment() {
                         Toast.LENGTH_SHORT
                     ).show()
                 }
+            },
+            onMarkersDetected = { detected, expected ->
+                viewModel.onMarkersDetected(detected, expected)
+            },
+            onAutoCaptureReady = {
+                autoCapturePhoto()
             }
         )
         cameraManager?.startCamera()
@@ -142,19 +150,31 @@ class CameraARFragment : Fragment() {
         }
 
         binding.fabCapture.setOnClickListener {
-            if (viewModel.isProcessing.value) return@setOnClickListener
-            val started = cameraManager?.capturePhoto() == true
-            if (!started) {
-                showCaptureLoading(false)
-                Toast.makeText(requireContext(), R.string.camera_ar_camera_not_ready, Toast.LENGTH_SHORT).show()
-            } else {
-                showCaptureLoading(true)
-            }
+            capturePhoto(showNotReadyMessage = true)
         }
 
         binding.btnGallery.setOnClickListener {
             if (viewModel.isProcessing.value) return@setOnClickListener
             pickImageLauncher.launch("image/*")
+        }
+    }
+
+    private fun autoCapturePhoto() {
+        if (_binding == null || viewModel.isProcessing.value) return
+        viewModel.onAutoCaptureStarting()
+        capturePhoto(showNotReadyMessage = false)
+    }
+
+    private fun capturePhoto(showNotReadyMessage: Boolean) {
+        if (viewModel.isProcessing.value) return
+        val started = cameraManager?.capturePhoto() == true
+        if (!started) {
+            showCaptureLoading(false)
+            if (showNotReadyMessage) {
+                Toast.makeText(requireContext(), R.string.camera_ar_camera_not_ready, Toast.LENGTH_SHORT).show()
+            }
+        } else {
+            showCaptureLoading(true)
         }
     }
 
@@ -313,6 +333,7 @@ class CameraARFragment : Fragment() {
     private fun finishExpiredSession() {
         if (_binding == null) return
         viewModel.stopSessionWork()
+        viewModel.submitBlankOnTimeout(arguments?.getInt("questionCount") ?: 0)
         cameraManager?.shutdown()
         (requireActivity() as? MainActivity)?.exitKioskMode()
         Toast.makeText(requireContext(), R.string.lock_mode_time_expired, Toast.LENGTH_LONG).show()

@@ -18,7 +18,7 @@ import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
 import com.examhub.student.R
 import com.examhub.student.databinding.FragmentRegisterBinding
-import com.examhub.student.extension.collectOnStarted
+import com.examhub.student.util.extension.collectOnStarted
 import com.google.android.material.snackbar.Snackbar
 import kotlinx.coroutines.launch
 import org.koin.androidx.viewmodel.ext.android.viewModel

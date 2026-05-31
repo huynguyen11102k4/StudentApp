@@ -15,6 +15,7 @@ import com.examhub.student.model.request.submission.StudentSubmitRequest
 import com.examhub.student.model.response.profile.UserResponse
 import com.examhub.student.repository.LockModeRepository
 import com.examhub.student.repository.StudentSubmissionRepository
+import com.examhub.student.service.ActiveExamSessionStore
 import com.examhub.student.service.NetworkStatusProvider
 import com.examhub.student.service.OfflineCacheManager
 import com.examhub.student.service.TokenManager
@@ -37,6 +38,7 @@ class LockModeViewModel(
     private val studentSubmissionRepository: StudentSubmissionRepository,
     private val context: Context,
     private val offlineCacheManager: OfflineCacheManager,
+    private val activeSessionStore: ActiveExamSessionStore,
     private val tokenManager: TokenManager,
     private val gson: Gson
 ) : ViewModel() {
@@ -196,6 +198,10 @@ class LockModeViewModel(
                 )
             ).collect { result ->
                 if (result !is ApiResult.Loading) {
+                    if (result is ApiResult.Success) {
+                        activeSessionStore.clear(examId)
+                        activeSessionStore.clearBySessionId(id)
+                    }
                     _blankSubmissionFinished.tryEmit(Unit)
                 }
             }

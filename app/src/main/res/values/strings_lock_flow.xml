@@ -34,7 +34,7 @@
     <string name="lock_mode_open_camera">Quét phiếu OMR</string>
     <string name="lock_mode_submit">Nộp bài</string>
     <string name="lock_mode_submit_hint_title">Nộp bài</string>
-    <string name="lock_mode_submit_hint_message">Bạn cần quét phiếu và xem lại đáp án trước khi nộp bài.</string>
+    <string name="lock_mode_submit_hint_message">Bạn cần quét phiếu và xem lại bài làm trước khi nộp bài.</string>
     <string name="lock_mode_submit_hint_close">Đóng</string>
     <string name="lock_mode_submit_hint_open_camera">Mở camera</string>
     <string name="lock_mode_violation_failed">Không thể ghi nhận vi phạm</string>
@@ -42,7 +42,7 @@
     <string name="lock_mode_heartbeat_failed">Không thể gửi heartbeat</string>
 
     <string name="smart_review_submit_confirm_title">Xác nhận nộp bài?</string>
-    <string name="smart_review_submit_confirm_message">Sau khi nộp bài, bạn không thể chỉnh sửa đáp án trong phiên này.</string>
+    <string name="smart_review_submit_confirm_message">Sau khi nộp bài, bạn không thể chỉnh sửa bài làm trong phiên này.</string>
     <string name="smart_review_submit_confirm_review">Xem lại</string>
     <string name="smart_review_submit_confirm_submit">Nộp bài</string>
     <string name="smart_review_submitted">Đã nộp bài</string>
@@ -67,10 +67,6 @@
     <string name="results_subtitle">Theo dõi điểm số và bài làm đã được chấm</string>
     <string name="results_empty_subtitle">Kết quả sẽ xuất hiện tại đây sau khi bài làm được xử lý và chấm điểm.</string>
     <string name="result_detail_title">Chi tiết kết quả</string>
-    <string name="result_detail_image_description">Ảnh kết quả</string>
-    <string name="result_detail_image_title">Ảnh bài làm đã xử lý</string>
-    <string name="result_detail_answers_title">Chi tiết đáp án</string>
-    <string name="result_detail_answers_subtitle">So sánh câu trả lời của bạn với đáp án đúng.</string>
     <string name="result_detail_create_appeal">Tạo khiếu nại</string>
     <string name="result_detail_default_title">Kết quả</string>
     <string name="result_detail_appeal_dialog_title">Tạo khiếu nại</string>
@@ -89,12 +85,6 @@
     <string name="result_detail_duration_format">%d phút</string>
     <string name="result_detail_graded_at_format">Chấm lúc %s</string>
     <string name="result_detail_ungraded">Chưa có thời gian chấm</string>
-    <string name="result_answer_question_format">Câu %d</string>
-    <string name="result_answer_student_label">Bạn chọn</string>
-    <string name="result_answer_correct_label">Đáp án</string>
-    <string name="result_answer_correct">Đúng</string>
-    <string name="result_answer_wrong">Sai</string>
-    <string name="result_answer_pending">Chưa có</string>
 
     <string name="smart_review_detection_title">Kiểm tra ảnh nhận dạng</string>
     <string name="smart_review_student_name_format">Tên học sinh: %1$s</string>

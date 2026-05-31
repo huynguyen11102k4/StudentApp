@@ -1,10 +1,10 @@
-package com.examhub.student.extension
+package com.examhub.student.util.extension
 
 import android.animation.AnimatorSet
 import android.animation.ObjectAnimator
 import android.view.View
 import android.view.animation.OvershootInterpolator
-import com.examhub.student.ui.TouchScaleHelper
+import com.examhub.student.util.helper.TouchScaleHelper
 
 /**
  * Extension functions for applying MD3 3D micro-interactions to any View.

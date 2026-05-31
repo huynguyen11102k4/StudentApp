@@ -137,7 +137,7 @@ class NotificationAdapter(
 
         fun getTypeIcon(type: String): Int = when (type.lowercase(Locale.ROOT)) {
             "submission_pending" -> R.drawable.ic_camera
-            "appeal_new", "appeal_updated", "appeal_created" -> R.drawable.ic_appeal
+            "appeal_new", "appeal_updated", "appeal_created", "appeal_resolved", "appeal_replied" -> R.drawable.ic_appeal
             "exam_closed", "exam_created" -> R.drawable.ic_dashboard
             "class_invite" -> R.drawable.ic_users
             "system" -> R.drawable.ic_settings
@@ -146,7 +146,7 @@ class NotificationAdapter(
 
         fun getTypeColor(type: String): Int = when (type.lowercase(Locale.ROOT)) {
             "submission_pending" -> R.color.primary
-            "appeal_new", "appeal_updated", "appeal_created" -> R.color.warning
+            "appeal_new", "appeal_updated", "appeal_created", "appeal_resolved", "appeal_replied" -> R.color.warning
             "exam_closed", "exam_created" -> R.color.tertiary
             "class_invite" -> R.color.secondary
             "system" -> R.color.text_secondary

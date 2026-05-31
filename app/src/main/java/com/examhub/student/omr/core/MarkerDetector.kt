@@ -1,6 +1,7 @@
-package com.examhub.student
+package com.examhub.student.omr.core
 
 import android.util.Log
+import com.examhub.student.omr.model.MarkerInfo
 import org.opencv.core.Mat
 import org.opencv.core.MatOfPoint
 import org.opencv.core.Point
@@ -10,11 +11,6 @@ import org.opencv.objdetect.DetectorParameters
 import org.opencv.objdetect.Dictionary
 import org.opencv.objdetect.Objdetect
 import kotlin.collections.HashMap
-
-data class MarkerInfo(
-    val center: Point,
-    val corners: List<Point>
-)
 
 class MarkerDetector {
     private val arucoDict: Dictionary = Objdetect.getPredefinedDictionary(Objdetect.DICT_APRILTAG_16h5)

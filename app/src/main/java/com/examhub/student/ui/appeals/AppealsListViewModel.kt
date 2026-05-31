@@ -3,7 +3,7 @@ package com.examhub.student.ui.appeals
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.examhub.student.data.model.Appeal
-import com.examhub.student.extension.toFriendlyAppealItemStatus
+import com.examhub.student.util.extension.toFriendlyAppealItemStatus
 import com.examhub.student.model.ApiResult
 import com.examhub.student.model.response.appeal.AppealSummaryResponse
 import com.examhub.student.repository.AppealsRepository

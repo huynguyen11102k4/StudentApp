@@ -11,10 +11,10 @@ import com.google.android.material.snackbar.Snackbar
 import com.examhub.student.R
 import com.examhub.student.databinding.FragmentExamStartBinding
 import com.examhub.student.model.response.exam.MobileExamDetailResponse
-import com.examhub.student.extension.applySystemWindowInsets
-import com.examhub.student.extension.collectOnStarted
-import com.examhub.student.extension.toFriendlyExamStatus
-import com.examhub.student.extension.toFriendlyGradingType
+import com.examhub.student.util.extension.applySystemWindowInsets
+import com.examhub.student.util.extension.collectOnStarted
+import com.examhub.student.util.extension.toFriendlyExamStatus
+import com.examhub.student.util.extension.toFriendlyGradingType
 import kotlinx.coroutines.launch
 import org.koin.androidx.viewmodel.ext.android.viewModel
 
@@ -53,6 +53,20 @@ class ExamStartFragment : Fragment() {
                     putInt("remainingSeconds", event.remainingSeconds)
                     putInt("questionCount", viewModel.exam.value?.totalQuestions ?: 0)
                     putBoolean("isLockedMode", session.isLockedMode)
+                    putString("classCode", event.omrCodes.classCode)
+                    putString("studentCode", event.omrCodes.studentCode)
+                    putString("studentCodeMode", event.omrCodes.studentCodeMode)
+                }
+                findNavController().navigate(R.id.action_exam_start_to_lock_mode, bundle)
+            } }
+            launch { viewModel.sessionResume.collect { event ->
+                Snackbar.make(binding.root, R.string.exam_start_resume_local_session, Snackbar.LENGTH_SHORT).show()
+                val bundle = Bundle().apply {
+                    putString("examId", event.examId)
+                    putString("sessionId", event.sessionId)
+                    putInt("remainingSeconds", event.remainingSeconds)
+                    putInt("questionCount", event.questionCount)
+                    putBoolean("isLockedMode", event.isLockedMode)
                     putString("classCode", event.omrCodes.classCode)
                     putString("studentCode", event.omrCodes.studentCode)
                     putString("studentCodeMode", event.omrCodes.studentCodeMode)

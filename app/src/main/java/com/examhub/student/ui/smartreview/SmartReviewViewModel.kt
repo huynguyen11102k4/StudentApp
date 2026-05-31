@@ -11,6 +11,8 @@ import com.examhub.student.model.request.submission.StudentSubmitRequest
 import com.examhub.student.data.model.Answer
 import com.examhub.student.omr.OmrReviewStore
 import com.examhub.student.repository.StudentSubmissionRepository
+import com.examhub.student.repository.ExamRepository
+import com.examhub.student.service.ActiveExamSessionStore
 import com.examhub.student.model.response.submission.PresignSubmissionImageResponse
 import com.examhub.student.model.response.submission.StudentSubmitResponse
 import kotlinx.coroutines.flow.first
@@ -28,7 +30,9 @@ import java.util.TimeZone
 
 class SmartReviewViewModel(
     private val omrReviewStore: OmrReviewStore,
-    private val studentSubmissionRepository: StudentSubmissionRepository
+    private val studentSubmissionRepository: StudentSubmissionRepository,
+    private val activeSessionStore: ActiveExamSessionStore,
+    private val examRepository: ExamRepository
 ) : ViewModel() {
 
     private val _filteredAnswers = MutableStateFlow<List<Answer>>(emptyList())
@@ -127,6 +131,11 @@ class SmartReviewViewModel(
 
         viewModelScope.launch {
             _isLoading.value = true
+            if (!canSubmitCurrentExam()) {
+                _isLoading.value = false
+                _errorMessage.tryEmit("Kỳ thi đã đóng nên không thể nộp thêm")
+                return@launch
+            }
             val rawImageBytes = decodeBase64Image(rawImageBase64) ?: run {
                 _isLoading.value = false
                 _errorMessage.tryEmit("Ảnh gốc không hợp lệ")
@@ -171,7 +180,11 @@ class SmartReviewViewModel(
 
             _isLoading.value = false
             when (submit) {
-                is ApiResult.Success -> _savedSuccess.tryEmit(submit.data)
+                is ApiResult.Success -> {
+                    activeSessionStore.clear(currentExamId)
+                    activeSessionStore.clearBySessionId(sessionId)
+                    _savedSuccess.tryEmit(submit.data)
+                }
                 is ApiResult.Error -> _errorMessage.tryEmit(submit.exception.message ?: "Nộp bài thất bại")
                 else -> Unit
             }
@@ -254,6 +267,16 @@ class SmartReviewViewModel(
         }
     }
 
+    private suspend fun canSubmitCurrentExam(): Boolean {
+        if (currentExamId.isBlank()) return false
+        val result = examRepository.getExamDetail(currentExamId).first { it !is ApiResult.Loading }
+        return when (result) {
+            is ApiResult.Success -> result.data.status.equals("ACTIVE", ignoreCase = true)
+            is ApiResult.Error -> true
+            else -> true
+        }
+    }
+
     fun setFallbackSession(sessionId: String) {
         if (currentSessionId.isBlank()) currentSessionId = sessionId
         updateReviewState()
@@ -261,7 +284,6 @@ class SmartReviewViewModel(
 
     private fun applyFilter() {
         _filteredAnswers.value = when (currentFilter) {
-            "wrong" -> allAnswers.filter { it.status == "wrong" }
             "empty" -> allAnswers.filter { it.status == "empty" }
             else -> allAnswers
         }
@@ -276,8 +298,6 @@ class SmartReviewViewModel(
             examId = currentExamId,
             sessionId = currentSessionId,
             total = allAnswers.size,
-            correct = allAnswers.count { it.status == "correct" },
-            wrong = allAnswers.count { it.status == "wrong" },
             empty = allAnswers.count { it.status == "empty" },
             debugImageBase64 = currentDebugImageBase64,
             hasOmrResult = allAnswers.isNotEmpty()
@@ -300,8 +320,6 @@ data class ReviewUiState(
     val examId: String = "",
     val sessionId: String = "",
     val total: Int = 0,
-    val correct: Int = 0,
-    val wrong: Int = 0,
     val empty: Int = 0,
     val debugImageBase64: String = "",
     val hasOmrResult: Boolean = false

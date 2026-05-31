@@ -117,7 +117,7 @@ static void copyOrResizeToDst(const cv::Mat& warped, cv::Mat& dst, int width, in
  * JNI: Analyze distortion
  */
 JNIEXPORT jobject JNICALL
-Java_com_examhub_student_NativeLib_analyzeDistortion(
+Java_com_examhub_student_omr_nativebridge_NativeLib_analyzeDistortion(
         JNIEnv* env,
         jclass clazz,
         jobject detectedMarkersMap,
@@ -136,7 +136,7 @@ Java_com_examhub_student_NativeLib_analyzeDistortion(
             detectedMarkers, expectedMarkers
     );
 
-    jclass resultClass = env->FindClass("com/omr/scanner/student/DistortionResult");
+    jclass resultClass = env->FindClass("com/examhub/student/omr/model/DistortionResult");
     jmethodID constructor = env->GetMethodID(resultClass, "<init>", "(DDILjava/lang/String;)V");
     jstring recommendation = env->NewStringUTF(analysis.recommendation.c_str());
 
@@ -153,7 +153,7 @@ Java_com_examhub_student_NativeLib_analyzeDistortion(
  * JNI: Apply TPS warping (ĐÃ SỬA: Dùng dstAddr để tránh Memory Leak)
  */
 JNIEXPORT void JNICALL
-Java_com_examhub_student_NativeLib_tpsWarp(
+Java_com_examhub_student_omr_nativebridge_NativeLib_tpsWarp(
         JNIEnv* env,
         jclass clazz,
         jlong srcAddr,
@@ -211,7 +211,7 @@ Java_com_examhub_student_NativeLib_tpsWarp(
  * JNI: Apply Mesh warping (STUB - Hàm giả định để không báo lỗi thiếu JNI)
  */
 JNIEXPORT void JNICALL
-Java_com_examhub_student_NativeLib_meshWarp(
+Java_com_examhub_student_omr_nativebridge_NativeLib_meshWarp(
         JNIEnv* env,
         jclass clazz,
         jlong srcAddr,
@@ -264,7 +264,7 @@ Java_com_examhub_student_NativeLib_meshWarp(
  * JNI: Apply Hybrid warping (STUB - Hàm giả định để không báo lỗi thiếu JNI)
  */
 JNIEXPORT void JNICALL
-Java_com_examhub_student_NativeLib_hybridWarp(
+Java_com_examhub_student_omr_nativebridge_NativeLib_hybridWarp(
         JNIEnv* env,
         jclass clazz,
         jlong srcAddr,
@@ -310,7 +310,7 @@ Java_com_examhub_student_NativeLib_hybridWarp(
  * JNI: Release Mat (Vẫn giữ lại cho an toàn nếu bạn cần gọi thủ công ở đâu đó)
  */
 JNIEXPORT void JNICALL
-Java_com_examhub_student_NativeLib_releaseMat(
+Java_com_examhub_student_omr_nativebridge_NativeLib_releaseMat(
         JNIEnv* env,
         jclass clazz,
         jlong matAddr
@@ -383,7 +383,7 @@ static bool bitmapToMat(JNIEnv* env, jobject bitmap, cv::Mat& outMat) {
  * @return               Result JSON string
  */
 JNIEXPORT jstring JNICALL
-Java_com_examhub_student_NativeLib_processOmr(
+Java_com_examhub_student_omr_nativebridge_NativeLib_processOmr(
         JNIEnv* env,
         jclass clazz,
         jobject bitmap,
@@ -482,7 +482,7 @@ Java_com_examhub_student_NativeLib_processOmr(
  * Caller must call releaseMat() when done.
  */
 JNIEXPORT jlong JNICALL
-Java_com_examhub_student_NativeLib_bitmapToNativeMat(
+Java_com_examhub_student_omr_nativebridge_NativeLib_bitmapToNativeMat(
         JNIEnv* env,
         jclass clazz,
         jobject bitmap
@@ -499,7 +499,7 @@ Java_com_examhub_student_NativeLib_bitmapToNativeMat(
  * JNI: Encode a Mat as JPEG base64 string.
  */
 JNIEXPORT jstring JNICALL
-Java_com_examhub_student_NativeLib_matToJpegBase64(
+Java_com_examhub_student_omr_nativebridge_NativeLib_matToJpegBase64(
         JNIEnv* env,
         jclass clazz,
         jlong matAddr,
@@ -538,7 +538,7 @@ Java_com_examhub_student_NativeLib_matToJpegBase64(
  * JNI: Get the native Mat address (for interop with other JNI calls).
  */
 JNIEXPORT jlong JNICALL
-Java_com_examhub_student_NativeLib_getNativeMatAddr(
+Java_com_examhub_student_omr_nativebridge_NativeLib_getNativeMatAddr(
         JNIEnv* env,
         jclass clazz,
         jlong matAddr
@@ -550,7 +550,7 @@ Java_com_examhub_student_NativeLib_getNativeMatAddr(
  * JNI: Clear the layout cache (call after template update).
  */
 JNIEXPORT void JNICALL
-Java_com_examhub_student_NativeLib_clearOmrCache(
+Java_com_examhub_student_omr_nativebridge_NativeLib_clearOmrCache(
         JNIEnv* env,
         jclass clazz
 ) {

@@ -17,8 +17,8 @@ import com.google.android.gms.common.api.ApiException
 import com.google.android.material.snackbar.Snackbar
 import com.examhub.student.R
 import com.examhub.student.databinding.FragmentLoginBinding
-import com.examhub.student.extension.add3DTouch
-import com.examhub.student.extension.collectOnStarted
+import com.examhub.student.util.extension.add3DTouch
+import com.examhub.student.util.extension.collectOnStarted
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 
@@ -127,10 +127,24 @@ class LoginFragment : Fragment() {
         }
 
         binding.btnGoogleSignIn.setOnClickListener {
-            googleSignInClient?.signInIntent?.let { intent ->
-                googleSignInLauncher.launch(intent)
-            } ?: Snackbar.make(binding.root, R.string.login_google_not_configured, Snackbar.LENGTH_SHORT).show()
+            startGoogleSignIn()
         }
+    }
+
+    private fun startGoogleSignIn() {
+        val client = googleSignInClient
+        if (client == null) {
+            Snackbar.make(binding.root, R.string.login_google_not_configured, Snackbar.LENGTH_SHORT).show()
+            return
+        }
+
+        binding.btnGoogleSignIn.isEnabled = false
+        client.signOut()
+            .addOnCompleteListener {
+                if (_binding == null) return@addOnCompleteListener
+                binding.btnGoogleSignIn.isEnabled = true
+                googleSignInLauncher.launch(client.signInIntent)
+            }
     }
 
     private fun observeViewModel() {

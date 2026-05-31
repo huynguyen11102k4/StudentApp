@@ -176,6 +176,8 @@ class MainActivity : AppCompatActivity() {
             ?: extras.getString("sheetId")
             ?: extras.getString("answer_sheet_id")
             ?: extras.getString("answerSheetId")
+            ?: extras.getString("result_id")
+            ?: extras.getString("resultId")
             ?: extras.getString("link")?.takeIf { it.contains("/results/", ignoreCase = true) }?.extractLastId()
         val examId = extras.getString("exam_id")
             ?: extras.getString("examId")
@@ -190,7 +192,7 @@ class MainActivity : AppCompatActivity() {
                 navOptions { launchSingleTop = true }
             )
             intent.replaceExtras(Bundle())
-        } else if ((route == "appeal_detail" || type.equals("appeal_created", ignoreCase = true) || type.equals("appeal_updated", ignoreCase = true)) && !appealId.isNullOrBlank()) {
+        } else if (isAppealNotification(route, type) && !appealId.isNullOrBlank()) {
             navController.navigate(
                 R.id.appealDetailFragment,
                 bundleOf("appealId" to appealId),
@@ -225,6 +227,12 @@ class MainActivity : AppCompatActivity() {
             route.equals("result", ignoreCase = true) ||
             link.contains("/results/", ignoreCase = true) ||
             listOf("grade_updated", "result_ready", "exam_graded")
+                .any { type.equals(it, ignoreCase = true) }
+    }
+
+    private fun isAppealNotification(route: String, type: String): Boolean {
+        return route.equals("appeal_detail", ignoreCase = true) ||
+            listOf("appeal_created", "appeal_updated", "appeal_new", "appeal_resolved", "appeal_replied")
                 .any { type.equals(it, ignoreCase = true) }
     }
 
@@ -325,5 +333,9 @@ class MainActivity : AppCompatActivity() {
         return split('/', '?', '#', '&', '=')
             .asReversed()
             .firstOrNull { it.length >= 16 && it.any(Char::isDigit) }
+    }
+
+    companion object {
+        const val ACTION_OPEN_NOTIFICATION = "com.examhub.student.OPEN_NOTIFICATION"
     }
 }

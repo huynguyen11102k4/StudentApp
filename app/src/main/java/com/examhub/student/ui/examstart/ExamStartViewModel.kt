@@ -13,6 +13,8 @@ import com.examhub.student.model.response.common.StartExamSessionResponse
 import com.examhub.student.model.response.profile.UserResponse
 import com.examhub.student.repository.ExamRepository
 import com.examhub.student.repository.LockModeRepository
+import com.examhub.student.service.ActiveExamSession
+import com.examhub.student.service.ActiveExamSessionStore
 import com.examhub.student.service.OfflineCacheManager
 import com.examhub.student.service.TokenManager
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -31,6 +33,7 @@ class ExamStartViewModel(
     private val lockModeRepository: LockModeRepository,
     private val tokenManager: TokenManager,
     private val offlineCacheManager: OfflineCacheManager,
+    private val activeSessionStore: ActiveExamSessionStore,
     private val gson: Gson,
     private val context: Context
 ) : ViewModel() {
@@ -42,6 +45,8 @@ class ExamStartViewModel(
 
     private val _sessionStarted = MutableSharedFlow<ExamStartSessionUiEvent>(extraBufferCapacity = 1)
     val sessionStarted: SharedFlow<ExamStartSessionUiEvent> = _sessionStarted.asSharedFlow()
+    private val _sessionResume = MutableSharedFlow<ExamResumeUiEvent>(extraBufferCapacity = 1)
+    val sessionResume: SharedFlow<ExamResumeUiEvent> = _sessionResume.asSharedFlow()
 
     private val _message = MutableSharedFlow<String>(extraBufferCapacity = 1)
     val message: SharedFlow<String> = _message.asSharedFlow()
@@ -85,6 +90,10 @@ class ExamStartViewModel(
 
     fun startSession() {
         if (currentExamId.isBlank() || _isLoading.value) return
+        activeSessionStore.get(currentExamId)?.let { active ->
+            _sessionResume.tryEmit(active.toResumeEvent())
+            return
+        }
         if (!_canStartExam.value) {
             _message.tryEmit(context.getString(R.string.exam_start_inactive))
             return
@@ -99,7 +108,13 @@ class ExamStartViewModel(
                     }
                     is ApiResult.Error -> {
                         _isLoading.value = false
-                        _message.tryEmit(result.exception.message ?: context.getString(R.string.exam_start_session_failed))
+                        if (result.exception.code == "SESSION_ACTIVE") {
+                            activeSessionStore.get(currentExamId)?.let { active ->
+                                _sessionResume.tryEmit(active.toResumeEvent())
+                            } ?: _message.tryEmit(context.getString(R.string.exam_start_session_active_remote))
+                        } else {
+                            _message.tryEmit(result.exception.message ?: context.getString(R.string.exam_start_session_failed))
+                        }
                     }
                 }
             }
@@ -109,10 +124,12 @@ class ExamStartViewModel(
     private suspend fun validateIfNeeded(session: StartExamSessionResponse) {
         if (!session.isLockedMode) {
             _isLoading.value = false
+            val omrCodes = resolveOmrCodes(session)
+            saveActiveSession(session, omrCodes, session.remainingSeconds)
             _sessionStarted.tryEmit(
                 ExamStartSessionUiEvent(
                     session = session,
-                    omrCodes = resolveOmrCodes(session),
+                    omrCodes = omrCodes,
                     remainingSeconds = session.remainingSeconds
                 )
             )
@@ -126,10 +143,12 @@ class ExamStartViewModel(
                 is ApiResult.Success -> {
                     _isLoading.value = false
                     if (result.data.valid) {
+                        val omrCodes = resolveOmrCodes(session)
+                        saveActiveSession(session, omrCodes, result.data.remainingSeconds ?: session.remainingSeconds)
                         _sessionStarted.tryEmit(
                             ExamStartSessionUiEvent(
                                 session = session,
-                                omrCodes = resolveOmrCodes(session),
+                                omrCodes = omrCodes,
                                 remainingSeconds = result.data.remainingSeconds ?: session.remainingSeconds
                             )
                         )
@@ -161,6 +180,27 @@ class ExamStartViewModel(
             )
         )
         offlineCacheManager.markOfflineReady(currentExamId)
+    }
+
+    private fun saveActiveSession(
+        session: StartExamSessionResponse,
+        omrCodes: LockModeOmrCodes,
+        remainingSeconds: Int
+    ) {
+        activeSessionStore.save(
+            ActiveExamSession(
+                examId = currentExamId,
+                sessionId = session.sessionId,
+                endTime = session.endTime,
+                remainingSeconds = remainingSeconds,
+                savedAtMillis = System.currentTimeMillis(),
+                isLockedMode = session.isLockedMode,
+                classCode = omrCodes.classCode,
+                studentCode = omrCodes.studentCode,
+                studentCodeMode = omrCodes.studentCodeMode,
+                questionCount = _exam.value?.totalQuestions ?: 0
+            )
+        )
     }
 
     private fun resolveOmrCodes(session: StartExamSessionResponse): LockModeOmrCodes {
@@ -266,12 +306,36 @@ class ExamStartViewModel(
             template = null
         )
     }
+
+    private fun ActiveExamSession.toResumeEvent(): ExamResumeUiEvent {
+        return ExamResumeUiEvent(
+            examId = examId,
+            sessionId = sessionId,
+            remainingSeconds = currentRemainingSeconds(),
+            isLockedMode = isLockedMode,
+            questionCount = questionCount,
+            omrCodes = LockModeOmrCodes(
+                classCode = classCode,
+                studentCode = studentCode,
+                studentCodeMode = studentCodeMode
+            )
+        )
+    }
 }
 
 data class ExamStartSessionUiEvent(
     val session: StartExamSessionResponse,
     val omrCodes: LockModeOmrCodes,
     val remainingSeconds: Int
+)
+
+data class ExamResumeUiEvent(
+    val examId: String,
+    val sessionId: String,
+    val remainingSeconds: Int,
+    val isLockedMode: Boolean,
+    val questionCount: Int,
+    val omrCodes: LockModeOmrCodes
 )
 
 data class LockModeOmrCodes(

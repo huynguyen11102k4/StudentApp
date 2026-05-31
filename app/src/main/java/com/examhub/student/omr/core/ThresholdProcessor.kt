@@ -1,4 +1,4 @@
-package com.examhub.student
+package com.examhub.student.omr.core
 
 import org.opencv.core.*
 import org.opencv.imgproc.Imgproc

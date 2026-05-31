@@ -11,12 +11,13 @@ import com.examhub.student.model.response.exam.MobileExamDetailResponse
 import com.examhub.student.repository.AppealsRepository
 import com.examhub.student.repository.ExamRepository
 import com.examhub.student.repository.LockModeRepository
+import com.examhub.student.service.ActiveExamSessionStore
 import com.examhub.student.service.OfflineCacheManager
 import com.examhub.student.service.TokenManager
-import com.examhub.student.extension.replaceTechnicalLabels
-import com.examhub.student.extension.toFriendlyExamStatus
-import com.examhub.student.extension.toFriendlyExamType
-import com.examhub.student.extension.toFriendlyGradingType
+import com.examhub.student.util.extension.replaceTechnicalLabels
+import com.examhub.student.util.extension.toFriendlyExamStatus
+import com.examhub.student.util.extension.toFriendlyExamType
+import com.examhub.student.util.extension.toFriendlyGradingType
 import com.google.gson.Gson
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -35,6 +36,7 @@ class ExamDetailViewModel(
     private val lockModeRepository: LockModeRepository,
     private val offlineCacheManager: OfflineCacheManager,
     private val tokenManager: TokenManager,
+    private val activeSessionStore: ActiveExamSessionStore,
     private val gson: Gson
 ) : ViewModel() {
 
@@ -54,6 +56,8 @@ class ExamDetailViewModel(
     val gradingType: StateFlow<String> = _gradingType.asStateFlow()
     private val _templateName = MutableStateFlow("")
     val templateName: StateFlow<String> = _templateName.asStateFlow()
+    private val _examWindowNotice = MutableStateFlow("")
+    val examWindowNotice: StateFlow<String> = _examWindowNotice.asStateFlow()
     private val _progressText = MutableStateFlow("")
     val progressText: StateFlow<String> = _progressText.asStateFlow()
     private val _submissions = MutableStateFlow<List<ExamSubmissionItem>>(emptyList())
@@ -122,8 +126,9 @@ class ExamDetailViewModel(
             exam.examType.toFriendlyExamType().takeIf { it.isNotBlank() }
         ).joinToString(" • ").ifBlank { "Bài thi học sinh nộp" }
         _gradingType.value = exam.gradingType.toFriendlyGradingType().ifBlank { "Học sinh nộp bài" }
-        _templateName.value = exam.template?.name ?: "Mẫu OMR đã sẵn sàng khi bắt đầu bài"
+        _templateName.value = exam.template?.name ?: "Dữ liệu kỳ thi đã sẵn sàng khi bắt đầu bài"
         _progressText.value = "Sẵn sàng nộp bài"
+        refreshExamWindowNotice()
         refreshCanStartExam()
         offlineCacheManager.saveExamClassCode(exam.id, exam.classInfo?.classCode)
         offlineCacheManager.saveExamBasic(exam.toCachedExam())
@@ -143,7 +148,7 @@ class ExamDetailViewModel(
         if (currentExamId.isBlank()) return
         viewModelScope.launch {
             _isDownloading.value = true
-            _downloadStep.value = "Đang tải mẫu OMR..."
+            _downloadStep.value = "Đang tải dữ liệu kỳ thi..."
             examRepository.getExamTemplate(currentExamId).collect { result ->
                 when (result) {
                     is ApiResult.Success -> {
@@ -152,11 +157,11 @@ class ExamDetailViewModel(
                         refreshCanStartExam()
                         _downloadStep.value = ""
                         _isDownloading.value = false
-                        _toastMessage.tryEmit("Đã tải mẫu OMR. Dữ liệu phiên thi sẽ tải khi bắt đầu bài.")
+                        _toastMessage.tryEmit("Đã tải dữ liệu kỳ thi. Dữ liệu phiên thi sẽ tải khi bắt đầu bài.")
                     }
                     is ApiResult.Error -> {
                         _isDownloading.value = false
-                        _toastMessage.tryEmit((result.exception.message ?: "Không thể tải mẫu OMR").replaceTechnicalLabels())
+                        _toastMessage.tryEmit((result.exception.message ?: "Không thể tải dữ liệu kỳ thi").replaceTechnicalLabels())
                     }
                     else -> Unit
                 }
@@ -174,6 +179,18 @@ class ExamDetailViewModel(
             _toastMessage.tryEmit("Chỉ có thể bắt đầu khi kỳ thi đang mở")
             return
         }
+        activeSessionStore.get(currentExamId)?.let {
+            _toastMessage.tryEmit("Đang mở lại phiên làm bài chưa nộp")
+            _sessionStarted.tryEmit(
+                StartExamSessionResponse(
+                    legacySessionId = it.sessionId,
+                    legacyEndTime = it.endTime,
+                    legacyRemainingSeconds = it.currentRemainingSeconds(),
+                    legacyIsLockedMode = it.isLockedMode
+                )
+            )
+            return
+        }
         viewModelScope.launch {
             examRepository.startSession(currentExamId).collect { result ->
                 when (result) {
@@ -181,6 +198,17 @@ class ExamDetailViewModel(
                     is ApiResult.Success -> {
                         val session = result.data
                         cacheStartPayload(session)
+                        activeSessionStore.save(
+                            com.examhub.student.service.ActiveExamSession(
+                                examId = currentExamId,
+                                sessionId = session.sessionId,
+                                endTime = session.endTime,
+                                remainingSeconds = session.remainingSeconds,
+                                savedAtMillis = System.currentTimeMillis(),
+                                isLockedMode = session.isLockedMode,
+                                questionCount = _questionCount.value
+                            )
+                        )
                         if (session.isLockedMode) {
                             validateLockedSession(session)
                         } else {
@@ -190,7 +218,11 @@ class ExamDetailViewModel(
                     }
                     is ApiResult.Error -> {
                         _isStartingSession.value = false
-                        _toastMessage.tryEmit((result.exception.message ?: "Không thể bắt đầu phiên làm bài").replaceTechnicalLabels())
+                        if (result.exception.code == "SESSION_ACTIVE") {
+                            _toastMessage.tryEmit("Bạn đang có phiên làm bài chưa kết thúc")
+                        } else {
+                            _toastMessage.tryEmit((result.exception.message ?: "Không thể bắt đầu phiên làm bài").replaceTechnicalLabels())
+                        }
                     }
                 }
             }
@@ -252,11 +284,12 @@ class ExamDetailViewModel(
         _status.value = exam.status.toFriendlyExamStatus()
         _examType.value = ""
         _templateName.value = if (offlineCacheManager.getTemplate(exam.id) != null) {
-            "Mẫu OMR đã sẵn sàng"
+            "Dữ liệu kỳ thi đã sẵn sàng"
         } else {
-            "Chưa có mẫu OMR"
+            "Chưa có dữ liệu kỳ thi"
         }
         _isOfflineReady.value = offlineCacheManager.getTemplate(exam.id) != null
+        refreshExamWindowNotice()
         refreshCanStartExam()
     }
 
@@ -266,6 +299,17 @@ class ExamDetailViewModel(
             isWithinExamWindow(currentStartTime, currentEndTime)
     }
 
+    private fun refreshExamWindowNotice() {
+        _examWindowNotice.value = if (
+            currentExamStatus.equals("END", ignoreCase = true) ||
+            (currentExamStatus.equals("ACTIVE", ignoreCase = true) && isAfterEndTime(currentEndTime))
+        ) {
+            "Đã hết thời gian làm bài. Bạn vẫn có thể xem kết quả và gửi khiếu nại nếu bài đã được chấm."
+        } else {
+            ""
+        }
+    }
+
     private fun isWithinExamWindow(startTime: String?, endTime: String?): Boolean {
         val now = System.currentTimeMillis()
         val start = parseTimeMillis(startTime)
@@ -273,6 +317,11 @@ class ExamDetailViewModel(
         if (start != null && now < start) return false
         if (end != null && now > end) return false
         return true
+    }
+
+    private fun isAfterEndTime(endTime: String?): Boolean {
+        val end = parseTimeMillis(endTime) ?: return false
+        return System.currentTimeMillis() > end
     }
 
     private fun parseTimeMillis(value: String?): Long? {
