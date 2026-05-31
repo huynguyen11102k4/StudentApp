@@ -11,7 +11,8 @@ interface ClassRepository {
         page: String = "1",
         limit: String = "20",
         status: String? = null,
-        schoolYear: String? = null
+        schoolYear: String? = null,
+        search: String? = null
     ): Flow<ApiResult<PagedEnvelope<MobileClassResponse>>>
     fun joinClass(request: JoinClassRequest): Flow<ApiResult<MobileClassResponse>>
     fun getClassDetail(classId: String): Flow<ApiResult<MobileClassResponse>>

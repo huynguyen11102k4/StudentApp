@@ -7,7 +7,7 @@ import android.view.ViewGroup
 import androidx.core.os.bundleOf
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
-import com.google.android.material.snackbar.Snackbar
+import androidx.paging.LoadState
 import com.examhub.student.R
 import com.examhub.student.databinding.FragmentResultsListBinding
 import com.examhub.student.util.extension.applySystemWindowInsets
@@ -33,25 +33,22 @@ class ResultsListFragment : Fragment() {
             findNavController().navigate(R.id.action_results_list_to_result_detail, bundleOf("sheetId" to result.id))
         }
         binding.rvResults.adapter = adapter
-        binding.swipeRefresh.setOnRefreshListener { viewModel.loadResults() }
+        binding.swipeRefresh.setOnRefreshListener { adapter.refresh() }
         collectOnStarted {
             launch {
                 viewModel.results.collect {
-                    adapter.submitList(it)
-                    binding.emptyState.visibility = if (it.isEmpty()) View.VISIBLE else View.GONE
+                    adapter.submitData(it)
                 }
             }
             launch {
-                viewModel.isLoading.collect {
-                    binding.progressBar.visibility = if (it) View.VISIBLE else View.GONE
-                    binding.swipeRefresh.isRefreshing = it && adapter.itemCount > 0
+                adapter.loadStateFlow.collect { state ->
+                    val refreshing = state.refresh is LoadState.Loading
+                    binding.progressBar.visibility = if (refreshing && adapter.itemCount == 0) View.VISIBLE else View.GONE
+                    binding.swipeRefresh.isRefreshing = refreshing && adapter.itemCount > 0
+                    binding.emptyState.visibility = if (!refreshing && adapter.itemCount == 0) View.VISIBLE else View.GONE
                 }
-            }
-            launch {
-                viewModel.message.collect { Snackbar.make(binding.root, it, Snackbar.LENGTH_LONG).show() }
             }
         }
-        viewModel.loadResults()
     }
 
     override fun onDestroyView() {

@@ -19,6 +19,7 @@ activityKtx = "1.8.2"
 fragmentKtx = "1.6.2"
 recyclerview = "1.3.2"
 swiperefreshlayout = "1.1.0"
+paging = "3.3.6"
 okhttpVersion = "4.12.0"
 coroutinesVersion = "1.10.2"
 googleAuthVersion = "21.3.0"
@@ -77,6 +78,7 @@ androidx-recyclerview = { group = "androidx.recyclerview", name = "recyclerview"
 
 # SwipeRefreshLayout
 androidx-swiperefreshlayout = { group = "androidx.swiperefreshlayout", name = "swiperefreshlayout", version.ref = "swiperefreshlayout" }
+androidx-paging-runtime-ktx = { group = "androidx.paging", name = "paging-runtime-ktx", version.ref = "paging" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

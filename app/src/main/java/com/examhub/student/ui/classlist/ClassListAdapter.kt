@@ -3,7 +3,7 @@ package com.examhub.student.ui.classlist
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.recyclerview.widget.DiffUtil
-import androidx.recyclerview.widget.ListAdapter
+import androidx.paging.PagingDataAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.examhub.student.R
 import com.examhub.student.data.model.SchoolClass
@@ -11,7 +11,7 @@ import com.examhub.student.databinding.ItemClassBinding
 
 class ClassListAdapter(
     private val onItemClick: (SchoolClass) -> Unit
-) : ListAdapter<SchoolClass, ClassListAdapter.ViewHolder>(DiffCallback()) {
+) : PagingDataAdapter<SchoolClass, ClassListAdapter.ViewHolder>(DiffCallback()) {
 
     class ViewHolder(private val binding: ItemClassBinding) : RecyclerView.ViewHolder(binding.root) {
         fun bind(schoolClass: SchoolClass, onItemClick: (SchoolClass) -> Unit) {
@@ -28,7 +28,7 @@ class ClassListAdapter(
     }
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-        holder.bind(getItem(position), onItemClick)
+        getItem(position)?.let { holder.bind(it, onItemClick) }
     }
 
     class DiffCallback : DiffUtil.ItemCallback<SchoolClass>() {

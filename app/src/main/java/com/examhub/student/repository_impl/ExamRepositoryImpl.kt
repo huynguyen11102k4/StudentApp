@@ -22,9 +22,10 @@ class ExamRepositoryImpl(
         status: String?,
         excludeClosed: Boolean?,
         subject: String?,
-        gradingType: String?
+        gradingType: String?,
+        search: String?
     ): Flow<ApiResult<PagedEnvelope<MobileExamSummaryResponse>>> =
-        safeApiFlow(gson) { apiService.getExams(page, limit, status, excludeClosed, subject, gradingType) }
+        safeApiFlow(gson) { apiService.getExams(page, limit, status, excludeClosed, subject, gradingType, search) }
 
     override fun getExamDetail(examId: String): Flow<ApiResult<MobileExamDetailResponse>> =
         safeEnvelopeFlow(gson) { apiService.getExamDetail(examId) }

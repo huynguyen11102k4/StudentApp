@@ -2,207 +2,123 @@ package com.examhub.student.ui.notifications
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.paging.Pager
+import androidx.paging.PagingConfig
+import androidx.paging.PagingData
+import androidx.paging.cachedIn
+import androidx.paging.filter
 import com.examhub.student.data.model.AppNotification
 import com.examhub.student.model.ApiResult
 import com.examhub.student.repository.NotificationRepository
 import com.examhub.student.service.OfflineCacheManager
+import com.examhub.student.util.paging.PageChunk
+import com.examhub.student.util.paging.RepositoryPagingSource
+import com.examhub.student.util.paging.requirePage
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
 class NotificationsViewModel(
     private val notificationRepository: NotificationRepository,
     private val offlineCacheManager: OfflineCacheManager
 ) : ViewModel() {
-
-    private var currentFilter = NotificationFilter.ALL
-    private var allNotifications = emptyList<AppNotification>()
-
-    private val _notifications = MutableStateFlow<List<AppNotification>>(emptyList())
-    val notifications: StateFlow<List<AppNotification>> = _notifications.asStateFlow()
-
-    private val _isLoading = MutableStateFlow(false)
-    val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
-
-    private val _isRefreshing = MutableStateFlow(false)
-    val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
-
-    private val _unreadCount = MutableStateFlow(0)
-    val unreadCount: StateFlow<Int> = _unreadCount.asStateFlow()
-
-    private val _errorMessage = MutableSharedFlow<String>(extraBufferCapacity = 1)
-    val errorMessage: SharedFlow<String> = _errorMessage.asSharedFlow()
-
-    fun loadNotifications() {
-        viewModelScope.launch {
-            val dismissedIds = offlineCacheManager.getDismissedNotificationIds().toSet()
-            val cached = offlineCacheManager.getCachedNotifications()
-            if (cached.isNotEmpty()) {
-                allNotifications = cached
-                applyFilter()
-                _unreadCount.value = cached.count { !it.isRead }
-            }
-
-            notificationRepository.getNotifications(unreadOnly = unreadOnlyQuery()).collect { result ->
-                when (result) {
-                    is ApiResult.Loading -> {
-                        if (!_isRefreshing.value) _isLoading.value = cached.isEmpty()
-                    }
-                    is ApiResult.Success -> {
-                        _isLoading.value = false
-                        _isRefreshing.value = false
-                        val mapped = result.data.data
-                            .filterNot { notif -> notif.id in dismissedIds }
-                            .map { notif ->
-                                AppNotification(
-                                    id = notif.id,
-                                    type = notif.type,
-                                    title = notif.title,
-                                    content = notif.content,
-                                    link = notif.link,
-                                    appealId = notif.appealId
-                                        ?: notif.targetId
-                                        ?: notif.entityId
-                                        ?: notif.metadata.stringValue("appealId")
-                                        ?: notif.metadata.stringValue("appeal_id")
-                                        ?: notif.data.stringValue("appealId")
-                                        ?: notif.data.stringValue("appeal_id"),
-                                    targetId = notif.targetId,
-                                    entityId = notif.entityId,
-                                    metadata = notif.metadata,
-                                    data = notif.data,
-                                    isRead = notif.isRead == true,
-                                    createdAt = notif.createdAt.orEmpty()
-                                )
-                            }
-                        allNotifications = when (currentFilter) {
-                            NotificationFilter.UNREAD -> mergeNotifications(
-                                existing = allNotifications,
-                                incoming = mapped
-                            )
-                            else -> mapped
-                        }
-                        applyFilter()
-                        _unreadCount.value = if (dismissedIds.isEmpty()) {
-                            result.data.meta?.unreadCount ?: mapped.count { !it.isRead }
-                        } else {
-                            mapped.count { !it.isRead }
-                        }
-                        offlineCacheManager.saveNotifications(allNotifications)
-                    }
-                    is ApiResult.Error -> {
-                        _isLoading.value = false
-                        _isRefreshing.value = false
-                        _errorMessage.tryEmit(result.exception.message ?: "Không thể tải thông báo")
-                    }
+    private val filter = MutableStateFlow(NotificationFilter.ALL)
+    val notifications: Flow<PagingData<AppNotification>> = filter.flatMapLatest { selected ->
+        Pager(
+            config = PagingConfig(pageSize = 20, prefetchDistance = 5, enablePlaceholders = false),
+            pagingSourceFactory = {
+                RepositoryPagingSource { page, limit ->
+                    val response = notificationRepository.getNotifications(
+                        page = page.toString(),
+                        limit = limit.toString(),
+                        unreadOnly = if (selected == NotificationFilter.UNREAD) true else null
+                    ).requirePage()
+                    val items = response.data.map(::toUiModel)
+                    offlineCacheManager.saveNotifications(items)
+                    _unreadCount.value = response.meta?.unreadCount ?: _unreadCount.value
+                    PageChunk(items, response.meta?.page ?: page, response.meta?.limit ?: limit, response.meta?.total ?: items.size)
                 }
             }
+        ).flow.map { pagingData ->
+            pagingData.filter { notification ->
+                notification.id !in offlineCacheManager.getDismissedNotificationIds() &&
+                    (selected != NotificationFilter.READ || notification.isRead)
+            }
         }
+    }.cachedIn(viewModelScope)
+
+    private val _unreadCount = MutableStateFlow(0)
+    val unreadCount = _unreadCount.asStateFlow()
+    private val _errorMessage = MutableSharedFlow<String>(extraBufferCapacity = 1)
+    val errorMessage: SharedFlow<String> = _errorMessage.asSharedFlow()
+    private val _refresh = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    val refresh: SharedFlow<Unit> = _refresh.asSharedFlow()
+
+    fun setFilter(value: NotificationFilter) {
+        filter.value = value
     }
 
-    fun refresh() {
-        _isRefreshing.value = true
-        loadNotifications()
-    }
-
-    fun setFilter(filter: NotificationFilter) {
-        if (currentFilter == filter) return
-        currentFilter = filter
-        applyFilter()
-        if (filter == NotificationFilter.UNREAD) {
-            loadNotifications()
-        }
-    }
-
-    fun markAsRead(notificationId: String) {
-        allNotifications = allNotifications.map {
-            if (it.id == notificationId) it.copy(isRead = true) else it
-        }
-        applyFilter()
-        _unreadCount.value = allNotifications.count { !it.isRead }
-        offlineCacheManager.saveNotifications(allNotifications)
+    fun markAsRead(notificationId: String, wasUnread: Boolean) {
         viewModelScope.launch {
             notificationRepository.markAsRead(notificationId).collect { result ->
-                if (result is ApiResult.Error) {
-                    _errorMessage.tryEmit(result.exception.message ?: "Không thể đánh dấu đã đọc")
-                    loadNotifications()
+                when (result) {
+                    is ApiResult.Success -> {
+                        if (wasUnread) _unreadCount.value = (_unreadCount.value - 1).coerceAtLeast(0)
+                        _refresh.tryEmit(Unit)
+                    }
+                    is ApiResult.Error -> _errorMessage.tryEmit(result.exception.message ?: "Không thể đánh dấu đã đọc")
+                    ApiResult.Loading -> Unit
                 }
             }
         }
     }
 
     fun markAllAsRead() {
-        if (allNotifications.none { !it.isRead } && _unreadCount.value == 0) return
-
-        val unreadIds = allNotifications.filterNot { it.isRead }.map { it.id }
-        allNotifications = allNotifications.map { it.copy(isRead = true) }
-        applyFilter()
-        _unreadCount.value = 0
-        offlineCacheManager.saveNotifications(allNotifications)
         viewModelScope.launch {
             notificationRepository.markAllAsRead().collect { result ->
                 when (result) {
-                    is ApiResult.Success -> Unit
-                    is ApiResult.Error -> markNotificationsAsReadIndividually(unreadIds)
-                    else -> {}
-                }
-            }
-        }
-    }
-
-    fun clearNotifications() {
-        offlineCacheManager.dismissNotifications(allNotifications.map { it.id })
-        allNotifications = emptyList()
-        _notifications.value = emptyList()
-        _unreadCount.value = 0
-        offlineCacheManager.clearNotifications()
-    }
-
-    private fun markNotificationsAsReadIndividually(notificationIds: List<String>) {
-        if (notificationIds.isEmpty()) return
-        viewModelScope.launch {
-            notificationIds.forEach { notificationId ->
-                notificationRepository.markAsRead(notificationId).collect { result ->
-                    if (result is ApiResult.Error) {
-                        _errorMessage.tryEmit(result.exception.message ?: "Không thể đánh dấu đã đọc")
+                    is ApiResult.Success -> {
+                        _unreadCount.value = 0
+                        _refresh.tryEmit(Unit)
                     }
+                    is ApiResult.Error -> _errorMessage.tryEmit(result.exception.message ?: "Không thể đánh dấu đã đọc")
+                    ApiResult.Loading -> Unit
                 }
             }
         }
     }
 
-    private fun unreadOnlyQuery(): Boolean? {
-        return if (currentFilter == NotificationFilter.UNREAD) true else null
+    fun clearNotifications(ids: List<String>) {
+        offlineCacheManager.dismissNotifications(ids)
+        offlineCacheManager.clearNotifications()
+        _refresh.tryEmit(Unit)
     }
 
-    private fun applyFilter() {
-        _notifications.value = when (currentFilter) {
-            NotificationFilter.ALL -> allNotifications
-            NotificationFilter.UNREAD -> allNotifications.filter { !it.isRead }
-            NotificationFilter.READ -> allNotifications.filter { it.isRead }
-        }
-    }
+    private fun toUiModel(notif: com.examhub.student.model.response.notification.NotificationResponse) = AppNotification(
+        id = notif.id,
+        type = notif.type,
+        title = notif.title,
+        content = notif.content,
+        link = notif.link,
+        appealId = notif.appealId ?: notif.targetId ?: notif.entityId
+            ?: notif.metadata.stringValue("appealId") ?: notif.metadata.stringValue("appeal_id")
+            ?: notif.data.stringValue("appealId") ?: notif.data.stringValue("appeal_id"),
+        targetId = notif.targetId,
+        entityId = notif.entityId,
+        metadata = notif.metadata,
+        data = notif.data,
+        isRead = notif.isRead == true,
+        createdAt = notif.createdAt.orEmpty()
+    )
 
-    private fun mergeNotifications(
-        existing: List<AppNotification>,
-        incoming: List<AppNotification>
-    ): List<AppNotification> {
-        val merged = existing.associateBy { it.id }.toMutableMap()
-        incoming.forEach { merged[it.id] = it }
-        return merged.values.sortedByDescending { it.createdAt }
-    }
+    private fun com.google.gson.JsonObject?.stringValue(key: String): String? =
+        this?.get(key)?.takeIf { !it.isJsonNull }?.asString?.takeIf(String::isNotBlank)
 
-    private fun com.google.gson.JsonObject?.stringValue(key: String): String? {
-        return this?.get(key)?.takeIf { !it.isJsonNull }?.asString?.takeIf { it.isNotBlank() }
-    }
-
-    enum class NotificationFilter {
-        ALL,
-        UNREAD,
-        READ
-    }
+    enum class NotificationFilter { ALL, UNREAD, READ }
 }

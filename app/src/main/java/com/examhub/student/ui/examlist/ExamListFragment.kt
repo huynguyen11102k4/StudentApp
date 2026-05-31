@@ -6,12 +6,12 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
+import androidx.paging.LoadState
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.appcompat.widget.PopupMenu
 import androidx.appcompat.widget.SearchView
 import com.examhub.student.R
 import com.examhub.student.databinding.FragmentExamListFullBinding
-import com.examhub.student.ui.dashboard.RecentExamAdapter
 import com.examhub.student.util.extension.applySystemWindowInsets
 import com.examhub.student.util.extension.collectOnStarted
 import kotlinx.coroutines.launch
@@ -22,9 +22,8 @@ class ExamListFragment : Fragment() {
     private var _binding: FragmentExamListFullBinding? = null
     private val binding get() = _binding!!
     private val viewModel: ExamListViewModel by viewModel()
-    private lateinit var adapter: RecentExamAdapter
-    private var allExams = emptyList<com.examhub.student.data.model.Exam>()
-    private var selectedFilter = ExamFilter.ALL
+    private lateinit var adapter: ExamPagingAdapter
+    private var selectedFilter = ExamListViewModel.ExamFilter.ALL
     private var currentGradingType = ""
     private var searchQuery = ""
 
@@ -50,7 +49,7 @@ class ExamListFragment : Fragment() {
             }
         }
 
-        adapter = RecentExamAdapter { exam ->
+        adapter = ExamPagingAdapter { exam ->
             if (exam.hasSubmitted && !exam.resultSheetId.isNullOrBlank()) {
                 val bundle = Bundle().apply { putString("sheetId", exam.resultSheetId) }
                 findNavController().navigate(R.id.resultDetailFragment, bundle)
@@ -64,19 +63,19 @@ class ExamListFragment : Fragment() {
 
         collectOnStarted {
             launch {
-                viewModel.exams.collect { exams ->
-                    allExams = exams
-                    submitFilteredExams()
-                }
+                viewModel.exams.collect { adapter.submitData(it) }
             }
             launch {
-                viewModel.isLoading.collect { loading ->
+                adapter.loadStateFlow.collect { state ->
+                    val loading = state.refresh is LoadState.Loading
                     binding.progressBar.visibility = if (loading) View.VISIBLE else View.GONE
+                    binding.emptyState.visibility = if (!loading && adapter.itemCount == 0) View.VISIBLE else View.GONE
+                    binding.rvExams.visibility = if (!loading && adapter.itemCount == 0) View.GONE else View.VISIBLE
                 }
             }
         }
 
-        viewModel.load(currentGradingType)
+        viewModel.configure(currentGradingType)
     }
 
     private fun setupSearch() {
@@ -91,7 +90,7 @@ class ExamListFragment : Fragment() {
 
             override fun onQueryTextChange(newText: String?): Boolean {
                 searchQuery = newText.orEmpty()
-                submitFilteredExams()
+                viewModel.setSearch(searchQuery)
                 return true
             }
         })
@@ -100,7 +99,7 @@ class ExamListFragment : Fragment() {
 
             override fun onMenuItemActionCollapse(item: android.view.MenuItem): Boolean {
                 searchQuery = ""
-                submitFilteredExams()
+                viewModel.setSearch("")
                 return true
             }
         })
@@ -117,12 +116,12 @@ class ExamListFragment : Fragment() {
             menu.findItem(menuIdForStatus(selectedFilter))?.isChecked = true
             setOnMenuItemClickListener { item ->
                 selectedFilter = when (item.itemId) {
-                    MENU_STATUS_READY -> ExamFilter.READY
-                    MENU_STATUS_PROCESSING -> ExamFilter.PROCESSING
-                    MENU_STATUS_CLOSED -> ExamFilter.CLOSED
-                    else -> ExamFilter.ALL
+                    MENU_STATUS_READY -> ExamListViewModel.ExamFilter.READY
+                    MENU_STATUS_PROCESSING -> ExamListViewModel.ExamFilter.PROCESSING
+                    MENU_STATUS_CLOSED -> ExamListViewModel.ExamFilter.CLOSED
+                    else -> ExamListViewModel.ExamFilter.ALL
                 }
-                submitFilteredExams()
+                viewModel.setFilter(selectedFilter)
                 true
             }
             show()
@@ -138,59 +137,13 @@ class ExamListFragment : Fragment() {
         }
     }
 
-    private fun menuIdForStatus(filter: ExamFilter): Int {
+    private fun menuIdForStatus(filter: ExamListViewModel.ExamFilter): Int {
         return when (filter) {
-            ExamFilter.READY -> MENU_STATUS_READY
-            ExamFilter.PROCESSING -> MENU_STATUS_PROCESSING
-            ExamFilter.CLOSED -> MENU_STATUS_CLOSED
-            ExamFilter.ALL -> MENU_STATUS_ALL
+            ExamListViewModel.ExamFilter.READY -> MENU_STATUS_READY
+            ExamListViewModel.ExamFilter.PROCESSING -> MENU_STATUS_PROCESSING
+            ExamListViewModel.ExamFilter.CLOSED -> MENU_STATUS_CLOSED
+            ExamListViewModel.ExamFilter.ALL -> MENU_STATUS_ALL
         }
-    }
-
-    private fun submitFilteredExams() {
-        val statusFiltered = when (selectedFilter) {
-            ExamFilter.ALL -> allExams
-            ExamFilter.READY -> allExams.filter { it.isOpenForStudent() && !it.hasSubmitted }
-            ExamFilter.PROCESSING -> allExams.filter { it.hasSubmitted || it.isSubmittedLikeStatus() }
-            ExamFilter.CLOSED -> allExams.filter { it.isClosedStatus() }
-        }
-        val query = searchQuery.trim()
-        val filtered = if (query.isBlank()) {
-            statusFiltered
-        } else {
-            statusFiltered.filter { exam ->
-                exam.name.contains(query, ignoreCase = true) ||
-                    exam.subject.contains(query, ignoreCase = true) ||
-                    exam.className.contains(query, ignoreCase = true) ||
-                    exam.status.contains(query, ignoreCase = true)
-            }
-        }
-        adapter.submitList(filtered)
-        binding.emptyState.visibility = if (filtered.isEmpty()) View.VISIBLE else View.GONE
-        binding.rvExams.visibility = if (filtered.isEmpty()) View.GONE else View.VISIBLE
-    }
-
-    private enum class ExamFilter {
-        ALL,
-        READY,
-        PROCESSING,
-        CLOSED
-    }
-
-    private fun com.examhub.student.data.model.Exam.isOpenForStudent(): Boolean {
-        val normalized = status.uppercase()
-        return normalized.isBlank() ||
-            listOf("OPEN", "ACTIVE", "PUBLISHED", "STARTED", "READY").any { normalized.contains(it) }
-    }
-
-    private fun com.examhub.student.data.model.Exam.isSubmittedLikeStatus(): Boolean {
-        val normalized = status.uppercase()
-        return listOf("SUBMITTED", "PROCESSING", "GRADED", "COMPLETED", "DONE").any { normalized.contains(it) }
-    }
-
-    private fun com.examhub.student.data.model.Exam.isClosedStatus(): Boolean {
-        val normalized = status.uppercase()
-        return listOf("CLOSED", "END", "ENDED", "EXPIRED", "LOCKED").any { normalized == it || normalized.contains(it) }
     }
 
     private companion object {

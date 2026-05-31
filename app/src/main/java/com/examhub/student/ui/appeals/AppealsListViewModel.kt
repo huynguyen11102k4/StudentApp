@@ -2,48 +2,41 @@ package com.examhub.student.ui.appeals
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.paging.Pager
+import androidx.paging.PagingConfig
+import androidx.paging.PagingData
+import androidx.paging.cachedIn
 import com.examhub.student.data.model.Appeal
-import com.examhub.student.util.extension.toFriendlyAppealItemStatus
-import com.examhub.student.model.ApiResult
 import com.examhub.student.model.response.appeal.AppealSummaryResponse
 import com.examhub.student.repository.AppealsRepository
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
+import com.examhub.student.util.extension.toFriendlyAppealItemStatus
+import com.examhub.student.util.paging.PageChunk
+import com.examhub.student.util.paging.RepositoryPagingSource
+import com.examhub.student.util.paging.requirePage
+import kotlinx.coroutines.flow.Flow
 
-class AppealsListViewModel(
-    private val appealsRepository: AppealsRepository
-) : ViewModel() {
-
-    private val _appeals = MutableStateFlow<List<Appeal>>(emptyList())
-    val appeals: StateFlow<List<Appeal>> = _appeals.asStateFlow()
-
-    private val _isLoading = MutableStateFlow(false)
-    val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
-
-    fun loadAppeals(examId: String = "") {
-        viewModelScope.launch {
-            appealsRepository.getAppeals(examId = examId.takeIf { it.isNotBlank() }).collect { result ->
-                when (result) {
-                    is ApiResult.Loading -> _isLoading.value = true
-                    is ApiResult.Success -> {
-                        _isLoading.value = false
-                        _appeals.value = result.data.data
-                            .filter { appeal ->
-                                val resolvedExam = appeal.resolvedExam()
-                                examId.isBlank() || resolvedExam?.id == examId
-                            }
-                            .map { appeal -> appeal.toUiModel() }
-                    }
-                    is ApiResult.Error -> _isLoading.value = false
-                }
+class AppealsListViewModel(private val appealsRepository: AppealsRepository) : ViewModel() {
+    fun appeals(examId: String): Flow<PagingData<Appeal>> = Pager(
+        config = PagingConfig(pageSize = 20, prefetchDistance = 5, enablePlaceholders = false),
+        pagingSourceFactory = {
+            RepositoryPagingSource { page, limit ->
+                val response = appealsRepository.getAppeals(
+                    examId = examId.takeIf(String::isNotBlank),
+                    page = page.toString(),
+                    limit = limit.toString()
+                ).requirePage()
+                PageChunk(
+                    items = response.data.map { it.toUiModel() },
+                    page = response.meta?.page ?: page,
+                    limit = response.meta?.limit ?: limit,
+                    total = response.meta?.total ?: response.data.size
+                )
             }
         }
-    }
+    ).flow.cachedIn(viewModelScope)
 
     private fun AppealSummaryResponse.toUiModel(): Appeal {
-        val resolvedExam = resolvedExam()
+        val resolvedExam = exam ?: sheet?.exam
         return Appeal(
             id = id,
             studentId = student?.id.orEmpty(),
@@ -62,13 +55,8 @@ class AppealsListViewModel(
             processedImageUrl = sheet?.processedImageUrl,
             dewarpedImageUrl = sheet?.dewarpedImageUrl,
             itemMessages = items.orEmpty().joinToString("\n") { item ->
-                listOf(
-                    "Câu ${item.questionNumber}: ${item.studentMessage.orEmpty().ifBlank { item.status.toFriendlyAppealItemStatus() }}",
-                    item.teacherResponse?.takeIf { it.isNotBlank() }?.let { "Phản hồi: $it" }
-                ).filterNotNull().joinToString("\n")
+                "Câu ${item.questionNumber}: ${item.studentMessage.orEmpty().ifBlank { item.status.toFriendlyAppealItemStatus() }}"
             }
         )
     }
-
-    private fun AppealSummaryResponse.resolvedExam() = exam ?: sheet?.exam
 }

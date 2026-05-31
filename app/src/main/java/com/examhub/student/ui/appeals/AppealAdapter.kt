@@ -3,8 +3,8 @@ package com.examhub.student.ui.appeals
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.recyclerview.widget.DiffUtil
-import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
+import androidx.paging.PagingDataAdapter
 import com.examhub.student.R
 import com.examhub.student.data.model.Appeal
 import com.examhub.student.databinding.ItemAppealBinding
@@ -12,7 +12,7 @@ import com.examhub.student.util.extension.toFriendlyAppealStatus
 
 class AppealAdapter(
     private val onItemClick: (Appeal) -> Unit
-) : ListAdapter<Appeal, AppealAdapter.ViewHolder>(DiffCallback()) {
+) : PagingDataAdapter<Appeal, AppealAdapter.ViewHolder>(DiffCallback()) {
 
     class ViewHolder(private val binding: ItemAppealBinding) : RecyclerView.ViewHolder(binding.root) {
         fun bind(appeal: Appeal, onClick: (Appeal) -> Unit) {
@@ -38,7 +38,7 @@ class AppealAdapter(
     }
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-        holder.bind(getItem(position), onItemClick)
+        getItem(position)?.let { holder.bind(it, onItemClick) }
     }
 
     class DiffCallback : DiffUtil.ItemCallback<Appeal>() {

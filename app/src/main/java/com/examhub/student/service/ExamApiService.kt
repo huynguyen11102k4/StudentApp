@@ -21,7 +21,8 @@ interface ExamApiService {
         @Query("status") status: String? = null,
         @Query("exclude_closed") excludeClosed: Boolean? = null,
         @Query("subject") subject: String? = null,
-        @Query("grading_type") gradingType: String? = null
+        @Query("grading_type") gradingType: String? = null,
+        @Query("search") search: String? = null
     ): Response<PagedEnvelope<MobileExamSummaryResponse>>
 
     @GET("student/exams/{examId}")

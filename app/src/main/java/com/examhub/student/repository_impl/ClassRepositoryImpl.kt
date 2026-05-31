@@ -17,9 +17,10 @@ class ClassRepositoryImpl(
         page: String,
         limit: String,
         status: String?,
-        schoolYear: String?
+        schoolYear: String?,
+        search: String?
     ): Flow<ApiResult<PagedEnvelope<MobileClassResponse>>> =
-        safeApiFlow(gson) { apiService.getClasses(page, limit, status, schoolYear) }
+        safeApiFlow(gson) { apiService.getClasses(page, limit, status, schoolYear, search) }
 
     override fun joinClass(request: JoinClassRequest): Flow<ApiResult<MobileClassResponse>> =
         safeEnvelopeFlow(gson) { apiService.joinClass(request) }

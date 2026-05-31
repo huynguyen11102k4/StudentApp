@@ -3,8 +3,8 @@ package com.examhub.student.ui.results
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.recyclerview.widget.DiffUtil
-import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
+import androidx.paging.PagingDataAdapter
 import com.examhub.student.databinding.ItemResultBinding
 import com.examhub.student.model.response.result.StudentResultSummaryResponse
 import com.examhub.student.R
@@ -14,13 +14,13 @@ import java.util.TimeZone
 
 class ResultsAdapter(
     private val onClick: (StudentResultSummaryResponse) -> Unit
-) : ListAdapter<StudentResultSummaryResponse, ResultsAdapter.ResultViewHolder>(DiffCallback) {
+) : PagingDataAdapter<StudentResultSummaryResponse, ResultsAdapter.ResultViewHolder>(DiffCallback) {
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ResultViewHolder {
         return ResultViewHolder(ItemResultBinding.inflate(LayoutInflater.from(parent.context), parent, false), onClick)
     }
 
     override fun onBindViewHolder(holder: ResultViewHolder, position: Int) {
-        holder.bind(getItem(position))
+        getItem(position)?.let(holder::bind)
     }
 
     class ResultViewHolder(

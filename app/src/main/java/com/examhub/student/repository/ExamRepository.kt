@@ -16,7 +16,8 @@ interface ExamRepository {
         status: String? = null,
         excludeClosed: Boolean? = null,
         subject: String? = null,
-        gradingType: String? = null
+        gradingType: String? = null,
+        search: String? = null
     ): Flow<ApiResult<PagedEnvelope<MobileExamSummaryResponse>>>
     fun getExamDetail(examId: String): Flow<ApiResult<MobileExamDetailResponse>>
     fun getExamTemplate(examId: String): Flow<ApiResult<OmrTemplateResponse>>

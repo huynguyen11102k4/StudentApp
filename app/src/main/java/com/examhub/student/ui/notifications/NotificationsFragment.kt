@@ -8,6 +8,7 @@ import android.view.ViewGroup
 import androidx.appcompat.widget.PopupMenu
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
+import androidx.paging.LoadState
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.examhub.student.R
 import com.examhub.student.data.model.AppNotification
@@ -45,7 +46,7 @@ class NotificationsFragment : Fragment() {
                     true
                 }
                 R.id.action_clear_notifications -> {
-                    viewModel.clearNotifications()
+                    viewModel.clearNotifications(adapter.snapshot().items.map { it.id })
                     Snackbar.make(binding.root, R.string.notifications_clear_success, Snackbar.LENGTH_SHORT).show()
                     true
                 }
@@ -55,11 +56,11 @@ class NotificationsFragment : Fragment() {
 
         adapter = NotificationAdapter(
             onItemClick = { notification ->
-                viewModel.markAsRead(notification.id)
+                viewModel.markAsRead(notification.id, wasUnread = !notification.isRead)
                 handleNotificationClick(notification)
             },
             onMarkRead = { notification ->
-                viewModel.markAsRead(notification.id)
+                viewModel.markAsRead(notification.id, wasUnread = !notification.isRead)
             }
         )
         binding.rvNotifications.layoutManager = LinearLayoutManager(requireContext())
@@ -67,15 +68,12 @@ class NotificationsFragment : Fragment() {
         binding.btnNotificationFilter.setOnClickListener { showFilterMenu() }
 
         binding.swipeRefresh.setOnRefreshListener {
-            viewModel.refresh()
+            adapter.refresh()
         }
 
         collectOnStarted {
             launch {
-                viewModel.notifications.collect { notifications ->
-                    adapter.submitList(notifications)
-                    updateContentState(notifications)
-                }
+                viewModel.notifications.collect { adapter.submitData(it) }
             }
             launch {
                 viewModel.unreadCount.collect { unreadCount ->
@@ -87,15 +85,16 @@ class NotificationsFragment : Fragment() {
                 }
             }
             launch {
-                viewModel.isLoading.collect { loading ->
+                adapter.loadStateFlow.collect { state ->
+                    val loading = state.refresh is LoadState.Loading
                     isLoading = loading
-                    updateContentState(viewModel.notifications.value)
+                    binding.swipeRefresh.isRefreshing = loading
+                    updateContentState(adapter.itemCount)
                 }
             }
-            launch { viewModel.isRefreshing.collect { refreshing -> binding.swipeRefresh.isRefreshing = refreshing } }
+            launch { viewModel.refresh.collect { adapter.refresh() } }
             launch { viewModel.errorMessage.collect { msg -> Snackbar.make(binding.root, msg, Snackbar.LENGTH_LONG).show() } }
         }
-        viewModel.loadNotifications()
     }
 
     private fun handleNotificationClick(notification: AppNotification) {
@@ -162,9 +161,9 @@ class NotificationsFragment : Fragment() {
         }
     }
 
-    private fun updateContentState(notifications: List<AppNotification>) {
-        val showSkeleton = isLoading && notifications.isEmpty()
-        val showEmpty = !isLoading && notifications.isEmpty()
+    private fun updateContentState(itemCount: Int) {
+        val showSkeleton = isLoading && itemCount == 0
+        val showEmpty = !isLoading && itemCount == 0
         binding.loadingSkeleton.visibility = if (showSkeleton) View.VISIBLE else View.GONE
         binding.emptyState.visibility = if (showEmpty) View.VISIBLE else View.GONE
         binding.swipeRefresh.visibility = if (showEmpty || showSkeleton) View.GONE else View.VISIBLE

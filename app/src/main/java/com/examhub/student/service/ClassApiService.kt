@@ -17,7 +17,8 @@ interface ClassApiService {
         @Query("page") page: String = "1",
         @Query("limit") limit: String = "20",
         @Query("status") status: String? = null,
-        @Query("schoolYear") schoolYear: String? = null
+        @Query("schoolYear") schoolYear: String? = null,
+        @Query("search") search: String? = null
     ): Response<PagedEnvelope<MobileClassResponse>>
 
     @POST("student/classes/join")

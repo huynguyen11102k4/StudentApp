@@ -2,120 +2,107 @@ package com.examhub.student.ui.examlist
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.paging.Pager
+import androidx.paging.PagingConfig
+import androidx.paging.PagingData
+import androidx.paging.cachedIn
+import androidx.paging.filter
 import com.examhub.student.data.model.Exam
-import com.examhub.student.model.ApiResult
-import com.examhub.student.model.response.exam.MobileExamSummaryResponse
-import com.examhub.student.model.response.result.StudentResultSummaryResponse
 import com.examhub.student.repository.ExamRepository
-import com.examhub.student.repository.ResultsRepository
 import com.examhub.student.service.OfflineCacheManager
-import kotlinx.coroutines.flow.first
+import com.examhub.student.util.paging.PageChunk
+import com.examhub.student.util.paging.RepositoryPagingSource
+import com.examhub.student.util.paging.requirePage
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.map
 
 class ExamListViewModel(
     private val examRepository: ExamRepository,
-    private val resultsRepository: ResultsRepository,
     private val offlineCacheManager: OfflineCacheManager
 ) : ViewModel() {
+    private val search = MutableStateFlow("")
+    private val filter = MutableStateFlow(ExamFilter.ALL)
+    private val gradingType = MutableStateFlow("")
 
-    private val _exams = MutableStateFlow<List<Exam>>(emptyList())
-    val exams: StateFlow<List<Exam>> = _exams.asStateFlow()
-
-    private val _isLoading = MutableStateFlow(false)
-    val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
-
-    fun load(gradingType: String) {
-        viewModelScope.launch {
-            val cached = offlineCacheManager.getCachedExamBasics()
-
-            examRepository.getExams(
-                excludeClosed = false,
-                gradingType = gradingType.takeIf { it.isNotBlank() }
-            ).collect { result ->
-                when (result) {
-                    is ApiResult.Loading -> _isLoading.value = cached.isEmpty()
-                    is ApiResult.Success -> {
-                        _isLoading.value = false
-                        val resultSummaries = loadResultSummaries()
-                        val resultSheetByExamId = resultSummaries.mapNotNull { summary ->
-                            val examId = summary.exam?.id?.takeIf { it.isNotBlank() }
-                            if (examId == null) null else examId to summary.id
-                        }.toMap()
-                        result.data.data.forEach { exam ->
-                            offlineCacheManager.saveExamClassCode(exam.id, exam.classInfo?.classCode)
-                        }
-                        val examsFromUpcoming = result.data.data.map { exam ->
-                            val resultSheetId = exam.resultId?.takeIf { it.isNotBlank() }
-                                ?: resultSheetByExamId[exam.id]
+    val exams: Flow<PagingData<Exam>> = combine(
+        search.debounce(250).distinctUntilChanged(),
+        filter,
+        gradingType
+    ) { query, selectedFilter, type -> Triple(query, selectedFilter, type) }
+        .flatMapLatest { (query, selectedFilter, type) ->
+            Pager(
+                config = PagingConfig(pageSize = 20, prefetchDistance = 5, enablePlaceholders = false),
+                pagingSourceFactory = {
+                    RepositoryPagingSource { page, limit ->
+                        val response = examRepository.getExams(
+                            page = page.toString(),
+                            limit = limit.toString(),
+                            excludeClosed = false,
+                            gradingType = type.takeIf(String::isNotBlank),
+                            search = query.takeIf(String::isNotBlank)
+                        ).requirePage()
+                        val items = response.data.map { item ->
+                            offlineCacheManager.saveExamClassCode(item.id, item.classInfo?.classCode)
                             Exam(
-                                id = exam.id,
-                                name = exam.name,
-                                subject = exam.subject,
-                                className = exam.classInfo?.className ?: exam.examType.orEmpty(),
-                                duration = exam.durationMinutes,
-                                questionCount = exam.totalQuestions,
-                                status = exam.status.orEmpty(),
-                                gradedCount = exam.count?.answerSheets ?: 0,
+                                id = item.id,
+                                name = item.name,
+                                subject = item.subject,
+                                className = item.classInfo?.className ?: item.examType.orEmpty(),
+                                duration = item.durationMinutes,
+                                questionCount = item.totalQuestions,
+                                status = item.status.orEmpty(),
+                                gradedCount = if (item.resultId.isNullOrBlank()) 0 else 1,
                                 totalStudents = 0,
-                                isOfflineReady = offlineCacheManager.getTemplate(exam.id) != null,
-                                date = exam.displayTime,
-                                resultSheetId = resultSheetId,
-                                hasSubmitted = resultSheetId != null || exam.hasSubmittedStatus()
+                                isOfflineReady = offlineCacheManager.getTemplate(item.id) != null,
+                                date = item.displayTime,
+                                resultSheetId = item.resultId,
+                                hasSubmitted = !item.resultId.isNullOrBlank() || item.hasSubmittedStatus()
                             )
                         }
-                        val missingSubmittedExams = resultSummaries
-                            .filter { summary -> summary.exam?.id?.let { id -> examsFromUpcoming.none { it.id == id } } == true }
-                            .mapNotNull { it.toSubmittedExam() }
-                        val exams = (examsFromUpcoming + missingSubmittedExams)
-                            .distinctBy { it.id }
-                            .sortedByDescending { it.date }
-                        offlineCacheManager.saveExamBasics(exams)
-                        _exams.value = exams
-                    }
-                    is ApiResult.Error -> {
-                        _isLoading.value = false
-                        if (_exams.value.isEmpty()) _exams.value = cached
+                        offlineCacheManager.saveExamBasics(items)
+                        PageChunk(items, response.meta?.page ?: page, response.meta?.limit ?: limit, response.meta?.total ?: items.size)
                     }
                 }
-            }
+            ).flow.map { data -> data.filter { it.matches(selectedFilter) } }
         }
+        .cachedIn(viewModelScope)
+
+    fun configure(type: String) {
+        gradingType.value = type
     }
 
-    private suspend fun loadResultSummaries(): List<StudentResultSummaryResponse> {
-        return when (val result = resultsRepository.getResults(limit = "100").first { it !is ApiResult.Loading }) {
-            is ApiResult.Success -> result.data.data
-            else -> emptyList()
-        }
+    fun setSearch(query: String) {
+        search.value = query.trim()
     }
 
-    private fun StudentResultSummaryResponse.toSubmittedExam(): Exam? {
-        val exam = exam ?: return null
-        val examId = exam.id?.takeIf { it.isNotBlank() } ?: return null
-        return Exam(
-            id = examId,
-            name = exam.name.orEmpty().ifBlank { "Bài kiểm tra đã nộp" },
-            subject = exam.subject.orEmpty(),
-            className = "Kết quả học sinh",
-            duration = exam.duration ?: 0,
-            questionCount = exam.totalQuestions ?: 0,
-            status = "SUBMITTED",
-            gradedCount = 1,
-            totalStudents = 0,
-            isOfflineReady = false,
-            date = gradedAt ?: createdAt.orEmpty(),
-            resultSheetId = id,
-            hasSubmitted = true
-        )
+    fun setFilter(value: ExamFilter) {
+        filter.value = value
     }
 
     private fun com.examhub.student.model.response.exam.MobileExamSummaryResponse.hasSubmittedStatus(): Boolean {
-        val normalized = listOfNotNull(status, submissionStatus)
-            .joinToString(" ")
-            .uppercase()
+        val normalized = listOfNotNull(status, submissionStatus).joinToString(" ").uppercase()
         return attemptsUsed?.let { it > 0 } == true ||
-            listOf("SUBMITTED", "PROCESSING", "GRADED", "COMPLETED", "DONE").any { normalized.contains(it) }
+            listOf("SUBMITTED", "PROCESSING", "GRADED", "COMPLETED", "DONE").any(normalized::contains)
     }
+
+    private fun Exam.matches(value: ExamFilter): Boolean = when (value) {
+        ExamFilter.ALL -> true
+        ExamFilter.READY -> isOpenForStudent() && !hasSubmitted
+        ExamFilter.PROCESSING -> hasSubmitted || isSubmittedLikeStatus()
+        ExamFilter.CLOSED -> isClosedStatus()
+    }
+
+    private fun Exam.isOpenForStudent() = status.isBlank() ||
+        listOf("OPEN", "ACTIVE", "PUBLISHED", "STARTED", "READY").any(status.uppercase()::contains)
+    private fun Exam.isSubmittedLikeStatus() =
+        listOf("SUBMITTED", "PROCESSING", "GRADED", "COMPLETED", "DONE").any(status.uppercase()::contains)
+    private fun Exam.isClosedStatus() =
+        listOf("CLOSED", "END", "ENDED", "EXPIRED", "LOCKED").any { status.uppercase().contains(it) }
+
+    enum class ExamFilter { ALL, READY, PROCESSING, CLOSED }
 }

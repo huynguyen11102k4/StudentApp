@@ -6,7 +6,7 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.DiffUtil
-import androidx.recyclerview.widget.ListAdapter
+import androidx.paging.PagingDataAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.examhub.student.R
 import com.examhub.student.data.model.AppNotification
@@ -19,7 +19,7 @@ import java.util.TimeZone
 class NotificationAdapter(
     private val onItemClick: (AppNotification) -> Unit,
     private val onMarkRead: (AppNotification) -> Unit
-) : ListAdapter<AppNotification, NotificationAdapter.ViewHolder>(DiffCallback()) {
+) : PagingDataAdapter<AppNotification, NotificationAdapter.ViewHolder>(DiffCallback()) {
 
     class ViewHolder(private val binding: ItemNotificationBinding) : RecyclerView.ViewHolder(binding.root) {
         fun bind(
@@ -60,7 +60,7 @@ class NotificationAdapter(
     }
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-        holder.bind(getItem(position), onItemClick, onMarkRead)
+        getItem(position)?.let { holder.bind(it, onItemClick, onMarkRead) }
     }
 
     class DiffCallback : DiffUtil.ItemCallback<AppNotification>() {

@@ -109,6 +109,7 @@ dependencies {
 
     // SwipeRefreshLayout
     implementation(libs.androidx.swiperefreshlayout)
+    implementation(libs.androidx.paging.runtime.ktx)
 
     // OpenCV
     implementation(project(":opencv"))

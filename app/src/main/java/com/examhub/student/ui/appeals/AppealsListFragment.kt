@@ -7,6 +7,7 @@ import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.paging.LoadState
 import com.examhub.student.R
 import com.examhub.student.databinding.FragmentAppealsListBinding
 import com.examhub.student.util.extension.applySystemWindowInsets
@@ -41,22 +42,20 @@ class AppealsListFragment : Fragment() {
 
         collectOnStarted {
             launch {
-                viewModel.appeals.collect { appeals ->
-                    adapter.submitList(appeals)
-                    binding.toolbar.subtitle = getString(R.string.appeals_list_count, appeals.size)
-                    binding.emptyState.visibility = if (appeals.isEmpty()) View.VISIBLE else View.GONE
-                    binding.rvAppeals.visibility = if (appeals.isEmpty()) View.GONE else View.VISIBLE
+                viewModel.appeals(arguments?.getString("examId").orEmpty()).collect { appeals ->
+                    adapter.submitData(appeals)
                 }
             }
             launch {
-                viewModel.isLoading.collect { loading ->
-                    binding.progressBar.visibility = if (loading) View.VISIBLE else View.GONE
+                adapter.loadStateFlow.collect { state ->
+                    val refreshing = state.refresh is LoadState.Loading
+                    binding.progressBar.visibility = if (refreshing) View.VISIBLE else View.GONE
+                    binding.toolbar.subtitle = getString(R.string.appeals_list_count, adapter.itemCount)
+                    binding.emptyState.visibility = if (!refreshing && adapter.itemCount == 0) View.VISIBLE else View.GONE
+                    binding.rvAppeals.visibility = if (!refreshing && adapter.itemCount == 0) View.GONE else View.VISIBLE
                 }
             }
         }
-        viewModel.loadAppeals(
-            examId = arguments?.getString("examId").orEmpty()
-        )
     }
 
     override fun onDestroyView() {

@@ -11,6 +11,7 @@ import android.widget.LinearLayout
 import androidx.core.os.bundleOf
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
+import androidx.paging.LoadState
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
@@ -29,7 +30,6 @@ class ClassListFragment : Fragment() {
     private val binding get() = _binding!!
     private val viewModel: ClassListViewModel by viewModel()
     private lateinit var adapter: ClassListAdapter
-    private var allClasses = emptyList<com.examhub.student.data.model.SchoolClass>()
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentClassListBinding.inflate(inflater, container, false)
@@ -53,16 +53,21 @@ class ClassListFragment : Fragment() {
         binding.etSearch.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-                submitFilteredClasses(s?.toString().orEmpty())
+                viewModel.setSearch(s?.toString().orEmpty())
             }
             override fun afterTextChanged(s: Editable?) = Unit
         })
 
         collectOnStarted {
             launch {
-                viewModel.classes.collect { classes ->
-                    allClasses = classes
-                    submitFilteredClasses(binding.etSearch.text?.toString().orEmpty())
+                viewModel.classes.collect { adapter.submitData(it) }
+            }
+            launch {
+                adapter.loadStateFlow.collect { state ->
+                    val loading = state.refresh is LoadState.Loading
+                    binding.tvClassCount.text = getString(R.string.class_list_count, adapter.itemCount)
+                    binding.emptyState.visibility = if (!loading && adapter.itemCount == 0) View.VISIBLE else View.GONE
+                    binding.rvClasses.visibility = if (!loading && adapter.itemCount == 0) View.GONE else View.VISIBLE
                 }
             }
             launch {
@@ -76,6 +81,7 @@ class ClassListFragment : Fragment() {
                 viewModel.joinResult.collect { success ->
                     if (success) {
                         Snackbar.make(binding.root, R.string.class_list_join_success, Snackbar.LENGTH_SHORT).show()
+                        adapter.refresh()
                     } else {
                         Snackbar.make(binding.root, R.string.class_list_join_code_empty, Snackbar.LENGTH_SHORT).show()
                     }
@@ -83,24 +89,6 @@ class ClassListFragment : Fragment() {
             }
         }
 
-        viewModel.loadClasses()
-    }
-
-    private fun submitFilteredClasses(query: String) {
-        val normalizedQuery = query.trim()
-        val filtered = if (normalizedQuery.isBlank()) {
-            allClasses
-        } else {
-            allClasses.filter { schoolClass ->
-                schoolClass.name.contains(normalizedQuery, ignoreCase = true) ||
-                    schoolClass.subject.contains(normalizedQuery, ignoreCase = true) ||
-                    schoolClass.joinCode.contains(normalizedQuery, ignoreCase = true)
-            }
-        }
-        adapter.submitList(filtered)
-        binding.tvClassCount.text = getString(R.string.class_list_count, filtered.size)
-        binding.emptyState.visibility = if (filtered.isEmpty()) View.VISIBLE else View.GONE
-        binding.rvClasses.visibility = if (filtered.isEmpty()) View.GONE else View.VISIBLE
     }
 
     private fun showJoinClassDialog() {
