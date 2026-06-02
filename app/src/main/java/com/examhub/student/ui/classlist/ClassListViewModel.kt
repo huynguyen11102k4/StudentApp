@@ -58,6 +58,7 @@ class ClassListViewModel(
                                 classCode = info?.classCode.orEmpty(),
                                 joinCode = info?.joinCode.orEmpty(),
                                 studentCount = cls.studentCount ?: info?.studentCount ?: 0,
+                                status = cls.status,
                                 hasOfflineData = false
                             )
                         }

@@ -45,6 +45,17 @@ class LockModeFragment : Fragment() {
             findNavController().navigate(R.id.action_lock_mode_to_camera_ar, bundle)
         }
         setupMonitor()
+        viewModel.start(
+            sessionId = sessionId,
+            examId = examId,
+            initialSeconds = arguments?.getInt("remainingSeconds") ?: 0,
+            questionCount = arguments?.getInt("questionCount") ?: 0,
+            argCodes = LockModeOmrCodes(
+                classCode = arguments?.getString("classCode").orEmpty(),
+                studentCode = arguments?.getString("studentCode").orEmpty(),
+                studentCodeMode = arguments?.getString("studentCodeMode").orEmpty()
+            )
+        )
 
         collectOnStarted {
             launch {
@@ -69,17 +80,6 @@ class LockModeFragment : Fragment() {
                 }
             }
         }
-        viewModel.start(
-            sessionId = sessionId,
-            examId = examId,
-            initialSeconds = arguments?.getInt("remainingSeconds") ?: 0,
-            questionCount = arguments?.getInt("questionCount") ?: 0,
-            argCodes = LockModeOmrCodes(
-                classCode = arguments?.getString("classCode").orEmpty(),
-                studentCode = arguments?.getString("studentCode").orEmpty(),
-                studentCodeMode = arguments?.getString("studentCodeMode").orEmpty()
-            )
-        )
         viewModel.flushViolations()
     }
 

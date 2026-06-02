@@ -27,4 +27,7 @@ class ClassRepositoryImpl(
 
     override fun getClassDetail(classId: String): Flow<ApiResult<MobileClassResponse>> =
         safeEnvelopeFlow(gson) { apiService.getClassDetail(classId) }
+
+    override fun requestLeaveClass(classId: String): Flow<ApiResult<MobileClassResponse>> =
+        safeEnvelopeFlow(gson) { apiService.requestLeaveClass(classId) }
 }

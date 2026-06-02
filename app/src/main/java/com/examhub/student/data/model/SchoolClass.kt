@@ -9,5 +9,6 @@ data class SchoolClass(
     val classCode: String = "",
     val joinCode: String,
     val studentCount: Int,
+    val status: String? = null,
     val hasOfflineData: Boolean = false
 ) : Serializable

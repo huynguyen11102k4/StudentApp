@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <solid android:color="@color/surface_container_high" />
+    <stroke
+        android:width="2dp"
+        android:color="@color/student_accent" />
+    <corners android:radius="@dimen/student_card_radius_xlarge" />
+    <padding
+        android:bottom="@dimen/spacing_24"
+        android:left="@dimen/spacing_24"
+        android:right="@dimen/spacing_24"
+        android:top="@dimen/spacing_24" />
+</shape>

@@ -127,8 +127,10 @@ class MainActivity : AppCompatActivity() {
                 args,
                 navOptions {
                     launchSingleTop = true
+                    restoreState = true
                     popUpTo(R.id.dashboardFragment) {
                         inclusive = false
+                        saveState = true
                     }
                 }
             )

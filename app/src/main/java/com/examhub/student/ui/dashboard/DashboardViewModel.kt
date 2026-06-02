@@ -33,7 +33,7 @@ class DashboardViewModel(
     private val _recentExams = MutableStateFlow<List<Exam>>(emptyList())
     val recentExams: StateFlow<List<Exam>> = _recentExams.asStateFlow()
 
-    private val _isLoading = MutableStateFlow(false)
+    private val _isLoading = MutableStateFlow(true)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
     private val _toastMessage = MutableSharedFlow<String>(extraBufferCapacity = 1)
@@ -48,6 +48,12 @@ class DashboardViewModel(
     fun loadDashboard() {
         // Load from cache for instant display — but only show if not stale
         val cachedExams = offlineCacheManager.getCachedExamBasics()
+        if (cachedExams.isNotEmpty()) {
+            _recentExams.value = cachedExams.take(5)
+            _isLoading.value = false
+        } else {
+            _isLoading.value = true
+        }
 
         val cachedClasses = offlineCacheManager.getCachedClassBasics()
         if (cachedClasses.isNotEmpty()) _classCount.value = cachedClasses.size

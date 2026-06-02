@@ -9,11 +9,12 @@ import androidx.navigation.fragment.findNavController
 import androidx.paging.LoadState
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.appcompat.widget.PopupMenu
-import androidx.appcompat.widget.SearchView
+import androidx.core.widget.doAfterTextChanged
 import com.examhub.student.R
 import com.examhub.student.databinding.FragmentExamListFullBinding
 import com.examhub.student.util.extension.applySystemWindowInsets
 import com.examhub.student.util.extension.collectOnStarted
+import com.examhub.student.util.extension.showShimmer
 import kotlinx.coroutines.launch
 import org.koin.androidx.viewmodel.ext.android.viewModel
 
@@ -36,6 +37,7 @@ class ExamListFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         currentGradingType = arguments?.getString("gradingType").orEmpty()
+        selectedFilter = arguments?.getString("examFilter").toExamFilter()
         binding.appBar.applySystemWindowInsets(top = true)
         updateToolbarTitle(arguments?.getString("title"))
         binding.toolbar.setNavigationOnClickListener { findNavController().navigateUp() }
@@ -68,41 +70,26 @@ class ExamListFragment : Fragment() {
             launch {
                 adapter.loadStateFlow.collect { state ->
                     val loading = state.refresh is LoadState.Loading
-                    binding.progressBar.visibility = if (loading) View.VISIBLE else View.GONE
+                    val showSkeleton = loading && adapter.itemCount == 0
+                    binding.loadingSkeleton.root.showShimmer(showSkeleton)
+                    binding.progressBar.visibility = if (loading && !showSkeleton) View.VISIBLE else View.GONE
                     binding.emptyState.visibility = if (!loading && adapter.itemCount == 0) View.VISIBLE else View.GONE
-                    binding.rvExams.visibility = if (!loading && adapter.itemCount == 0) View.GONE else View.VISIBLE
+                    binding.rvExams.visibility = if (showSkeleton || (!loading && adapter.itemCount == 0)) View.GONE else View.VISIBLE
                 }
             }
         }
 
-        viewModel.configure(currentGradingType)
+        viewModel.configure(currentGradingType, selectedFilter)
+        updateStatusFilterMenuState()
     }
 
     private fun setupSearch() {
         val searchItem = binding.toolbar.menu.findItem(R.id.actionSearchExam)
-        val searchView = searchItem.actionView as? SearchView ?: return
-        searchView.queryHint = getString(R.string.exam_list_search_hint)
-        searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
-            override fun onQueryTextSubmit(query: String?): Boolean {
-                searchView.clearFocus()
-                return true
-            }
-
-            override fun onQueryTextChange(newText: String?): Boolean {
-                searchQuery = newText.orEmpty()
-                viewModel.setSearch(searchQuery)
-                return true
-            }
-        })
-        searchItem.setOnActionExpandListener(object : android.view.MenuItem.OnActionExpandListener {
-            override fun onMenuItemActionExpand(item: android.view.MenuItem): Boolean = true
-
-            override fun onMenuItemActionCollapse(item: android.view.MenuItem): Boolean {
-                searchQuery = ""
-                viewModel.setSearch("")
-                return true
-            }
-        })
+        searchItem.isVisible = false
+        binding.etSearch.doAfterTextChanged { text ->
+            searchQuery = text?.toString().orEmpty()
+            viewModel.setSearch(searchQuery)
+        }
     }
 
     private fun showFilterMenu() {
@@ -122,6 +109,7 @@ class ExamListFragment : Fragment() {
                     else -> ExamListViewModel.ExamFilter.ALL
                 }
                 viewModel.setFilter(selectedFilter)
+                updateStatusFilterMenuState()
                 true
             }
             show()
@@ -143,6 +131,26 @@ class ExamListFragment : Fragment() {
             ExamListViewModel.ExamFilter.PROCESSING -> MENU_STATUS_PROCESSING
             ExamListViewModel.ExamFilter.CLOSED -> MENU_STATUS_CLOSED
             ExamListViewModel.ExamFilter.ALL -> MENU_STATUS_ALL
+        }
+    }
+
+    private fun updateStatusFilterMenuState() {
+        val item = binding.toolbar.menu.findItem(R.id.actionExamTypeFilter) ?: return
+        item.title = when (selectedFilter) {
+            ExamListViewModel.ExamFilter.READY -> getString(R.string.exam_list_filter_ready)
+            ExamListViewModel.ExamFilter.PROCESSING -> getString(R.string.exam_list_filter_processing)
+            ExamListViewModel.ExamFilter.CLOSED -> getString(R.string.exam_list_filter_closed)
+            ExamListViewModel.ExamFilter.ALL -> getString(R.string.class_list_filter)
+        }
+        item.contentDescription = item.title
+    }
+
+    private fun String?.toExamFilter(): ExamListViewModel.ExamFilter {
+        return when (orEmpty().trim().uppercase()) {
+            "READY", "ACTIVE", "OPEN", "IN_PROGRESS", "RUNNING" -> ExamListViewModel.ExamFilter.READY
+            "PROCESSING", "SUBMITTED" -> ExamListViewModel.ExamFilter.PROCESSING
+            "CLOSED", "END", "ENDED" -> ExamListViewModel.ExamFilter.CLOSED
+            else -> ExamListViewModel.ExamFilter.ALL
         }
     }
 

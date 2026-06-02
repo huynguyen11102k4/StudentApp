@@ -26,6 +26,9 @@ class ProfileViewModel(
     private val _isSaving = MutableStateFlow(false)
     val isSaving: StateFlow<Boolean> = _isSaving.asStateFlow()
 
+    private val _isLoading = MutableStateFlow(false)
+    val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
+
     private val _saveSuccess = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     val saveSuccess: SharedFlow<Unit> = _saveSuccess.asSharedFlow()
 
@@ -39,11 +42,17 @@ class ProfileViewModel(
         viewModelScope.launch {
             authRepository.getMe().collect { result ->
                 when (result) {
-                    is ApiResult.Loading -> Unit
-                    is ApiResult.Success -> _userProfile.value = result.data
-                    is ApiResult.Error -> _errorMessage.tryEmit(
-                        result.exception.message ?: resources.getString(R.string.profile_load_failed)
-                    )
+                    is ApiResult.Loading -> _isLoading.value = _userProfile.value == null
+                    is ApiResult.Success -> {
+                        _isLoading.value = false
+                        _userProfile.value = result.data
+                    }
+                    is ApiResult.Error -> {
+                        _isLoading.value = false
+                        _errorMessage.tryEmit(
+                            result.exception.message ?: resources.getString(R.string.profile_load_failed)
+                        )
+                    }
                 }
             }
         }

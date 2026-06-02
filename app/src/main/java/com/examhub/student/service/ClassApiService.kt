@@ -27,4 +27,7 @@ interface ClassApiService {
     @GET("student/classes/{classId}")
     suspend fun getClassDetail(@Path("classId") classId: String): Response<ApiEnvelope<MobileClassResponse>>
 
+    @POST("student/classes/{classId}/leave-request")
+    suspend fun requestLeaveClass(@Path("classId") classId: String): Response<ApiEnvelope<MobileClassResponse>>
+
 }

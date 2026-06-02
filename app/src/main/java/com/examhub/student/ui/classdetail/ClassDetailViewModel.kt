@@ -30,12 +30,17 @@ class ClassDetailViewModel(
 
     private val _classExams = MutableStateFlow<List<Exam>>(emptyList())
     val classExams: StateFlow<List<Exam>> = _classExams.asStateFlow()
+    private var allClassExams: List<Exam> = emptyList()
+    private var examSearchQuery: String = ""
 
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
     private val _message = MutableSharedFlow<String>(extraBufferCapacity = 1)
     val message: SharedFlow<String> = _message.asSharedFlow()
+
+    private val _leaveRequested = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    val leaveRequested: SharedFlow<Unit> = _leaveRequested.asSharedFlow()
 
     fun load(classId: String) {
         if (classId.isBlank()) return
@@ -57,6 +62,29 @@ class ClassDetailViewModel(
         }
     }
 
+    fun requestLeaveClass() {
+        val classId = _classDetail.value?.classId?.takeIf { it.isNotBlank() }
+            ?: _classDetail.value?.classInfo?.id?.takeIf { it.isNotBlank() }
+            ?: return
+        if (_classDetail.value?.status == "LEAVE_REQUESTED") return
+        viewModelScope.launch {
+            classRepository.requestLeaveClass(classId).collect { result ->
+                when (result) {
+                    is ApiResult.Loading -> _isLoading.value = true
+                    is ApiResult.Success -> {
+                        _isLoading.value = false
+                        _classDetail.value = result.data
+                        _leaveRequested.tryEmit(Unit)
+                    }
+                    is ApiResult.Error -> {
+                        _isLoading.value = false
+                        _message.tryEmit(result.exception.message ?: "Không thể gửi yêu cầu rời lớp")
+                    }
+                }
+            }
+        }
+    }
+
     private fun loadClassExams(classDetail: MobileClassResponse) {
         viewModelScope.launch {
             examRepository.getExams(limit = "100", excludeClosed = false).collect { result ->
@@ -64,15 +92,33 @@ class ClassDetailViewModel(
                     is ApiResult.Loading -> Unit
                     is ApiResult.Success -> {
                         val resultSheetByExamId = loadResultSheetByExamId()
-                        _classExams.value = result.data.data
+                        allClassExams = result.data.data
                             .filter { it.belongsToClass(classDetail) }
                             .map { it.toExam(resultSheetByExamId) }
                             .sortedByDescending { it.date }
+                        applyExamSearch()
                     }
                     is ApiResult.Error -> {
                         _message.tryEmit(result.exception.message ?: "Không thể tải danh sách kỳ thi của lớp")
                     }
                 }
+            }
+        }
+    }
+
+    fun setExamSearch(query: String) {
+        examSearchQuery = query.trim()
+        applyExamSearch()
+    }
+
+    private fun applyExamSearch() {
+        val query = examSearchQuery.lowercase()
+        _classExams.value = if (query.isBlank()) {
+            allClassExams
+        } else {
+            allClassExams.filter { exam ->
+                listOf(exam.name, exam.subject, exam.className, exam.status)
+                    .any { it.contains(query, ignoreCase = true) }
             }
         }
     }

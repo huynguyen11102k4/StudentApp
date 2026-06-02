@@ -251,6 +251,11 @@
                 tools:itemCount="3"
                 tools:listitem="@layout/item_exam" />
 
+            <include
+                android:id="@+id/loadingSkeletonRecentExams"
+                android:layout_marginTop="@dimen/spacing_8"
+                layout="@layout/layout_skeleton_list" />
+
             <LinearLayout
                 android:id="@+id/emptyRecentExams"
                 android:layout_width="match_parent"

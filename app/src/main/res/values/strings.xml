@@ -93,6 +93,7 @@
     <string name="dashboard_status_ready">Sẵn sàng làm bài</string>
     <string name="dashboard_status_submitted">Đã nộp bài</string>
     <string name="dashboard_status_online">Online</string>
+    <string name="dashboard_status_in_progress">Đang diễn ra</string>
     <string name="dashboard_status_offline">Offline</string>
     <string name="dashboard_status_processing">Đang xử lý bài nộp</string>
     <string name="dashboard_exam_updated">Cập nhật gần đây</string>
@@ -139,6 +140,7 @@
     <string name="class_list_empty_title">Chưa có lớp học nào</string>
     <string name="class_list_empty_subtitle">Nhập mã lớp do giáo viên cung cấp để tham gia lớp học</string>
     <string name="class_list_badge_pending">Kỳ thi đang mở</string>
+    <string name="class_list_leave_requested_badge">Chờ duyệt rời lớp</string>
 
     <!-- Class Detail Screen -->
     <string name="class_detail_student_list">Thông tin lớp</string>
@@ -157,6 +159,13 @@
     <string name="class_detail_copy_code_success">Đã sao chép mã lớp học!</string>
     <string name="class_detail_tab_students">Học sinh</string>
     <string name="class_detail_tab_exams">Kỳ thi</string>
+    <string name="class_detail_leave_request_action">Yêu cầu rời lớp</string>
+    <string name="class_detail_leave_request_pending_action">Đang chờ duyệt</string>
+    <string name="class_detail_leave_request_title">Rời lớp</string>
+    <string name="class_detail_leave_request_confirm">Bạn muốn gửi yêu cầu rời lớp này cho giáo viên?</string>
+    <string name="class_detail_leave_request_confirm_action">Gửi yêu cầu</string>
+    <string name="class_detail_leave_request_success">Đã gửi yêu cầu rời lớp cho giáo viên</string>
+    <string name="class_detail_leave_requested_status">Yêu cầu rời lớp đang chờ giáo viên xử lý.</string>
 
     <!-- Exam Detail Screen -->
     <string name="exam_detail_progress">Trạng thái bài làm</string>

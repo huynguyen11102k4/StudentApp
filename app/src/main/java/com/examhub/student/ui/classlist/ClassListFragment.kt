@@ -21,6 +21,7 @@ import com.examhub.student.R
 import com.examhub.student.databinding.FragmentClassListBinding
 import com.examhub.student.util.extension.applySystemWindowInsets
 import com.examhub.student.util.extension.collectOnStarted
+import com.examhub.student.util.extension.showShimmer
 import kotlinx.coroutines.launch
 import org.koin.androidx.viewmodel.ext.android.viewModel
 
@@ -65,9 +66,11 @@ class ClassListFragment : Fragment() {
             launch {
                 adapter.loadStateFlow.collect { state ->
                     val loading = state.refresh is LoadState.Loading
+                    val showSkeleton = loading && adapter.itemCount == 0
                     binding.tvClassCount.text = getString(R.string.class_list_count, adapter.itemCount)
+                    binding.loadingSkeleton.root.showShimmer(showSkeleton)
                     binding.emptyState.visibility = if (!loading && adapter.itemCount == 0) View.VISIBLE else View.GONE
-                    binding.rvClasses.visibility = if (!loading && adapter.itemCount == 0) View.GONE else View.VISIBLE
+                    binding.rvClasses.visibility = if (showSkeleton || (!loading && adapter.itemCount == 0)) View.GONE else View.VISIBLE
                 }
             }
             launch {

@@ -1,6 +1,7 @@
 package com.examhub.student.ui.classlist
 
 import android.view.LayoutInflater
+import android.view.View
 import android.view.ViewGroup
 import androidx.recyclerview.widget.DiffUtil
 import androidx.paging.PagingDataAdapter
@@ -18,6 +19,8 @@ class ClassListAdapter(
             binding.tvClassName.text = schoolClass.name
             binding.tvSubject.text = schoolClass.subject
             binding.tvStudentCount.text = binding.root.context.getString(R.string.class_list_student_count_short, schoolClass.studentCount)
+            binding.tvLeaveRequestedBadge.visibility =
+                if (schoolClass.status == "LEAVE_REQUESTED") View.VISIBLE else View.GONE
             binding.root.setOnClickListener { onItemClick(schoolClass) }
         }
     }

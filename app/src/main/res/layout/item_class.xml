@@ -56,6 +56,18 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="@dimen/spacing_4"
                     android:text="@string/class_list_sample_subject" />
+
+                <TextView
+                    android:id="@+id/tvLeaveRequestedBadge"
+                    style="@style/Text_Label_Small"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/spacing_8"
+                    android:background="@drawable/bg_badge_review"
+                    android:maxLines="1"
+                    android:text="@string/class_list_leave_requested_badge"
+                    android:textColor="@color/status_review_text"
+                    android:visibility="gone" />
             </LinearLayout>
 
             <TextView

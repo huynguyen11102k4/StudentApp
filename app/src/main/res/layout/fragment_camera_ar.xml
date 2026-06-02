@@ -145,7 +145,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
-            app:cardBackgroundColor="@color/inverse_surface"
+            app:cardBackgroundColor="@color/surface"
             app:cardCornerRadius="@dimen/student_card_radius_large"
             app:contentPadding="@dimen/spacing_24">
 
@@ -159,7 +159,7 @@
                     android:layout_width="@dimen/spacing_48"
                     android:layout_height="@dimen/spacing_48"
                     android:indeterminate="true"
-                    app:indicatorColor="@color/white" />
+                    app:indicatorColor="@color/primary" />
 
                 <TextView
                     android:id="@+id/tvProgressMessage"
@@ -168,7 +168,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="@dimen/spacing_12"
                     android:text="@string/camera_ar_processing"
-                    android:textColor="@color/white" />
+                    android:textColor="@color/text_primary" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
     </FrameLayout>

@@ -16,4 +16,5 @@ interface ClassRepository {
     ): Flow<ApiResult<PagedEnvelope<MobileClassResponse>>>
     fun joinClass(request: JoinClassRequest): Flow<ApiResult<MobileClassResponse>>
     fun getClassDetail(classId: String): Flow<ApiResult<MobileClassResponse>>
+    fun requestLeaveClass(classId: String): Flow<ApiResult<MobileClassResponse>>
 }

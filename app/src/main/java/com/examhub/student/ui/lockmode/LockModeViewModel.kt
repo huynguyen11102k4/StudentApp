@@ -230,6 +230,7 @@ class LockModeViewModel(
     }
 
     private fun loadOmrCodes(examId: String, argCodes: LockModeOmrCodes) {
+        val activeSession = activeSessionStore.get(examId)
         val mode = readStudentIdentifierMode(examId)
         val profile = tokenManager.getCachedProfileJson()
             ?.let { raw -> runCatching { gson.fromJson(raw, UserResponse::class.java) }.getOrNull() }
@@ -248,9 +249,9 @@ class LockModeViewModel(
         val cachedClassCode = offlineCacheManager.getExamClassCode(examId)
             .orEmpty()
         _omrCodes.value = LockModeOmrCodes(
-            classCode = argCodes.classCode.ifBlank { cachedClassCode },
-            studentCode = argCodes.studentCode.ifBlank { cachedStudentCode },
-            studentCodeMode = argCodes.studentCodeMode.ifBlank { mode.label }
+            classCode = argCodes.classCode.ifBlank { activeSession?.classCode.orEmpty() }.ifBlank { cachedClassCode },
+            studentCode = argCodes.studentCode.ifBlank { activeSession?.studentCode.orEmpty() }.ifBlank { cachedStudentCode },
+            studentCodeMode = argCodes.studentCodeMode.ifBlank { activeSession?.studentCodeMode.orEmpty() }.ifBlank { mode.label }
         )
     }
 

@@ -16,6 +16,7 @@ import com.examhub.student.model.response.profile.UserResponse
 import com.examhub.student.util.extension.add3DTouch
 import com.examhub.student.util.extension.applySystemWindowInsets
 import com.examhub.student.util.extension.collectOnStarted
+import com.examhub.student.util.extension.showShimmer
 import kotlinx.coroutines.launch
 import org.koin.androidx.viewmodel.ext.android.viewModel
 
@@ -25,6 +26,7 @@ class DashboardFragment : Fragment() {
     private val binding get() = _binding!!
     private val viewModel: DashboardViewModel by viewModel()
     private lateinit var recentExamsAdapter: RecentExamAdapter
+    private var recentExamCount = 0
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentDashboardBinding.inflate(inflater, container, false)
@@ -68,7 +70,8 @@ class DashboardFragment : Fragment() {
         binding.cardOnline.setOnClickListener {
             val bundle = Bundle().apply {
                 putString("gradingType", "")
-                putString("title", getString(R.string.exam_list_default_title))
+                putString("examFilter", "READY")
+                putString("title", getString(R.string.dashboard_camera_exam_list_title))
             }
             findNavController().navigate(R.id.action_dashboard_to_exam_list, bundle)
         }
@@ -105,9 +108,9 @@ class DashboardFragment : Fragment() {
             }
             launch {
                 viewModel.recentExams.collect { exams ->
+                    recentExamCount = exams.size
                     recentExamsAdapter.submitList(exams)
-                    binding.emptyRecentExams.visibility = if (exams.isEmpty()) View.VISIBLE else View.GONE
-                    binding.rvRecentExams.visibility = if (exams.isEmpty()) View.GONE else View.VISIBLE
+                    updateRecentExamLoadingState(viewModel.isLoading.value)
                 }
             }
             launch {
@@ -117,7 +120,7 @@ class DashboardFragment : Fragment() {
             }
             launch {
                 viewModel.isLoading.collect { loading ->
-                    binding.progressBar.visibility = if (loading) View.VISIBLE else View.GONE
+                    updateRecentExamLoadingState(loading)
                 }
             }
             launch {
@@ -126,6 +129,14 @@ class DashboardFragment : Fragment() {
                 }
             }
         }
+    }
+
+    private fun updateRecentExamLoadingState(loading: Boolean) {
+        val showSkeleton = loading && recentExamCount == 0
+        binding.loadingSkeletonRecentExams.root.showShimmer(showSkeleton)
+        binding.progressBar.visibility = if (loading && !showSkeleton) View.VISIBLE else View.GONE
+        binding.emptyRecentExams.visibility = if (!loading && recentExamCount == 0) View.VISIBLE else View.GONE
+        binding.rvRecentExams.visibility = if (showSkeleton || recentExamCount == 0) View.GONE else View.VISIBLE
     }
 
     private fun bindProfile(profile: UserResponse) {

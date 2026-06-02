@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="@dimen/spacing_12"
+    app:cardBackgroundColor="@color/surface"
+    app:cardCornerRadius="@dimen/student_card_radius"
+    app:cardElevation="@dimen/elevation_level0"
+    app:contentPadding="@dimen/spacing_16"
+    app:strokeColor="@color/divider_soft"
+    app:strokeWidth="1dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <View
+            android:layout_width="220dp"
+            android:layout_height="18dp"
+            android:background="@drawable/bg_notification_skeleton" />
+
+        <View
+            android:layout_width="156dp"
+            android:layout_height="12dp"
+            android:layout_marginTop="@dimen/spacing_10"
+            android:background="@drawable/bg_notification_skeleton" />
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="12dp"
+            android:layout_marginTop="@dimen/spacing_16"
+            android:background="@drawable/bg_notification_skeleton" />
+
+        <View
+            android:layout_width="260dp"
+            android:layout_height="12dp"
+            android:layout_marginTop="@dimen/spacing_8"
+            android:background="@drawable/bg_notification_skeleton" />
+    </LinearLayout>
+</com.google.android.material.card.MaterialCardView>

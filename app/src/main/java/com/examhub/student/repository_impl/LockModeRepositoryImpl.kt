@@ -38,7 +38,7 @@ class LockModeRepositoryImpl(
             if (response.isSuccessful && response.body()?.data != null) {
                 violationQueueManager.remove(item.id)
                 flushed += 1
-            } else if (response.code() == 404) {
+            } else if (response.code() == 400 || response.code() == 404) {
                 violationQueueManager.remove(item.id)
             } else {
                 break

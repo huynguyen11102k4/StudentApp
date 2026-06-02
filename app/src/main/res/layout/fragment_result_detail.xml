@@ -12,8 +12,10 @@
         android:background="@color/surface"
         app:layout_constraintTop_toTopOf="parent"
         app:navigationIcon="@drawable/ic_close"
+        app:navigationIconTint="@color/text_primary"
         app:title="@string/result_detail_title"
-        app:titleTextAppearance="@style/Text_Toolbar_Title_Bold" />
+        app:titleTextAppearance="@style/Text_Toolbar_Title_Bold"
+        app:titleTextColor="@color/text_primary" />
 
     <androidx.core.widget.NestedScrollView
         android:id="@+id/contentScroll"

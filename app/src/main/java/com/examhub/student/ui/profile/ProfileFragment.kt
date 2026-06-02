@@ -17,7 +17,7 @@ import com.examhub.student.databinding.FragmentProfileBinding
 import com.examhub.student.model.response.profile.UserResponse
 import com.examhub.student.util.extension.applySystemWindowInsets
 import com.examhub.student.util.extension.collectOnStarted
-import kotlinx.coroutines.flow.collect
+import com.examhub.student.util.extension.showShimmer
 import kotlinx.coroutines.launch
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
@@ -33,6 +33,7 @@ class ProfileFragment : Fragment() {
     private val viewModel: ProfileViewModel by viewModel()
     private var pendingAvatarPart: MultipartBody.Part? = null
     private var pendingAvatarFile: File? = null
+    private var hasProfile = false
     private val pickAvatarLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         uri?.let { prepareAvatar(it) }
     }
@@ -76,7 +77,14 @@ class ProfileFragment : Fragment() {
             }
             launch {
                 viewModel.userProfile.collect { profile ->
+                    hasProfile = profile != null
                     profile?.let(::bindProfile)
+                    updateProfileLoadingState(viewModel.isLoading.value)
+                }
+            }
+            launch {
+                viewModel.isLoading.collect { loading ->
+                    updateProfileLoadingState(loading)
                 }
             }
             launch {
@@ -86,6 +94,12 @@ class ProfileFragment : Fragment() {
             }
         }
         viewModel.loadProfile()
+    }
+
+    private fun updateProfileLoadingState(loading: Boolean) {
+        val showSkeleton = loading && !hasProfile
+        binding.loadingSkeleton.root.showShimmer(showSkeleton)
+        binding.contentScroll.visibility = if (showSkeleton) View.GONE else View.VISIBLE
     }
 
     private fun bindProfile(profile: UserResponse) {

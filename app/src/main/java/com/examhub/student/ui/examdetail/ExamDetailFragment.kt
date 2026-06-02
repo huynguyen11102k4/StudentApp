@@ -11,6 +11,7 @@ import com.examhub.student.R
 import com.examhub.student.databinding.FragmentExamDetailBinding
 import com.examhub.student.util.extension.applySystemWindowInsets
 import com.examhub.student.util.extension.collectOnStarted
+import com.examhub.student.util.extension.showShimmer
 import kotlinx.coroutines.launch
 import org.koin.androidx.viewmodel.ext.android.viewModel
 
@@ -20,6 +21,7 @@ class ExamDetailFragment : Fragment() {
     private val binding get() = _binding!!
     private val viewModel: ExamDetailViewModel by viewModel()
     private val examId: String get() = arguments?.getString("examId").orEmpty()
+    private var hasExamContent = false
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentExamDetailBinding.inflate(inflater, container, false)
@@ -58,7 +60,15 @@ class ExamDetailFragment : Fragment() {
 
     private fun observeViewModel() {
         collectOnStarted {
-            launch { viewModel.examName.collect { binding.tvExamName.text = it } }
+            launch {
+                viewModel.examName.collect {
+                    binding.tvExamName.text = it
+                    if (it.isNotBlank()) {
+                        hasExamContent = true
+                        updateLoadingState(viewModel.isLoading.value)
+                    }
+                }
+            }
             launch { viewModel.subject.collect { binding.tvSubject.text = it } }
             launch { viewModel.duration.collect { binding.tvDuration.text = getString(R.string.exam_detail_duration_format, it) } }
             launch { viewModel.questionCount.collect { binding.tvQuestionCount.text = getString(R.string.exam_detail_question_count_format, it) } }
@@ -132,6 +142,11 @@ class ExamDetailFragment : Fragment() {
                 }
             }
             launch {
+                viewModel.isLoading.collect { loading ->
+                    updateLoadingState(loading)
+                }
+            }
+            launch {
                 viewModel.sessionStarted.collect { session ->
                     val bundle = Bundle().apply {
                         putString("examId", examId)
@@ -141,6 +156,13 @@ class ExamDetailFragment : Fragment() {
                 }
             }
         }
+    }
+
+    private fun updateLoadingState(loading: Boolean) {
+        val showSkeleton = loading && !hasExamContent
+        binding.loadingSkeleton.root.showShimmer(showSkeleton)
+        binding.scrollContent.visibility = if (showSkeleton) View.GONE else View.VISIBLE
+        binding.progressBar.visibility = if (loading && !showSkeleton) View.VISIBLE else View.GONE
     }
 
     override fun onDestroyView() {

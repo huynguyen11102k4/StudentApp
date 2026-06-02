@@ -34,6 +34,10 @@ class RecentExamAdapter(
                 binding.tvOfflineBadge.setText(R.string.dashboard_status_submitted)
                 binding.tvOfflineBadge.setBackgroundResource(R.drawable.bg_badge_online)
                 binding.tvOfflineBadge.setTextColor(context.getColor(R.color.status_online_text))
+            } else if (exam.status.isRunningExamStatus()) {
+                binding.tvOfflineBadge.setText(R.string.dashboard_status_in_progress)
+                binding.tvOfflineBadge.setBackgroundResource(R.drawable.bg_badge_processing)
+                binding.tvOfflineBadge.setTextColor(context.getColor(R.color.status_processing_text))
             } else if (exam.isOfflineReady) {
                 binding.tvOfflineBadge.setText(R.string.dashboard_status_ready)
                 binding.tvOfflineBadge.setBackgroundResource(R.drawable.bg_badge_ready)
@@ -63,6 +67,14 @@ class RecentExamAdapter(
                 runCatching { parser.parse(normalized) }.getOrNull()
             } ?: return normalized.removeSuffix("Z")
             return SimpleDateFormat("HH:mm dd/MM/yyyy", Locale("vi", "VN")).format(date)
+        }
+
+        private fun String.isRunningExamStatus(): Boolean {
+            val normalized = trim().replace('-', '_').uppercase(Locale.US)
+            return normalized == "ACTIVE" ||
+                normalized == "OPEN" ||
+                normalized == "IN_PROGRESS" ||
+                normalized == "RUNNING"
         }
     }
 

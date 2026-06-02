@@ -76,6 +76,20 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
+            <TextView
+                android:id="@+id/tvLeaveRequestedStatus"
+                style="@style/Text_Body_Medium"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/spacing_12"
+                android:background="@drawable/bg_badge_review"
+                android:paddingHorizontal="@dimen/spacing_12"
+                android:paddingVertical="@dimen/spacing_8"
+                android:text="@string/class_detail_leave_requested_status"
+                android:textColor="@color/status_review_text"
+                android:visibility="gone"
+                tools:visibility="visible" />
+
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -202,6 +216,25 @@
                 android:layout_marginTop="@dimen/spacing_24"
                 android:text="@string/class_detail_exam_list" />
 
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/tilSearch"
+                style="@style/Student.InputField"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/spacing_12"
+                app:startIconDrawable="@drawable/ic_search"
+                app:startIconTint="@color/text_secondary">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etSearch"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="@string/exam_list_search_hint"
+                    android:inputType="text"
+                    android:maxLines="1"
+                    android:textAppearance="@style/Text_Body_Large" />
+            </com.google.android.material.textfield.TextInputLayout>
+
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/rvClassExams"
                 android:layout_width="match_parent"
@@ -237,6 +270,14 @@
                     android:gravity="center"
                     android:text="@string/class_detail_exam_empty_subtitle" />
             </LinearLayout>
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnRequestLeave"
+                style="@style/Student.OutlineButton"
+                android:layout_width="match_parent"
+                android:layout_height="@dimen/button_height_large"
+                android:layout_marginTop="@dimen/spacing_24"
+                android:text="@string/class_detail_leave_request_action" />
+
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
 

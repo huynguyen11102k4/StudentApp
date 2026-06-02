@@ -4,6 +4,7 @@
     <color name="army_green">#FFA2B26C</color>
     <color name="army_green_dark">#FF7D8E4A</color>
     <color name="army_green_light">#FFC4D290</color>
+    <color name="army_green_soft">#FF2D3418</color>
 
     <!-- Primary (Material3 mapping — dark) -->
     <color name="primary">@color/army_green</color>
@@ -70,6 +71,7 @@
 
     <!-- Divider (dark) -->
     <color name="divider">#FF2D2E29</color>
+    <color name="divider_soft">#FF2D2E29</color>
 
     <!-- Text (dark) -->
     <color name="text_primary">#FFE4E3DB</color>

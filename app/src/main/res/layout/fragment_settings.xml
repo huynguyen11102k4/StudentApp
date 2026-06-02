@@ -100,7 +100,8 @@
                             android:background="@drawable/bg_badge_neutral"
                             android:paddingHorizontal="@dimen/spacing_12"
                             android:paddingVertical="@dimen/spacing_4"
-                            android:text="STUDENT" />
+                            android:text="STUDENT"
+                            android:textColor="@color/on_primary_container" />
                     </LinearLayout>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>

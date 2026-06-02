@@ -25,6 +25,26 @@
             app:titleTextColor="@color/text_primary"
         app:titleTextAppearance="@style/Text_Toolbar_Title_Bold" />
 
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/tilSearch"
+            style="@style/Student.InputField"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="@dimen/spacing_16"
+            android:layout_marginBottom="@dimen/spacing_12"
+            app:startIconDrawable="@drawable/ic_search"
+            app:startIconTint="@color/text_secondary">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etSearch"
+                style="@style/Text_Body_Medium"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="@string/exam_list_search_hint"
+                android:inputType="text"
+                android:maxLines="1" />
+        </com.google.android.material.textfield.TextInputLayout>
+
     </com.google.android.material.appbar.AppBarLayout>
 
     <androidx.recyclerview.widget.RecyclerView
@@ -34,6 +54,14 @@
         android:clipToPadding="false"
         android:padding="@dimen/spacing_16"
         android:paddingBottom="@dimen/screen_bottom_content_padding"
+        app:layout_behavior="@string/appbar_scrolling_view_behavior" />
+
+    <include
+        android:id="@+id/loadingSkeleton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="@dimen/spacing_16"
+        layout="@layout/layout_skeleton_list"
         app:layout_behavior="@string/appbar_scrolling_view_behavior" />
 
     <LinearLayout

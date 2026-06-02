@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="@dimen/spacing_16"
+    android:visibility="gone">
+
+    <View
+        android:layout_width="260dp"
+        android:layout_height="22dp"
+        android:background="@drawable/bg_notification_skeleton" />
+
+    <View
+        android:layout_width="220dp"
+        android:layout_height="12dp"
+        android:layout_marginTop="@dimen/spacing_12"
+        android:background="@drawable/bg_notification_skeleton" />
+
+    <include
+        android:layout_marginTop="@dimen/spacing_16"
+        layout="@layout/item_skeleton_card" />
+
+    <include layout="@layout/item_skeleton_card" />
+
+    <include layout="@layout/item_skeleton_card" />
+</LinearLayout>

@@ -1,6 +1,8 @@
 package com.examhub.student.ui.classdetail
 
 import android.os.Bundle
+import android.text.Editable
+import android.text.TextWatcher
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -14,6 +16,7 @@ import com.examhub.student.model.response.classroom.MobileClassResponse
 import com.examhub.student.util.extension.applySystemWindowInsets
 import com.examhub.student.util.extension.collectOnStarted
 import com.examhub.student.ui.dashboard.RecentExamAdapter
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
 import kotlinx.coroutines.launch
 import org.koin.androidx.viewmodel.ext.android.viewModel
@@ -39,12 +42,25 @@ class ClassDetailFragment : Fragment() {
             adapter = examAdapter
             isNestedScrollingEnabled = false
         }
+        binding.btnRequestLeave.setOnClickListener { showLeaveRequestConfirmation() }
+        binding.etSearch.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                viewModel.setExamSearch(s?.toString().orEmpty())
+            }
+            override fun afterTextChanged(s: Editable?) = Unit
+        })
 
         collectOnStarted {
             launch { viewModel.classDetail.collect { it?.let(::bindClass) } }
             launch { viewModel.classExams.collect(::bindClassExams) }
             launch { viewModel.isLoading.collect { binding.progressBar.visibility = if (it) View.VISIBLE else View.GONE } }
             launch { viewModel.message.collect { Snackbar.make(binding.root, it, Snackbar.LENGTH_LONG).show() } }
+            launch {
+                viewModel.leaveRequested.collect {
+                    Snackbar.make(binding.root, R.string.class_detail_leave_request_success, Snackbar.LENGTH_LONG).show()
+                }
+            }
         }
         viewModel.load(arguments?.getString("classId").orEmpty())
     }
@@ -68,6 +84,25 @@ class ClassDetailFragment : Fragment() {
         }
         binding.tvStudentCount.text = studentCount(item).toString()
         binding.tvExamCount.text = examCount(item).toString()
+        val leaveRequested = item.status == "LEAVE_REQUESTED"
+        binding.tvLeaveRequestedStatus.visibility = if (leaveRequested) View.VISIBLE else View.GONE
+        binding.btnRequestLeave.isEnabled = !leaveRequested
+        binding.btnRequestLeave.text = getString(
+            if (leaveRequested) R.string.class_detail_leave_request_pending_action
+            else R.string.class_detail_leave_request_action
+        )
+    }
+
+    private fun showLeaveRequestConfirmation() {
+        if (viewModel.classDetail.value?.status == "LEAVE_REQUESTED") return
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.class_detail_leave_request_title)
+            .setMessage(R.string.class_detail_leave_request_confirm)
+            .setNegativeButton(R.string.common_cancel, null)
+            .setPositiveButton(R.string.class_detail_leave_request_confirm_action) { _, _ ->
+                viewModel.requestLeaveClass()
+            }
+            .show()
     }
 
     private fun bindClassExams(exams: List<Exam>) {

@@ -72,8 +72,9 @@ class ExamListViewModel(
         }
         .cachedIn(viewModelScope)
 
-    fun configure(type: String) {
+    fun configure(type: String, initialFilter: ExamFilter = ExamFilter.ALL) {
         gradingType.value = type
+        filter.value = initialFilter
     }
 
     fun setSearch(query: String) {

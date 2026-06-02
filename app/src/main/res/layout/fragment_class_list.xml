@@ -76,6 +76,11 @@
             android:layout_weight="1"
             android:clipToPadding="false"
             android:paddingBottom="@dimen/screen_bottom_content_padding" />
+
+        <include
+            android:id="@+id/loadingSkeleton"
+            android:layout_marginTop="@dimen/spacing_8"
+            layout="@layout/layout_skeleton_list" />
     </LinearLayout>
 
     <LinearLayout
