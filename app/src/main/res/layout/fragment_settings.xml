@@ -52,7 +52,7 @@
                             android:layout_width="match_parent"
                             android:layout_height="match_parent"
                             android:background="@drawable/bg_avatar"
-                            android:contentDescription="Ảnh đại diện"
+                            android:contentDescription="@string/common_avatar"
                             android:scaleType="centerCrop"
                             android:visibility="gone"
                             app:shapeAppearanceOverlay="@style/ShapeAppearance.Material3.Corner.Full" />
@@ -64,7 +64,7 @@
                             android:layout_height="match_parent"
                             android:background="@drawable/bg_avatar"
                             android:gravity="center"
-                            android:text="HS"
+                            android:text="@string/student_initials_placeholder"
                             android:textColor="@color/white"
                             android:textStyle="bold" />
                     </FrameLayout>
@@ -81,7 +81,7 @@
                             style="@style/Text_Title_Medium"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Học sinh" />
+                            android:text="@string/settings_default_student_name" />
 
                         <TextView
                             android:id="@+id/tvProfileEmail"
@@ -89,7 +89,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="@dimen/spacing_4"
-                            android:text="email@example.com" />
+                            android:text="@string/settings_email_placeholder" />
 
                         <TextView
                             android:id="@+id/tvProfileRole"
@@ -100,7 +100,7 @@
                             android:background="@drawable/bg_badge_neutral"
                             android:paddingHorizontal="@dimen/spacing_12"
                             android:paddingVertical="@dimen/spacing_4"
-                            android:text="STUDENT"
+                            android:text="@string/settings_default_student_role"
                             android:textColor="@color/on_primary_container" />
                     </LinearLayout>
                 </LinearLayout>
@@ -113,7 +113,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginHorizontal="@dimen/spacing_24"
                 android:layout_marginTop="@dimen/spacing_8"
-                android:text="0 thiết bị đang đăng nhập"
+                android:text="@string/settings_session_zero"
                 android:textColor="@color/text_secondary" />
 
             <!-- Group 1: Account & Display -->
@@ -276,6 +276,63 @@
                         android:id="@+id/switchDarkMode"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content" />
+                </LinearLayout>
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:background="@color/outline_variant" />
+
+                <LinearLayout
+                    android:id="@+id/itemLanguage"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="?android:attr/selectableItemBackground"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:padding="@dimen/spacing_16">
+
+                    <ImageView
+                        android:layout_width="@dimen/avatar_size_medium"
+                        android:layout_height="@dimen/avatar_size_medium"
+                        android:background="@drawable/bg_icon_container_primary"
+                        android:padding="@dimen/spacing_8"
+                        android:src="@drawable/ic_settings"
+                        app:tint="@color/primary" />
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="@dimen/spacing_16"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            style="@style/Text_Body_Large"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/settings_language" />
+
+                        <TextView
+                            style="@style/Text_Body_Small"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/settings_language_desc" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/tvLanguageValue"
+                        style="@style/Text_Body_Small"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="@dimen/spacing_8" />
+
+                    <ImageView
+                        android:layout_width="@dimen/icon_size_large"
+                        android:layout_height="@dimen/icon_size_large"
+                        android:src="@drawable/ic_chevron_right" />
                 </LinearLayout>
             </LinearLayout>
 

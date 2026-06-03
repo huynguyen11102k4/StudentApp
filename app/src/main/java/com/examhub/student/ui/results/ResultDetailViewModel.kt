@@ -5,10 +5,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.examhub.student.R
 import com.examhub.student.model.ApiResult
-import com.examhub.student.model.request.appeal.StudentAppealItemRequest
 import com.examhub.student.model.request.appeal.StudentAppealRequest
 import com.examhub.student.model.response.result.StudentResultDetailResponse
+import com.examhub.student.model.response.result.StudentResultExamResponse
 import com.examhub.student.repository.AppealsRepository
+import com.examhub.student.repository.ExamRepository
 import com.examhub.student.repository.ResultsRepository
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -22,6 +23,7 @@ import kotlinx.coroutines.launch
 class ResultDetailViewModel(
     private val resultsRepository: ResultsRepository,
     private val appealsRepository: AppealsRepository,
+    private val examRepository: ExamRepository,
     private val context: Context
 ) : ViewModel() {
     private val _result = MutableStateFlow<StudentResultDetailResponse?>(null)
@@ -36,30 +38,42 @@ class ResultDetailViewModel(
     val appealCount: StateFlow<Int> = _appealCount.asStateFlow()
     private val _isResultPending = MutableStateFlow(false)
     val isResultPending: StateFlow<Boolean> = _isResultPending.asStateFlow()
+    private val _resultUnavailable = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    val resultUnavailable: SharedFlow<Unit> = _resultUnavailable.asSharedFlow()
 
-    fun loadResult(sheetId: String) {
+    private var fallbackExamStatus: String = ""
+
+    fun loadResult(sheetId: String, examStatus: String = "") {
+        fallbackExamStatus = examStatus
+        if (sheetId.isBlank()) {
+            _message.tryEmit(context.getString(R.string.result_detail_pending_message))
+            _resultUnavailable.tryEmit(Unit)
+            return
+        }
         viewModelScope.launch {
             resultsRepository.getResultDetail(sheetId).collect { result ->
                 when (result) {
                     is ApiResult.Loading -> _isLoading.value = true
                     is ApiResult.Success -> {
                         _isLoading.value = false
-                        _result.value = result.data
-                        _isResultPending.value = result.data.isPending()
-                        if (!result.data.isPending()) {
-                            loadAppealCount(result.data)
+                        val resolvedResult = result.data.resolveExamStatus()
+                        _result.value = resolvedResult
+                        _isResultPending.value = resolvedResult.isPending()
+                        if (!resolvedResult.isPending()) {
+                            loadAppealCount(resolvedResult)
                         }
                     }
                     is ApiResult.Error -> {
                         _isLoading.value = false
                         _message.tryEmit(result.exception.message ?: context.getString(R.string.result_detail_load_failed))
+                        _resultUnavailable.tryEmit(Unit)
                     }
                 }
             }
         }
     }
 
-    fun createAppeal(reason: String, questionNumber: Int?, questionMessage: String) {
+    fun createAppeal(reason: String) {
         val initialResult = _result.value
         val sheetId = initialResult?.id.orEmpty()
         if (sheetId.isBlank()) {
@@ -71,25 +85,26 @@ class ResultDetailViewModel(
             _message.tryEmit(context.getString(R.string.result_detail_reason_required))
             return
         }
-        val items = questionNumber?.takeIf { it > 0 }?.let {
-            listOf(StudentAppealItemRequest(it, questionMessage.ifBlank { normalizedReason }))
-        }.orEmpty()
-
         viewModelScope.launch {
             val refreshed = resultsRepository.getResultDetail(sheetId).first { it !is ApiResult.Loading }
             val result = when (refreshed) {
                 is ApiResult.Success -> {
-                    _result.value = refreshed.data
-                    refreshed.data
+                    val resolvedResult = refreshed.data.resolveExamStatus()
+                    _result.value = resolvedResult
+                    resolvedResult
                 }
                 else -> initialResult
             }
-            if (!result?.exam?.status.isAppealOpenStatus()) {
+            if (result == null) {
+                _message.tryEmit(context.getString(R.string.result_detail_missing_sheet))
+                return@launch
+            }
+            if (!result.exam?.status.isAppealOpenStatus()) {
                 _message.tryEmit(context.getString(R.string.result_detail_appeal_closed_exam))
                 return@launch
             }
-            if (result == null) {
-                _message.tryEmit(context.getString(R.string.result_detail_missing_sheet))
+            if (!result.resultStatus.equals("GRADED", ignoreCase = true)) {
+                _message.tryEmit(context.getString(R.string.result_detail_pending_message))
                 return@launch
             }
             val pendingCount = countPendingAppealsForResult(result)
@@ -98,7 +113,7 @@ class ResultDetailViewModel(
                 _message.tryEmit(context.getString(R.string.result_detail_appeal_pending_exists))
                 return@launch
             }
-            appealsRepository.createAppeal(StudentAppealRequest(sheetId, normalizedReason, items)).collect { result ->
+            appealsRepository.createAppeal(StudentAppealRequest(sheetId, normalizedReason)).collect { result ->
                 when (result) {
                     is ApiResult.Loading -> _isLoading.value = true
                     is ApiResult.Success -> {
@@ -142,7 +157,23 @@ class ResultDetailViewModel(
         return resultStatus.equals("PENDING", ignoreCase = true) && id.isNullOrBlank()
     }
 
+    private suspend fun StudentResultDetailResponse.resolveExamStatus(): StudentResultDetailResponse {
+        if (!exam?.status.isNullOrBlank()) return this
+        val examStatus = exam?.id
+            ?.takeIf { it.isNotBlank() }
+            ?.let { examId ->
+                when (val result = examRepository.getExamDetail(examId).first { it !is ApiResult.Loading }) {
+                    is ApiResult.Success -> result.data.status
+                    else -> null
+                }
+            }
+            ?.takeIf { it.isNotBlank() }
+            ?: fallbackExamStatus
+        if (examStatus.isBlank()) return this
+        return copy(exam = (exam ?: StudentResultExamResponse()).copy(status = examStatus))
+    }
+
     private fun String?.isAppealOpenStatus(): Boolean {
-        return equals("ACTIVE", ignoreCase = true) || equals("END", ignoreCase = true)
+        return equals("END", ignoreCase = true)
     }
 }

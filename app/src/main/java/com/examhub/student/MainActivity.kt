@@ -297,8 +297,8 @@ class MainActivity : AppCompatActivity() {
                     "screen" to activeLockScreen.ifBlank { "unknown" },
                     "source" to "activity_on_stop",
                     "reason" to "app_background",
-                    "violation_label" to "Thoát ứng dụng trong lúc làm bài",
-                    "teacher_message" to "Học sinh đã đưa app xuống nền hoặc chuyển sang ứng dụng khác trong lúc làm bài."
+                    "violation_label" to getString(R.string.lock_violation_background_label),
+                    "teacher_message" to getString(R.string.lock_violation_background_teacher_message)
                 )
             )
         )

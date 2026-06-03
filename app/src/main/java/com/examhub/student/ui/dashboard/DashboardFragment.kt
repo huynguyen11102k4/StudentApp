@@ -54,9 +54,8 @@ class DashboardFragment : Fragment() {
 
     private fun setupRecyclerView() {
         recentExamsAdapter = RecentExamAdapter { exam ->
-            if (exam.hasSubmitted && !exam.resultSheetId.isNullOrBlank()) {
-                val bundle = Bundle().apply { putString("sheetId", exam.resultSheetId) }
-                findNavController().navigate(R.id.resultDetailFragment, bundle)
+            if (exam.canViewResult && !exam.resultSheetId.isNullOrBlank()) {
+                openSubmittedExam(exam)
             } else {
                 val bundle = Bundle().apply { putString("examId", exam.id) }
                 findNavController().navigate(R.id.action_dashboard_to_exam_detail, bundle)
@@ -128,6 +127,21 @@ class DashboardFragment : Fragment() {
                     com.google.android.material.snackbar.Snackbar.make(binding.root, it, com.google.android.material.snackbar.Snackbar.LENGTH_SHORT).show()
                 }
             }
+        }
+    }
+
+    private fun openSubmittedExam(exam: com.examhub.student.data.model.Exam) {
+        val resultId = exam.resultSheetId
+        if (resultId.isNullOrBlank()) {
+            findNavController().navigate(R.id.action_dashboard_to_results)
+        } else {
+            findNavController().navigate(
+                R.id.resultDetailFragment,
+                Bundle().apply {
+                    putString("sheetId", resultId)
+                    putString("examStatus", exam.status)
+                }
+            )
         }
     }
 

@@ -19,6 +19,7 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleOwner
+import com.examhub.student.R
 import org.opencv.android.OpenCVLoader
 import org.opencv.core.CvType
 import org.opencv.core.Mat
@@ -127,7 +128,7 @@ class CameraManager(
                     image.close()
                     if (bitmap == null) {
                         isTakingPicture = false
-                        onCaptureFailed(IllegalStateException("Không đọc được ảnh vừa chụp"))
+                        onCaptureFailed(IllegalStateException(previewView.context.getString(R.string.camera_ar_capture_read_failed)))
                     } else {
                         isTakingPicture = false
                         onImageCaptured(bitmap)

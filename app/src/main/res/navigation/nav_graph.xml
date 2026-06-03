@@ -209,6 +209,7 @@
         android:label="@string/result_detail_title"
         tools:layout="@layout/fragment_result_detail">
         <argument android:name="sheetId" app:argType="string" />
+        <argument android:name="examStatus" app:argType="string" android:defaultValue="" />
         <action android:id="@+id/action_result_detail_to_appeal_detail" app:destination="@id/appealDetailFragment" />
         <action android:id="@+id/action_result_detail_to_appeals_list" app:destination="@id/appealsListFragment" />
     </fragment>
@@ -237,6 +238,8 @@
         android:label="@string/appeal_detail_title"
         tools:layout="@layout/fragment_appeal_detail">
         <argument android:name="appealId" app:argType="string" />
+        <argument android:name="studentName" app:argType="string" android:defaultValue="" />
+        <argument android:name="studentCode" app:argType="string" android:defaultValue="" />
     </fragment>
 
     <fragment

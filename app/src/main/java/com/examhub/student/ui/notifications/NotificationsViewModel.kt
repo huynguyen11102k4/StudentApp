@@ -1,5 +1,6 @@
 package com.examhub.student.ui.notifications
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.paging.Pager
@@ -7,6 +8,7 @@ import androidx.paging.PagingConfig
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
 import androidx.paging.filter
+import com.examhub.student.R
 import com.examhub.student.data.model.AppNotification
 import com.examhub.student.model.ApiResult
 import com.examhub.student.repository.NotificationRepository
@@ -26,7 +28,8 @@ import kotlinx.coroutines.launch
 
 class NotificationsViewModel(
     private val notificationRepository: NotificationRepository,
-    private val offlineCacheManager: OfflineCacheManager
+    private val offlineCacheManager: OfflineCacheManager,
+    private val context: Context
 ) : ViewModel() {
     private val filter = MutableStateFlow(NotificationFilter.ALL)
     val notifications: Flow<PagingData<AppNotification>> = filter.flatMapLatest { selected ->
@@ -72,7 +75,7 @@ class NotificationsViewModel(
                         if (wasUnread) _unreadCount.value = (_unreadCount.value - 1).coerceAtLeast(0)
                         _refresh.tryEmit(Unit)
                     }
-                    is ApiResult.Error -> _errorMessage.tryEmit(result.exception.message ?: "Không thể đánh dấu đã đọc")
+                    is ApiResult.Error -> _errorMessage.tryEmit(result.exception.message ?: context.getString(R.string.notifications_mark_read_failed))
                     ApiResult.Loading -> Unit
                 }
             }
@@ -87,7 +90,7 @@ class NotificationsViewModel(
                         _unreadCount.value = 0
                         _refresh.tryEmit(Unit)
                     }
-                    is ApiResult.Error -> _errorMessage.tryEmit(result.exception.message ?: "Không thể đánh dấu đã đọc")
+                    is ApiResult.Error -> _errorMessage.tryEmit(result.exception.message ?: context.getString(R.string.notifications_mark_read_failed))
                     ApiResult.Loading -> Unit
                 }
             }
@@ -106,6 +109,9 @@ class NotificationsViewModel(
         title = notif.title,
         content = notif.content,
         link = notif.link,
+        route = notif.route
+            ?: notif.metadata.stringValue("route")
+            ?: notif.data.stringValue("route"),
         appealId = notif.appealId ?: notif.targetId ?: notif.entityId
             ?: notif.metadata.stringValue("appealId") ?: notif.metadata.stringValue("appeal_id")
             ?: notif.data.stringValue("appealId") ?: notif.data.stringValue("appeal_id"),
@@ -120,5 +126,5 @@ class NotificationsViewModel(
     private fun com.google.gson.JsonObject?.stringValue(key: String): String? =
         this?.get(key)?.takeIf { !it.isJsonNull }?.asString?.takeIf(String::isNotBlank)
 
-    enum class NotificationFilter { ALL, UNREAD, READ }
+enum class NotificationFilter { ALL, UNREAD, READ }
 }

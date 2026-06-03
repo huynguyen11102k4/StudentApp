@@ -1,9 +1,225 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">ExamHub Student</string>
-    <string name="kiosk_device_admin_description">Cho phép ứng dụng khóa thiết bị trong khi làm bài.</string>
 
-    <!-- Login Screen -->
+    <string name="common_cancel">Cancel</string>
+    <string name="common_confirm">Confirm</string>
+    <string name="common_save">Save</string>
+    <string name="common_retry">Retry</string>
+    <string name="common_loading">Loading...</string>
+    <string name="common_search">Search</string>
+    <string name="common_close">Close</string>
+    <string name="common_error">Error</string>
+    <string name="common_avatar">Avatar</string>
+    <string name="common_change_avatar">Change avatar</string>
+
+    <string name="dashboard_title_student">Student</string>
+    <string name="dashboard_title_student_name">Hello, %1$s</string>
+    <string name="dashboard_recent_exams">Recent exams</string>
+    <string name="dashboard_view_all">View all</string>
+    <string name="dashboard_status_ready">Ready</string>
+    <string name="dashboard_status_submitted">Submitted</string>
+    <string name="dashboard_status_online">Online</string>
+    <string name="dashboard_status_in_progress">In progress</string>
+    <string name="dashboard_status_processing">Processing</string>
+    <string name="dashboard_status_ended">Ended</string>
+    <string name="dashboard_status_waiting_result">Waiting for score</string>
+    <string name="dashboard_status_view_result">View score</string>
+
+    <string name="exam_detail_title">Exam detail</string>
+    <string name="exam_detail_info">Exam information</string>
+    <string name="exam_detail_duration_format">%d minutes</string>
+    <string name="exam_detail_question_count_format">%d questions</string>
+    <string name="exam_detail_download_template">Download exam data</string>
+    <string name="exam_detail_offline_ready">Exam data is ready</string>
+    <string name="exam_detail_start_scanning">Start exam</string>
+    <string name="exam_detail_starting">Starting...</string>
+    <string name="exam_detail_view_result">View score</string>
+    <string name="exam_detail_waiting_result">This exam is graded by the teacher. Your score is not available yet.</string>
+    <string name="exam_detail_result_only_notice">This exam is graded by the teacher. You do not need to take it in the app.</string>
+    <string name="exam_detail_loading_failed">Unable to load exam information</string>
+    <string name="exam_detail_default_exam_type">Student submission exam</string>
+    <string name="exam_detail_default_grading_type">Student submission</string>
+    <string name="exam_detail_data_ready_on_start">Exam data will be ready when you start</string>
+    <string name="exam_detail_ready_to_submit">Ready to submit</string>
+    <string name="exam_detail_downloading_data">Downloading exam data...</string>
+    <string name="exam_detail_download_success">Exam data downloaded. Session data will load when you start.</string>
+    <string name="exam_detail_download_failed">Unable to download exam data</string>
+    <string name="exam_detail_start_not_allowed">This exam cannot be started in the app yet</string>
+    <string name="exam_detail_start_only_active">You can only start when the exam is open</string>
+    <string name="exam_detail_remote_session_active">You already have an unfinished exam session</string>
+    <string name="exam_detail_start_session_failed">Unable to start exam session</string>
+    <string name="exam_detail_lock_invalid">This exam session is not valid on this device</string>
+    <string name="exam_detail_lock_validate_failed">Unable to validate lock mode</string>
+    <string name="exam_detail_data_ready">Exam data is ready</string>
+    <string name="exam_detail_data_missing">No exam data downloaded</string>
+    <string name="exam_detail_after_end_notice">The exam time has ended. You can still view results and request a review if the paper has been graded.</string>
+    <string name="exam_detail_start_locked">Download exam data before starting</string>
+    <string name="camera_ar_status_tap_capture">Tap capture to process OMR</string>
+    <string name="camera_ar_status_align_markers">Align all markers in the frame. The app will capture automatically.</string>
+    <string name="camera_ar_status_no_marker">No marker found - move the camera closer</string>
+    <string name="camera_ar_status_all_markers">All %1$d/%2$d markers found - hold still for auto capture</string>
+    <string name="camera_ar_status_nearly_markers">Almost there: %1$d/%2$d markers - keep the paper in frame</string>
+    <string name="camera_ar_status_detected_markers">Detected %1$d/%2$d markers</string>
+    <string name="camera_ar_status_auto_capture">All markers found - hold still, capturing automatically...</string>
+    <string name="camera_ar_status_processing_omr">Processing OMR...</string>
+    <string name="camera_ar_missing_exam_template">Open the camera from an exam with an OMR template</string>
+    <string name="camera_ar_processing_failed">OMR processing failed</string>
+    <string name="camera_ar_status_error_format">Error: %1$s - try again</string>
+    <string name="camera_ar_capture_read_failed">Unable to read the captured image</string>
+
+    <string name="exam_list_default_title">Exams</string>
+    <string name="exam_list_empty">No exams yet</string>
+    <string name="exam_list_filter_all">All</string>
+    <string name="exam_list_filter_ready">Ready</string>
+    <string name="exam_list_filter_processing">Processing</string>
+    <string name="exam_list_filter_closed">Closed</string>
+
+    <string name="result_detail_pending_message">Your result is being graded. Please check again later.</string>
+
+    <string name="appeals_list_title">Appeals</string>
+    <string name="appeal_detail_title">Appeal detail</string>
+    <string name="appeal_detail_reason_empty">No message</string>
+    <string name="appeal_detail_teacher_response">Teacher response</string>
+
+    <string name="notifications_title">Notifications</string>
+    <string name="notifications_subtitle">Exam reminders, scores, and appeal updates</string>
+    <string name="notifications_view_result">View result</string>
+    <string name="notifications_view_detail">View detail</string>
+    <string name="notifications_filter_all">All</string>
+    <string name="notifications_filter_unread">Unread</string>
+    <string name="notifications_filter_read">Read</string>
+    <string name="notifications_mark_all_read_success">All notifications marked as read</string>
+    <string name="notifications_clear_success">Notifications hidden locally</string>
+
+    <string name="settings_title">Settings</string>
+    <string name="settings_account_group">Account &amp; Appearance</string>
+    <string name="settings_account">Account</string>
+    <string name="settings_account_desc">Profile information and password</string>
+    <string name="settings_dark_mode">Dark mode</string>
+    <string name="settings_dark_mode_desc">Use dark appearance</string>
+    <string name="settings_language">Language</string>
+    <string name="settings_language_desc">Choose Vietnamese or English</string>
+    <string name="settings_language_vietnamese">Vietnamese</string>
+    <string name="settings_language_english">English</string>
+    <string name="settings_language_changed">Language updated</string>
+    <string name="settings_data_group">Data</string>
+    <string name="settings_storage">Data &amp; Storage</string>
+    <string name="settings_storage_desc">Manage local storage and cache</string>
+    <string name="settings_notifications">Notifications</string>
+    <string name="settings_notifications_desc">Receive exam reminders, results, and appeal updates</string>
+    <string name="settings_notifications_enabled">Notifications enabled</string>
+    <string name="settings_notifications_disabled">Notifications disabled</string>
+    <string name="settings_other_group">Other</string>
+    <string name="settings_help">Help</string>
+    <string name="settings_help_desc">Guides and contact</string>
+    <string name="settings_logout">Log out</string>
+    <string name="settings_logout_confirm_title">Log out</string>
+    <string name="settings_logout_confirm_message">Are you sure you want to log out?</string>
+    <string name="settings_logout_confirm_yes">Log out</string>
+    <string name="settings_logout_confirm_no">Cancel</string>
+    <string name="settings_version">Version 1.0.0</string>
+    <string name="settings_storage_cleanup_title">Clear storage</string>
+    <string name="settings_storage_cleanup_message">Remove downloaded OMR templates and local exam data. Class and exam lists remain cached for quick viewing.</string>
+    <string name="settings_storage_cleanup_confirm">Clear OMR templates</string>
+    <string name="settings_change_password">Change password</string>
+    <string name="settings_change_password_desc">Update your login password</string>
+    <string name="settings_current_password_hint">Current password</string>
+    <string name="settings_new_password_hint">New password</string>
+    <string name="settings_confirm_password_hint">Confirm new password</string>
+    <string name="settings_current_password_required">Please enter your current password</string>
+    <string name="settings_new_password_same">The new password must be different</string>
+    <string name="settings_change_password_failed">Unable to change password</string>
+    <string name="settings_logout_failed">Log out failed</string>
+    <string name="settings_avatar_unsupported">Avatar supports JPG, PNG, or WEBP only</string>
+    <string name="settings_avatar_read_failed">Unable to read avatar image</string>
+    <string name="settings_avatar_too_large">Avatar must be at most 2MB</string>
+    <string name="settings_default_student_name">Student</string>
+    <string name="settings_default_student_role">STUDENT</string>
+    <string name="settings_session_zero">0 devices signed in</string>
+    <string name="settings_email_placeholder">email@example.com</string>
+    <string name="student_initials_placeholder">ST</string>
+    <string name="answer_preview_placeholder">Student: D -> Key: D</string>
+    <string name="api_invalid_server_format">Server data does not match the app format</string>
+    <string name="common_separator_dot">-</string>
+    <string name="omr_missing_exam_id">Missing exam id for OMR processing</string>
+    <string name="omr_missing_template">No OMR template found. Download the exam template first.</string>
+    <string name="omr_processing_failed_format">OMR processing failed (%1$s)</string>
+    <string name="omr_unreadable_student_code">Unable to read the student code on the paper. Please capture again.</string>
+    <string name="omr_unreadable_class_code">Unable to read the class code on the paper. Please capture again.</string>
+    <string name="omr_unreadable_exam_code">Unable to read the exam code on the paper. Please capture again.</string>
+    <string name="omr_student_code_mismatch_format">The student code on the paper (%1$s) does not match the logged-in account.</string>
+    <string name="omr_class_code_mismatch_format">The class code on the paper (%1$s) does not match the student class.</string>
+    <string name="splash_starting">Starting...</string>
+    <string name="splash_not_logged_in">Not logged in</string>
+    <string name="splash_checking_session">Checking session...</string>
+    <string name="splash_offline_mode">Offline mode...</string>
+    <string name="splash_refreshing_session">Refreshing session...</string>
+    <string name="splash_session_expired">Your session has expired</string>
+    <string name="appeal_detail_subject_format">Subject: %1$s</string>
+    <string name="appeal_detail_load_failed">Unable to load appeal detail</string>
+    <string name="class_detail_load_failed">Unable to load class detail</string>
+    <string name="class_detail_leave_request_failed">Unable to send leave request</string>
+    <string name="class_detail_exam_list_failed">Unable to load class exams</string>
+    <string name="dashboard_load_failed">Unable to load data</string>
+    <string name="dashboard_submitted_exam_name">Submitted exam</string>
+    <string name="dashboard_student_result_class">Student result</string>
+    <string name="notifications_mark_read_failed">Unable to mark as read</string>
+    <string name="smart_review_missing_session">Missing exam session. Please start again from exam detail.</string>
+    <string name="smart_review_missing_omr_image">No OMR image to submit</string>
+    <string name="smart_review_exam_closed_no_submit">The exam is closed and cannot receive more submissions</string>
+    <string name="smart_review_invalid_raw_image">Invalid original image</string>
+    <string name="smart_review_invalid_dewarped_image">Invalid corrected image</string>
+    <string name="smart_review_invalid_review_image">Invalid review image</string>
+    <string name="smart_review_submit_failed">Submission failed</string>
+    <string name="smart_review_presign_failed_format">Unable to create upload URL for %1$s</string>
+    <string name="smart_review_upload_failed_format">Uploading %1$s failed</string>
+    <string name="exam_start_lock_mode">Lock mode</string>
+    <string name="exam_start_no_lock_mode">No screen lock</string>
+    <string name="friendly_unknown">Unknown</string>
+    <string name="friendly_no_note">No note</string>
+    <string name="friendly_notification">Notification</string>
+    <string name="friendly_ready_for_shuffle">Ready to generate exam</string>
+    <string name="friendly_teacher_grading">Teacher grading</string>
+    <string name="friendly_student_submission">Student submission</string>
+    <string name="friendly_auto_grading">Auto grading</string>
+    <string name="friendly_draft">Draft</string>
+    <string name="friendly_scheduled">Scheduled</string>
+    <string name="friendly_active">In progress</string>
+    <string name="friendly_end">Exam time ended</string>
+    <string name="friendly_processing">Processing</string>
+    <string name="friendly_closed">Closed</string>
+    <string name="friendly_done">Completed</string>
+    <string name="friendly_published">Published</string>
+    <string name="friendly_cancelled">Cancelled</string>
+    <string name="friendly_pending">Processing</string>
+    <string name="friendly_graded">Graded</string>
+    <string name="friendly_resolved">Responded</string>
+    <string name="friendly_accepted">Accepted</string>
+    <string name="friendly_rejected">Rejected</string>
+    <string name="friendly_submitted">Submitted</string>
+    <string name="friendly_not_submitted">Not submitted</string>
+    <string name="friendly_open">Open</string>
+    <string name="friendly_ready">Ready</string>
+    <string name="friendly_locked">Locked</string>
+    <string name="friendly_exam">Exam</string>
+    <string name="friendly_practice">Practice</string>
+    <string name="friendly_quiz">Quiz</string>
+    <string name="friendly_midterm">Midterm</string>
+    <string name="friendly_final">Final</string>
+    <string name="friendly_submission_pending">Submission pending grading</string>
+    <string name="friendly_appeal_new">New appeal</string>
+    <string name="friendly_appeal_updated">Appeal updated</string>
+    <string name="friendly_exam_created">New exam</string>
+    <string name="friendly_exam_closed">Exam closed</string>
+    <string name="friendly_class_invite">Class invitation</string>
+    <string name="friendly_system">System notification</string>
+    <string name="friendly_waiting">Waiting for grading</string>
+    <string name="friendly_pending_ungraded">Not graded</string>
+    <string name="friendly_reviewing">Reviewing</string>
+    <string name="friendly_failed">Processing failed</string>
+    <string name="friendly_appeal_pending_note">Waiting for teacher review</string>
+    <string name="kiosk_device_admin_description">Cho phép ứng dụng khóa thiết bị trong khi làm bài.</string>
     <string name="login_title">ExamHub Student</string>
     <string name="login_subtitle">Ứng dụng làm bài và nộp phiếu OMR dành cho học sinh</string>
     <string name="login_email_hint">Email</string>
@@ -23,8 +239,6 @@
     <string name="login_google_failed_format">Đăng nhập Google thất bại (%d)</string>
     <string name="login_google_not_configured">Google Sign-In chưa được cấu hình</string>
     <string name="login_google_developer_error">Google Sign-In chưa đúng cấu hình SHA-1/package cho bản cài hiện tại</string>
-
-    <!-- Register Screen -->
     <string name="register_title">Đăng ký tài khoản</string>
     <string name="register_subtitle">Tạo tài khoản học sinh để tham gia lớp và làm bài</string>
     <string name="register_full_name_hint">Họ và tên</string>
@@ -55,8 +269,6 @@
     <string name="register_otp_success_login">Xác thực thành công. Vui lòng đăng nhập.</string>
     <string name="register_otp_invalid">OTP không hợp lệ</string>
     <string name="register_otp_verify_failed">Xác thực OTP thất bại</string>
-
-    <!-- Forgot Password Screen -->
     <string name="forgot_password_title">Quên mật khẩu</string>
     <string name="forgot_password_subtitle">Nhập email để nhận mã OTP</string>
     <string name="forgot_password_otp_title">Nhập mã OTP</string>
@@ -69,10 +281,6 @@
     <string name="forgot_password_reset_button">Đổi mật khẩu</string>
     <string name="forgot_password_validation_otp_required">Vui lòng nhập đầy đủ mã OTP</string>
     <string name="forgot_password_student_unsupported">Chức năng quên mật khẩu học sinh chưa được backend hỗ trợ</string>
-
-    <!-- Dashboard Screen -->
-    <string name="dashboard_title_student">Xin chào, HS</string>
-    <string name="dashboard_title_student_name">Xin chào, %s</string>
     <string name="dashboard_subtitle_classes">Bạn đã tham gia %d lớp học</string>
     <string name="dashboard_subtitle_default">Theo dõi lớp học và kỳ thi đang mở của bạn</string>
     <string name="dashboard_camera_title">Quét phiếu OMR</string>
@@ -84,21 +292,12 @@
     <string name="dashboard_classes_title">Lớp học của tôi</string>
     <string name="dashboard_classes_subtitle">%d lớp đã tham gia</string>
     <string name="dashboard_classes_pending">%d kỳ thi đang mở hôm nay</string>
-    <string name="dashboard_view_all">Xem tất cả</string>
     <string name="dashboard_create_exam">Tham gia kỳ thi</string>
     <string name="dashboard_create_exam_desc">Mở danh sách kỳ thi</string>
     <string name="dashboard_empty_title">Chưa có kỳ thi nào</string>
     <string name="dashboard_empty_subtitle">Kỳ thi sẽ xuất hiện khi giáo viên mở cho lớp của bạn</string>
     <string name="dashboard_create_exam_unavailable">Hãy chọn kỳ thi đang mở từ danh sách của bạn</string>
-    <string name="dashboard_status_ready">Sẵn sàng làm bài</string>
-    <string name="dashboard_status_submitted">Đã nộp bài</string>
-    <string name="dashboard_status_online">Online</string>
-    <string name="dashboard_status_in_progress">Đang diễn ra</string>
     <string name="dashboard_status_offline">Offline</string>
-    <string name="dashboard_status_processing">Đang xử lý bài nộp</string>
-    <string name="dashboard_status_ended">Đã hết giờ làm bài</string>
-    <string name="dashboard_status_waiting_result">Chờ điểm</string>
-    <string name="dashboard_status_view_result">Xem điểm</string>
     <string name="dashboard_exam_updated">Cập nhật gần đây</string>
     <string name="dashboard_bottom_home">Trang chủ</string>
     <string name="dashboard_bottom_exams">Kỳ thi</string>
@@ -112,11 +311,8 @@
     <string name="dashboard_view_classes">Xem lớp học</string>
     <string name="dashboard_sync_now">Cập nhật ngay</string>
     <string name="dashboard_syncing">Đang cập nhật...</string>
-    <string name="dashboard_recent_exams">Kỳ thi gần đây</string>
     <string name="dashboard_offline_ready">Offline</string>
     <string name="dashboard_load_error">Không thể tải dữ liệu trang chủ</string>
-
-    <!-- Class List Screen -->
     <string name="class_list_title">Lớp học của tôi</string>
     <string name="class_list_search_hint">Tìm kiếm lớp học...</string>
     <string name="class_list_count">%d lớp học</string>
@@ -144,8 +340,6 @@
     <string name="class_list_empty_subtitle">Nhập mã lớp do giáo viên cung cấp để tham gia lớp học</string>
     <string name="class_list_badge_pending">Kỳ thi đang mở</string>
     <string name="class_list_leave_requested_badge">Chờ duyệt rời lớp</string>
-
-    <!-- Class Detail Screen -->
     <string name="class_detail_student_list">Thông tin lớp</string>
     <string name="class_detail_student_count">%d học sinh</string>
     <string name="class_detail_exam_list">Kỳ thi của lớp</string>
@@ -169,67 +363,20 @@
     <string name="class_detail_leave_request_confirm_action">Gửi yêu cầu</string>
     <string name="class_detail_leave_request_success">Đã gửi yêu cầu rời lớp cho giáo viên</string>
     <string name="class_detail_leave_requested_status">Yêu cầu rời lớp đang chờ giáo viên xử lý.</string>
-
-    <!-- Exam Detail Screen -->
     <string name="exam_detail_progress">Trạng thái bài làm</string>
     <string name="exam_detail_download_offline">Tải dữ liệu kỳ thi</string>
     <string name="exam_detail_downloading">Đang tải...</string>
-    <string name="exam_detail_offline_ready">Dữ liệu kỳ thi đã sẵn sàng</string>
     <string name="exam_detail_downloaded">Đã tải xong!</string>
-    <string name="exam_detail_start_scanning">Bắt đầu làm bài</string>
-    <string name="exam_detail_starting">Đang bắt đầu...</string>
-    <string name="exam_detail_view_result">Xem điểm</string>
-    <string name="exam_detail_waiting_result">Bài này do giáo viên chấm. Bạn chưa có điểm, hãy quay lại sau.</string>
-    <string name="exam_detail_result_only_notice">Bài này do giáo viên chấm, học sinh không cần làm bài trên app.</string>
-    <string name="exam_detail_loading_failed">Không thể tải thông tin kỳ thi</string>
-    <string name="exam_detail_default_exam_type">Bài thi học sinh nộp</string>
-    <string name="exam_detail_default_grading_type">Học sinh nộp bài</string>
-    <string name="exam_detail_data_ready_on_start">Dữ liệu kỳ thi đã sẵn sàng khi bắt đầu bài</string>
-    <string name="exam_detail_ready_to_submit">Sẵn sàng nộp bài</string>
-    <string name="exam_detail_downloading_data">Đang tải dữ liệu kỳ thi...</string>
-    <string name="exam_detail_download_success">Đã tải dữ liệu kỳ thi. Dữ liệu phiên thi sẽ tải khi bắt đầu bài.</string>
-    <string name="exam_detail_download_failed">Không thể tải dữ liệu kỳ thi</string>
-    <string name="exam_detail_start_not_allowed">Kỳ thi này chưa thể bắt đầu làm bài trên app</string>
-    <string name="exam_detail_start_only_active">Chỉ có thể bắt đầu khi kỳ thi đang mở</string>
-    <string name="exam_detail_remote_session_active">Bạn đang có phiên làm bài chưa kết thúc</string>
-    <string name="exam_detail_start_session_failed">Không thể bắt đầu phiên làm bài</string>
-    <string name="exam_detail_lock_invalid">Phiên làm bài không hợp lệ trên thiết bị này</string>
-    <string name="exam_detail_lock_validate_failed">Không thể xác thực chế độ khóa</string>
-    <string name="exam_detail_data_ready">Dữ liệu kỳ thi đã sẵn sàng</string>
-    <string name="exam_detail_data_missing">Chưa có dữ liệu kỳ thi</string>
-    <string name="exam_detail_after_end_notice">Đã hết thời gian làm bài. Bạn vẫn có thể xem kết quả và gửi khiếu nại nếu bài đã được chấm.</string>
-    <string name="exam_detail_info">Thông tin kỳ thi</string>
-    <string name="exam_detail_title">Chi tiết kỳ thi</string>
-    <string name="exam_detail_duration_format">%d phút</string>
-    <string name="exam_detail_question_count_format">%d câu</string>
     <string name="exam_detail_need_template_data">Cần tải dữ liệu kỳ thi trước khi quét phiếu.</string>
-    <string name="exam_detail_download_template">Tải dữ liệu kỳ thi</string>
-    <string name="exam_detail_start_locked">Hãy tải dữ liệu kỳ thi trước khi bắt đầu</string>
     <string name="exam_detail_submissions_title">Bài làm của bạn</string>
     <string name="exam_detail_submission_empty">Bạn chưa nộp bài cho kỳ thi này</string>
     <string name="exam_detail_pending_appeals">Khiếu nại của bạn đang chờ</string>
     <string name="exam_start_inactive">Kỳ thi chưa mở hoặc chưa tải dữ liệu kỳ thi</string>
     <string name="exam_start_resume_local_session">Đang mở lại phiên làm bài chưa nộp</string>
     <string name="exam_start_session_active_remote">Bạn đang có phiên làm bài chưa kết thúc</string>
-    <string name="exam_start_lock_mode">Lock mode</string>
-    <string name="exam_start_no_lock_mode">Không khóa màn hình</string>
-
-    <!-- Camera AR Screen -->
     <string name="camera_ar_title">Quét OMR</string>
     <string name="camera_ar_ready">Sẵn sàng chụp</string>
     <string name="camera_ar_detecting">Đang phát hiện marker</string>
-    <string name="camera_ar_status_tap_capture">Bấm chụp để xử lý OMR</string>
-    <string name="camera_ar_status_align_markers">Căn đủ marker vào khung, app sẽ tự chụp</string>
-    <string name="camera_ar_status_no_marker">Chưa thấy marker - đưa camera gần hơn</string>
-    <string name="camera_ar_status_all_markers">Đã đủ %1$d/%2$d marker - giữ nguyên tay để tự chụp</string>
-    <string name="camera_ar_status_nearly_markers">Gần đủ marker: %1$d/%2$d - giữ phiếu trong khung</string>
-    <string name="camera_ar_status_detected_markers">Đã nhận diện %1$d/%2$d marker</string>
-    <string name="camera_ar_status_auto_capture">Đã đủ marker - giữ nguyên tay, đang tự chụp...</string>
-    <string name="camera_ar_status_processing_omr">Đang xử lý OMR...</string>
-    <string name="camera_ar_missing_exam_template">Hãy mở camera từ một kỳ thi đã có mẫu OMR</string>
-    <string name="camera_ar_processing_failed">Xử lý OMR thất bại</string>
-    <string name="camera_ar_status_error_format">Lỗi: %1$s - thử lại</string>
-    <string name="camera_ar_capture_read_failed">Không đọc được ảnh vừa chụp</string>
     <string name="camera_ar_flash_off">Flash: Tắt</string>
     <string name="camera_ar_flash_on">Flash: Bật</string>
     <string name="camera_ar_flash_auto">Flash: Tự động</string>
@@ -248,28 +395,16 @@
     <string name="camera_ar_gallery_open_failed">Không thể mở ảnh đã chọn</string>
     <string name="camera_ar_gallery_decode_failed">Không thể giải mã ảnh đã chọn</string>
     <string name="camera_ar_invalid_image">Ảnh đã chọn không hợp lệ</string>
-
-    <!-- Exam List Screen -->
-    <string name="exam_list_default_title">Danh sách kỳ thi</string>
-    <string name="exam_list_empty">Chưa có kỳ thi nào</string>
     <string name="exam_list_empty_title">Chưa có kỳ thi phù hợp</string>
     <string name="exam_list_empty_subtitle">Thử đổi bộ lọc hoặc chờ giáo viên mở kỳ thi cho lớp của bạn</string>
-    <string name="exam_list_filter_all">Tất cả</string>
-    <string name="exam_list_filter_ready">Đang mở</string>
-    <string name="exam_list_filter_processing">Đã nộp</string>
-    <string name="exam_list_filter_closed">Đã đóng</string>
     <string name="exam_list_type_filter">Lọc loại kỳ thi</string>
     <string name="exam_list_type_all">Tất cả loại kỳ thi</string>
     <string name="exam_list_type_student">Bài thi cần nộp</string>
     <string name="exam_list_search_hint">Tìm kỳ thi, môn học...</string>
     <string name="exam_status_open">Đang mở</string>
-
-    <!-- Manual Crop Screen -->
     <string name="manual_crop_title">Chỉnh sửa thủ công</string>
     <string name="manual_crop_instructions">Kéo các góc để điều chỉnh</string>
     <string name="manual_crop_confirm">Xác nhận</string>
-
-    <!-- Smart Review Screen -->
     <string name="smart_review_title">Kiểm tra bài làm</string>
     <string name="smart_review_filter_all">Tất cả</string>
     <string name="smart_review_filter_wrong">Cần xem lại</string>
@@ -278,23 +413,13 @@
     <string name="smart_review_save">Lưu nháp</string>
     <string name="smart_review_saving">Đang lưu...</string>
     <string name="smart_review_saved">Đã lưu nháp bài làm!</string>
-
-    <!-- Notifications Screen -->
-    <string name="notifications_title">Thông báo</string>
-    <string name="notifications_subtitle">Cập nhật mới nhất từ bài thi và lớp học của bạn</string>
     <string name="notifications_empty">Chưa có thông báo nào</string>
     <string name="notifications_empty_desc">Khi có bài kiểm tra, kết quả hoặc cập nhật lớp học, thông báo sẽ xuất hiện tại đây.</string>
     <string name="notifications_mark_read">Đánh dấu đã đọc</string>
     <string name="notifications_mark_all_read">Đánh dấu tất cả đã đọc</string>
     <string name="notifications_clear">Xóa thông báo</string>
-    <string name="notifications_clear_success">Đã xóa thông báo trên thiết bị này</string>
-    <string name="notifications_filter_all">Tất cả</string>
-    <string name="notifications_filter_unread">Chưa đọc</string>
-    <string name="notifications_filter_read">Đã đọc</string>
     <string name="notifications_exam_opened_default_title">Bài kiểm tra đã mở</string>
     <string name="notifications_exam_opened_default_body">Giáo viên đã mở bài kiểm tra. Nhấn để xem chi tiết.</string>
-    <string name="notifications_view_detail">Xem chi tiết</string>
-    <string name="notifications_view_result">Xem kết quả</string>
     <string name="notifications_grade_default_title">Bài thi đã có kết quả</string>
     <string name="notifications_grade_old_sentence">Bài thi của bạn đã được chấm xong.</string>
     <string name="notifications_grade_old_phrase">Bài thi của bạn đã được chấm xong</string>
@@ -306,9 +431,6 @@
     <string name="notifications_days_ago">%1$d ngày trước</string>
     <string name="fcm_channel_name">Cập nhật học sinh</string>
     <string name="fcm_channel_description">Thông báo bài nộp, khiếu nại và cập nhật kỳ thi</string>
-
-    <!-- Appeals List Screen -->
-    <string name="appeals_list_title">Khiếu nại</string>
     <string name="appeals_list_empty">Chưa có khiếu nại nào</string>
     <string name="appeals_list_count">%d khiếu nại</string>
     <string name="appeals_list_empty_subtitle">Các khiếu nại bạn gửi cho bài làm sẽ xuất hiện tại đây.</string>
@@ -317,80 +439,22 @@
     <string name="result_detail_has_appeal_notice">Bạn có khiếu nại đã được gửi cho bài làm này. Nhấn để xem danh sách.</string>
     <string name="result_detail_has_appeals_notice">%d khiếu nại đã được gửi cho bài làm này. Nhấn để xem danh sách.</string>
     <string name="result_detail_appeal_dialog_message">Ví dụ: Em muốn thầy/cô xem lại bài làm giúp em.</string>
-    <string name="result_detail_pending_message">Bài đang chờ chấm</string>
     <string name="result_detail_appeal_closed_exam">Chỉ có thể tạo khiếu nại khi kỳ thi đã hết giờ làm bài</string>
     <string name="result_detail_appeal_pending_exists">Bạn đang có khiếu nại chờ xử lý cho bài này</string>
     <string name="result_detail_student_code_format">Mã HS: %1$s</string>
-
-    <!-- Appeal Detail Screen -->
-    <string name="appeal_detail_title">Chi tiết khiếu nại</string>
     <string name="appeal_detail_student_info">THÔNG TIN HỌC SINH</string>
     <string name="appeal_detail_exam_info">THÔNG TIN KỲ THI</string>
     <string name="appeal_detail_reason">LÝ DO KHIẾU NẠI</string>
-    <string name="appeal_detail_teacher_response">PHẢN HỒI GIÁO VIÊN</string>
     <string name="appeal_detail_back_to_list">Quay lại danh sách</string>
     <string name="appeal_detail_pending_count">%d khiếu nại đang chờ</string>
     <string name="appeal_detail_student_unknown">Học sinh</string>
     <string name="appeal_detail_student_code_unknown">Chưa xác định</string>
-    <string name="appeal_detail_reason_empty">Không có ghi chú</string>
     <string name="appeal_detail_created_at_format">Gửi lúc: %1$s</string>
-
-    <!-- Settings Screen -->
-    <string name="settings_title">Cài đặt</string>
-    <string name="settings_account_group">Tài khoản &amp; Giao diện</string>
-    <string name="settings_account">Tài khoản</string>
-    <string name="settings_account_desc">Thông tin cá nhân, mật khẩu</string>
-    <string name="settings_dark_mode">Giao diện tối</string>
-    <string name="settings_dark_mode_desc">Chế độ Dark mode</string>
-    <string name="settings_language">Ngôn ngữ</string>
-    <string name="settings_language_desc">Chọn tiếng Việt hoặc tiếng Anh</string>
-    <string name="settings_language_vietnamese">Tiếng Việt</string>
-    <string name="settings_language_english">English</string>
-    <string name="settings_language_changed">Đã cập nhật ngôn ngữ</string>
-    <string name="settings_data_group">Dữ liệu</string>
-    <string name="settings_storage">Dữ liệu &amp; Lưu trữ</string>
-    <string name="settings_storage_desc">Quản lý bộ nhớ, cache</string>
     <string name="settings_sync">Đồng bộ</string>
     <string name="settings_sync_desc">Tự động đồng bộ dữ liệu</string>
-    <string name="settings_other_group">Khác</string>
-    <string name="settings_help">Hỗ trợ</string>
-    <string name="settings_help_desc">Hướng dẫn, liên hệ</string>
-    <string name="settings_logout">Đăng xuất</string>
-    <string name="settings_logout_confirm_title">Đăng xuất</string>
-    <string name="settings_logout_confirm_message">Bạn có chắc chắn muốn đăng xuất?</string>
-    <string name="settings_logout_confirm_yes">Đăng xuất</string>
-    <string name="settings_logout_confirm_no">Hủy</string>
-    <string name="settings_version">Phiên bản 1.0.0</string>
-    <string name="settings_storage_cleanup_title">Dọn dẹp bộ nhớ</string>
-    <string name="settings_storage_cleanup_message">Xóa mẫu OMR và dữ liệu bài làm đã tải về máy. Danh sách lớp/kỳ thi đã lưu vẫn được giữ để xem nhanh.</string>
-    <string name="settings_storage_cleanup_confirm">Xóa mẫu OMR</string>
-    <string name="settings_notifications">Thông báo</string>
-    <string name="settings_notifications_desc">Nhận nhắc nhở kỳ thi, kết quả và phản hồi khiếu nại</string>
-    <string name="settings_notifications_enabled">Đã bật thông báo</string>
-    <string name="settings_notifications_disabled">Đã tắt thông báo</string>
-    <string name="settings_change_password">Đổi mật khẩu</string>
-    <string name="settings_change_password_desc">Cập nhật mật khẩu đăng nhập</string>
-    <string name="settings_current_password_hint">Mật khẩu hiện tại</string>
-    <string name="settings_new_password_hint">Mật khẩu mới</string>
-    <string name="settings_confirm_password_hint">Xác nhận mật khẩu mới</string>
-    <string name="settings_current_password_required">Vui lòng nhập mật khẩu hiện tại</string>
-    <string name="settings_new_password_same">Mật khẩu mới phải khác mật khẩu hiện tại</string>
     <string name="settings_change_password_invalid">Thông tin đổi mật khẩu chưa hợp lệ</string>
-    <string name="settings_change_password_failed">Không thể đổi mật khẩu</string>
-    <string name="settings_logout_failed">Đăng xuất thất bại</string>
     <string name="settings_storage_cleared_format">Đã xóa mẫu OMR của %1$d kỳ thi</string>
     <string name="settings_storage_nothing_to_clear">Không có mẫu OMR để xóa</string>
-    <string name="settings_avatar_unsupported">Avatar chỉ hỗ trợ JPG, PNG hoặc WEBP</string>
-    <string name="settings_avatar_read_failed">Không thể đọc ảnh đại diện</string>
-    <string name="settings_avatar_too_large">Ảnh đại diện tối đa 2MB</string>
-    <string name="settings_default_student_name">Học sinh</string>
-    <string name="settings_default_student_role">STUDENT</string>
-    <string name="settings_session_zero">0 thiết bị đang đăng nhập</string>
-    <string name="settings_email_placeholder">email@example.com</string>
-    <string name="student_initials_placeholder">HS</string>
-    <string name="answer_preview_placeholder">HS: D -> DA: D</string>
-
-    <!-- Profile Screen -->
     <string name="profile_title">Thông tin cá nhân</string>
     <string name="profile_save">Lưu thay đổi</string>
     <string name="profile_saving">Đang lưu...</string>
@@ -416,120 +480,16 @@
     <string name="profile_password_must_change">Mật khẩu: Cần đổi mật khẩu</string>
     <string name="profile_created_at_empty">Ngày tạo: Chưa cập nhật</string>
     <string name="profile_created_at_format">Ngày tạo: %1$s</string>
-
-    <!-- Common -->
     <string name="common_back">Quay lại</string>
-    <string name="common_cancel">Hủy</string>
-    <string name="common_confirm">Xác nhận</string>
-    <string name="common_save">Lưu</string>
-    <string name="common_loading">Đang tải...</string>
-    <string name="common_error">Có lỗi xảy ra</string>
     <string name="common_offline">Bạn đang offline</string>
     <string name="common_no_internet">Không có kết nối mạng</string>
-    <string name="common_retry">Thử lại</string>
-    <string name="common_close">Đóng</string>
-    <string name="common_search">Tìm kiếm</string>
-    <string name="common_separator_dot">-</string>
     <string name="common_not_updated">Chưa cập nhật</string>
-    <string name="common_avatar">Ảnh đại diện</string>
-    <string name="common_change_avatar">Đổi ảnh đại diện</string>
-    <string name="api_invalid_server_format">Dữ liệu server chưa đúng định dạng ứng dụng mong đợi</string>
-    <string name="omr_missing_exam_id">Thiếu mã kỳ thi để xử lý OMR</string>
-    <string name="omr_missing_template">Chưa có mẫu OMR. Hãy tải mẫu OMR của kỳ thi trước.</string>
-    <string name="omr_processing_failed_format">Xử lý OMR thất bại (%1$s)</string>
-    <string name="omr_unreadable_student_code">Không đọc được mã học sinh trên phiếu. Vui lòng chụp lại.</string>
-    <string name="omr_unreadable_class_code">Không đọc được mã lớp trên phiếu. Vui lòng chụp lại.</string>
-    <string name="omr_unreadable_exam_code">Không đọc được mã đề trên phiếu. Vui lòng chụp lại.</string>
-    <string name="omr_student_code_mismatch_format">Mã học sinh trên phiếu (%1$s) không trùng với tài khoản đăng nhập.</string>
-    <string name="omr_class_code_mismatch_format">Mã lớp trên phiếu (%1$s) không trùng với lớp của học sinh.</string>
-    <string name="splash_starting">Đang khởi động...</string>
-    <string name="splash_not_logged_in">Chưa đăng nhập</string>
-    <string name="splash_checking_session">Đang kiểm tra phiên...</string>
-    <string name="splash_offline_mode">Chế độ ngoại tuyến...</string>
-    <string name="splash_refreshing_session">Đang làm mới phiên...</string>
-    <string name="splash_session_expired">Phiên đăng nhập đã hết hạn</string>
-    <string name="appeal_detail_subject_format">Môn: %1$s</string>
-    <string name="appeal_detail_load_failed">Không thể tải chi tiết khiếu nại</string>
-    <string name="class_detail_load_failed">Không thể tải chi tiết lớp</string>
-    <string name="class_detail_leave_request_failed">Không thể gửi yêu cầu rời lớp</string>
-    <string name="class_detail_exam_list_failed">Không thể tải danh sách kỳ thi của lớp</string>
-    <string name="dashboard_load_failed">Không thể tải dữ liệu</string>
-    <string name="dashboard_submitted_exam_name">Bài kiểm tra đã nộp</string>
-    <string name="dashboard_student_result_class">Kết quả học sinh</string>
-    <string name="notifications_mark_read_failed">Không thể đánh dấu đã đọc</string>
-    <string name="smart_review_missing_session">Thiếu phiên làm bài, vui lòng bắt đầu lại từ màn chi tiết kỳ thi</string>
-    <string name="smart_review_missing_omr_image">Chưa có ảnh OMR để nộp bài</string>
-    <string name="smart_review_exam_closed_no_submit">Kỳ thi đã đóng nên không thể nộp thêm</string>
-    <string name="smart_review_invalid_raw_image">Ảnh gốc không hợp lệ</string>
-    <string name="smart_review_invalid_dewarped_image">Ảnh đã nắn chỉnh không hợp lệ</string>
-    <string name="smart_review_invalid_review_image">Ảnh review không hợp lệ</string>
-    <string name="smart_review_submit_failed">Nộp bài thất bại</string>
-    <string name="smart_review_presign_failed_format">Không thể tạo URL upload ảnh %1$s</string>
-    <string name="smart_review_upload_failed_format">Upload ảnh %1$s thất bại</string>
     <string name="lock_violation_background_label">Đưa ứng dụng chạy ngầm trong lúc làm bài</string>
     <string name="lock_violation_background_teacher_message">Học sinh đã đưa ứng dụng chạy ngầm hoặc chuyển sang ứng dụng khác trong lúc làm bài.</string>
     <string name="lock_violation_screen_off_label">Tắt màn hình trong lúc làm bài</string>
     <string name="lock_violation_screen_off_teacher_message">Học sinh đã tắt màn hình hoặc khóa thiết bị trong lúc làm bài.</string>
     <string name="lock_violation_network_lost_label">Mất kết nối mạng trong lúc làm bài</string>
     <string name="lock_violation_network_lost_teacher_message">Thiết bị của học sinh đã mất kết nối mạng trong lúc làm bài.</string>
-    <string name="notifications_mark_all_read_success">Đã đánh dấu tất cả là đã đọc</string>
-    <plurals name="notifications_unread_count">
-        <item quantity="one">%d chưa đọc</item>
-        <item quantity="other">%d chưa đọc</item>
-    </plurals>
     <string name="notifications_all_read">Tất cả đã đọc</string>
-    <string name="friendly_unknown">Chưa xác định</string>
-    <string name="friendly_no_note">Chưa có ghi chú</string>
-    <string name="friendly_notification">Thông báo</string>
-    <string name="friendly_ready_for_shuffle">Sẵn sàng tạo đề</string>
-    <string name="friendly_teacher_grading">Giáo viên chấm</string>
-    <string name="friendly_student_submission">Học sinh nộp bài</string>
-    <string name="friendly_auto_grading">Tự động chấm</string>
-    <string name="friendly_draft">Bản nháp</string>
-    <string name="friendly_scheduled">Đã lên lịch</string>
-    <string name="friendly_active">Đang diễn ra</string>
-    <string name="friendly_end">Đã hết giờ làm bài</string>
-    <string name="friendly_processing">Đang xử lý</string>
-    <string name="friendly_closed">Đã kết thúc</string>
-    <string name="friendly_done">Đã hoàn tất</string>
-    <string name="friendly_published">Đã phát hành</string>
-    <string name="friendly_cancelled">Đã hủy</string>
-    <string name="friendly_pending">Đang xử lý</string>
-    <string name="friendly_graded">Đã chấm</string>
-    <string name="friendly_resolved">Đã phản hồi</string>
-    <string name="friendly_accepted">Đã chấp nhận</string>
-    <string name="friendly_rejected">Bị từ chối</string>
-    <string name="friendly_submitted">Đã nộp</string>
-    <string name="friendly_not_submitted">Chưa nộp</string>
-    <string name="friendly_open">Đang mở</string>
-    <string name="friendly_ready">Sẵn sàng</string>
-    <string name="friendly_locked">Đã khóa</string>
-    <string name="friendly_exam">Bài thi</string>
-    <string name="friendly_practice">Bài luyện tập</string>
-    <string name="friendly_quiz">Bài kiểm tra nhanh</string>
-    <string name="friendly_midterm">Giữa kỳ</string>
-    <string name="friendly_final">Cuối kỳ</string>
-    <string name="friendly_submission_pending">Có bài nộp cần chấm</string>
-    <string name="friendly_appeal_new">Có khiếu nại mới</string>
-    <string name="friendly_appeal_updated">Khiếu nại được cập nhật</string>
-    <string name="friendly_exam_created">Bài thi mới</string>
-    <string name="friendly_exam_closed">Bài thi đã kết thúc</string>
-    <string name="friendly_class_invite">Lời mời lớp học</string>
-    <string name="friendly_system">Thông báo hệ thống</string>
-    <string name="friendly_waiting">Chờ chấm</string>
-    <string name="friendly_pending_ungraded">Chưa chấm</string>
-    <string name="friendly_reviewing">Đang xem lại</string>
-    <string name="friendly_failed">Xử lý thất bại</string>
-    <string name="friendly_appeal_pending_note">Đang chờ giáo viên xem lại</string>
-
-    <plurals name="settings_session_count">
-        <item quantity="one">%d thiết bị đang đăng nhập</item>
-        <item quantity="other">%d thiết bị đang đăng nhập</item>
-    </plurals>
-
-    <plurals name="settings_storage_content_description">
-        <item quantity="one">Dữ liệu bài làm của %d kỳ thi</item>
-        <item quantity="other">Dữ liệu bài làm của %d kỳ thi</item>
-    </plurals>
-
 </resources>
+

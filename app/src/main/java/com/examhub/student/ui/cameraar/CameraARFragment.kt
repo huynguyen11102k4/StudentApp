@@ -309,6 +309,11 @@ class CameraARFragment : Fragment() {
                     Toast.makeText(requireContext(), msg, Toast.LENGTH_SHORT).show()
                 }
             }
+            launch {
+                viewModel.blankSubmissionFinished.collect { submission ->
+                    navigateToSubmissionEnd(submission?.resultId)
+                }
+            }
         }
     }
 
@@ -337,11 +342,15 @@ class CameraARFragment : Fragment() {
         cameraManager?.shutdown()
         (requireActivity() as? MainActivity)?.exitKioskMode()
         Toast.makeText(requireContext(), R.string.lock_mode_time_expired, Toast.LENGTH_LONG).show()
+    }
+
+    private fun navigateToSubmissionEnd(resultId: String?) {
+        if (_binding == null) return
         findNavController().navigate(
             R.id.submissionEndFragment,
             Bundle().apply {
                 putString("examId", arguments?.getString("examId").orEmpty())
-                putString("sheetId", "")
+                putString("sheetId", resultId.orEmpty())
             },
             navOptions {
                 popUpTo(R.id.lockModeFragment) { inclusive = true }

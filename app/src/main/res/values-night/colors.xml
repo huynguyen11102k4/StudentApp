@@ -64,6 +64,12 @@
     <color name="status_processing_text">#FFC0E8F2</color>
     <color name="status_ready_bg">#FF3A411A</color>
     <color name="status_ready_text">#FFDCE4C5</color>
+    <color name="lock_mode_timer_bg">@color/surface_container_high</color>
+    <color name="lock_mode_timer_stroke">@color/student_accent</color>
+    <color name="lock_mode_panel_bg">@color/surface_container</color>
+    <color name="lock_mode_panel_stroke">@color/outline_variant</color>
+    <color name="lock_mode_chip_bg">@color/status_processing_bg</color>
+    <color name="lock_mode_chip_text">@color/status_processing_text</color>
 
     <!-- Outline (dark) -->
     <color name="outline">#FF8E9286</color>

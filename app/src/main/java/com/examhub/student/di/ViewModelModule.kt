@@ -35,29 +35,29 @@ object ViewModelModule {
         viewModel { ProfileViewModel(get(), get()) }
 
         // Dashboard
-        viewModel { DashboardViewModel(get(), get(), get(), get(), get()) }
+        viewModel { DashboardViewModel(get(), get(), get(), get(), get(), get()) }
 
         // Exams
-        viewModel { ExamDetailViewModel(get(), get(), get(), get(), get(), get(), get()) }
+        viewModel { ExamDetailViewModel(get(), get(), get(), get(), get(), get(), get(), get()) }
         viewModel { ExamListViewModel(get(), get()) }
         viewModel { ExamStartViewModel(get(), get(), get(), get(), get(), get(), get()) }
         viewModel { LockModeViewModel(get(), get(), get(), get(), get(), get(), get()) }
         viewModel { ResultsListViewModel(get()) }
-        viewModel { ResultDetailViewModel(get(), get(), get()) }
+        viewModel { ResultDetailViewModel(get(), get(), get(), get()) }
 
         // Classes
         viewModel { ClassListViewModel(get(), get(), get(), get()) }
-        viewModel { ClassDetailViewModel(get(), get(), get(), get()) }
+        viewModel { ClassDetailViewModel(get(), get(), get(), get(), get()) }
 
         // OMR confirm/review
-        viewModel { SmartReviewViewModel(get(), get(), get(), get()) }
+        viewModel { SmartReviewViewModel(get(), get(), get(), get(), get()) }
 
         // Notifications
-        viewModel { NotificationsViewModel(get(), get()) }
+        viewModel { NotificationsViewModel(get(), get(), get()) }
 
         // Appeals
         viewModel { AppealsListViewModel(get()) }
-        viewModel { AppealDetailViewModel(get()) }
+        viewModel { AppealDetailViewModel(get(), get()) }
 
         // Others (no repository dependencies)
         viewModel { SettingsViewModel(get(), get(), get(), get(), get()) }

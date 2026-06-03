@@ -83,14 +83,14 @@ class ExamStartFragment : Fragment() {
         binding.tvSubject.text = listOfNotNull(
             exam.subject.takeIf { it.isNotBlank() },
             exam.classInfo?.className?.takeIf { it.isNotBlank() }
-        ).joinToString(" • ")
+        ).joinToString(binding.root.context.getString(R.string.common_separator_dot))
         binding.tvDuration.text = getString(R.string.exam_start_duration_format, exam.durationMinutes)
         binding.tvQuestionCount.text = getString(R.string.exam_start_question_count_format, exam.totalQuestions)
         binding.tvMode.text = listOf(
-            exam.gradingType.toFriendlyGradingType().ifBlank { "Học sinh nộp bài" },
-            if (exam.onlineConfig?.isLockedMode == true) "Lock mode" else "Không khóa màn hình",
+            exam.gradingType.toFriendlyGradingType().ifBlank { getString(R.string.exam_detail_default_grading_type) },
+            if (exam.onlineConfig?.isLockedMode == true) getString(R.string.exam_start_lock_mode) else getString(R.string.exam_start_no_lock_mode),
             exam.status.toFriendlyExamStatus()
-        ).joinToString(" • ")
+        ).joinToString(binding.root.context.getString(R.string.common_separator_dot))
     }
 
     private fun showStartConfirmDialog() {

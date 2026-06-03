@@ -4,15 +4,13 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.LinearLayout
 import androidx.core.os.bundleOf
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
-import com.google.android.material.textfield.TextInputEditText
-import com.google.android.material.textfield.TextInputLayout
 import com.examhub.student.R
+import com.examhub.student.databinding.DialogCreateAppealBinding
 import com.examhub.student.databinding.FragmentResultDetailBinding
 import com.examhub.student.model.response.result.StudentResultDetailResponse
 import com.examhub.student.util.extension.applySystemWindowInsets
@@ -55,12 +53,24 @@ class ResultDetailFragment : Fragment() {
             }
             launch { viewModel.isResultPending.collect(::bindPendingState) }
             launch {
+                viewModel.resultUnavailable.collect {
+                    findNavController().navigate(R.id.resultsListFragment)
+                }
+            }
+            launch {
                 viewModel.appealCreated.collect { appealId ->
-                    findNavController().navigate(R.id.action_result_detail_to_appeal_detail, bundleOf("appealId" to appealId))
+                    findNavController().navigate(
+                        R.id.action_result_detail_to_appeal_detail,
+                        bundleOf(
+                            "appealId" to appealId,
+                            "studentName" to currentResult?.displayStudentName().orEmpty(),
+                            "studentCode" to currentResult?.displayStudentCode().orEmpty()
+                        )
+                    )
                 }
             }
         }
-        viewModel.loadResult(sheetId)
+        viewModel.loadResult(sheetId, arguments?.getString("examStatus").orEmpty())
     }
 
     private fun bindResult(result: StudentResultDetailResponse) {
@@ -115,6 +125,7 @@ class ResultDetailFragment : Fragment() {
 
     private fun canCreateAppeal(result: StudentResultDetailResponse): Boolean {
         return !result.id.isNullOrBlank() &&
+            result.resultStatus.equals("GRADED", ignoreCase = true) &&
             result.exam?.status.isAppealOpenStatus() &&
             viewModel.appealCount.value == 0
     }
@@ -159,55 +170,21 @@ class ResultDetailFragment : Fragment() {
             return
         }
         val context = requireContext()
-        val container = LinearLayout(context).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(32, 8, 32, 0)
-        }
-        val intro = android.widget.TextView(context).apply {
-            text = getString(R.string.result_detail_appeal_dialog_message)
-            setTextColor(androidx.core.content.ContextCompat.getColor(context, R.color.text_secondary))
-            textSize = 14f
-            setPadding(0, 0, 0, 16)
-        }
-        val reasonInput = TextInputEditText(context).apply {
-            minLines = 2
-            maxLines = 4
-        }
-        val reasonLayout = TextInputLayout(context).apply {
-            hint = getString(R.string.result_detail_appeal_reason_hint)
-            addView(reasonInput)
-        }
-        val questionInput = TextInputEditText(context).apply { inputType = android.text.InputType.TYPE_CLASS_NUMBER }
-        val questionLayout = TextInputLayout(context).apply {
-            hint = getString(R.string.result_detail_appeal_question_hint)
-            addView(questionInput)
-        }
-        val messageInput = TextInputEditText(context)
-        val messageLayout = TextInputLayout(context).apply {
-            hint = getString(R.string.result_detail_appeal_message_hint)
-            addView(messageInput)
-        }
-        container.addView(intro)
-        container.addView(reasonLayout)
-        container.addView(questionLayout)
-        container.addView(messageLayout)
+        val dialogBinding = DialogCreateAppealBinding.inflate(layoutInflater)
 
         val dialog = MaterialAlertDialogBuilder(context)
             .setTitle(R.string.result_detail_appeal_dialog_title)
-            .setView(container)
+            .setView(dialogBinding.root)
             .setNegativeButton(android.R.string.cancel, null)
             .setPositiveButton(R.string.result_detail_appeal_send, null)
             .create()
         dialog.setOnShowListener {
             dialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_POSITIVE).setOnClickListener {
-                val reason = reasonInput.text?.toString().orEmpty()
-                reasonLayout.error = if (reason.isBlank()) getString(R.string.result_detail_reason_required) else null
+                val reason = dialogBinding.etReason.text?.toString().orEmpty()
+                dialogBinding.layoutReason.error =
+                    if (reason.isBlank()) getString(R.string.result_detail_reason_required) else null
                 if (reason.isBlank()) return@setOnClickListener
-                viewModel.createAppeal(
-                    reason = reason,
-                    questionNumber = questionInput.text?.toString()?.toIntOrNull(),
-                    questionMessage = messageInput.text?.toString().orEmpty()
-                )
+                viewModel.createAppeal(reason)
                 dialog.dismiss()
             }
         }
@@ -220,6 +197,6 @@ class ResultDetailFragment : Fragment() {
     }
 
     private fun String?.isAppealOpenStatus(): Boolean {
-        return equals("ACTIVE", ignoreCase = true) || equals("END", ignoreCase = true)
+        return equals("END", ignoreCase = true)
     }
 }

@@ -9,7 +9,6 @@ import androidx.paging.cachedIn
 import com.examhub.student.data.model.Appeal
 import com.examhub.student.model.response.appeal.AppealSummaryResponse
 import com.examhub.student.repository.AppealsRepository
-import com.examhub.student.util.extension.toFriendlyAppealItemStatus
 import com.examhub.student.util.paging.PageChunk
 import com.examhub.student.util.paging.RepositoryPagingSource
 import com.examhub.student.util.paging.requirePage
@@ -37,11 +36,12 @@ class AppealsListViewModel(private val appealsRepository: AppealsRepository) : V
 
     private fun AppealSummaryResponse.toUiModel(): Appeal {
         val resolvedExam = exam ?: sheet?.exam
+        val resolvedStudent = student ?: sheet?.student
         return Appeal(
             id = id,
-            studentId = student?.id.orEmpty(),
-            studentName = student?.name.orEmpty(),
-            studentCode = student?.code.orEmpty(),
+            studentId = resolvedStudent?.id.orEmpty(),
+            studentName = resolvedStudent?.name.orEmpty(),
+            studentCode = resolvedStudent?.code.orEmpty(),
             examId = resolvedExam?.id.orEmpty(),
             examName = resolvedExam?.name.orEmpty(),
             subject = resolvedExam?.subject.orEmpty(),
@@ -51,12 +51,7 @@ class AppealsListViewModel(private val appealsRepository: AppealsRepository) : V
             reason = reason.orEmpty(),
             status = status,
             createdAt = createdAt,
-            teacherNote = teacherNote,
-            processedImageUrl = sheet?.processedImageUrl,
-            dewarpedImageUrl = sheet?.dewarpedImageUrl,
-            itemMessages = items.orEmpty().joinToString("\n") { item ->
-                "Câu ${item.questionNumber}: ${item.studentMessage.orEmpty().ifBlank { item.status.toFriendlyAppealItemStatus() }}"
-            }
+            teacherNote = teacherNote
         )
     }
 }

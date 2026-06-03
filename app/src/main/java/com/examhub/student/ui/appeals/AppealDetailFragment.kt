@@ -6,8 +6,6 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
-import com.bumptech.glide.Glide
-import com.examhub.student.BuildConfig
 import com.examhub.student.R
 import com.examhub.student.data.model.Appeal
 import com.examhub.student.databinding.FragmentAppealDetailBinding
@@ -49,47 +47,30 @@ class AppealDetailFragment : Fragment() {
                 }
             }
         }
-        viewModel.loadAppeal(arguments?.getString("appealId").orEmpty())
+        viewModel.loadAppeal(
+            appealId = arguments?.getString("appealId").orEmpty(),
+            fallbackStudentName = arguments?.getString("studentName").orEmpty(),
+            fallbackStudentCode = arguments?.getString("studentCode").orEmpty()
+        )
     }
 
     private fun bindAppeal(appeal: Appeal) {
-        binding.tvStudentName.text = appeal.studentName.ifBlank { "Học sinh" }
-        binding.tvStudentCode.text = "Mã HS: ${appeal.studentCode.ifBlank { "Chưa xác định" }}"
+        binding.tvStudentName.text = appeal.studentName.ifBlank { getString(R.string.appeal_detail_student_unknown) }
+        binding.tvStudentCode.text = getString(
+            R.string.result_detail_student_code_format,
+            appeal.studentCode.ifBlank { getString(R.string.appeal_detail_student_code_unknown) }
+        )
         binding.tvExamName.text = appeal.examName.ifBlank { getString(R.string.result_detail_default_title) }
-        binding.tvSubject.text = appeal.subject.takeIf { it.isNotBlank() }?.let { "Môn: $it" }.orEmpty()
+        binding.tvSubject.text = appeal.subject.takeIf { it.isNotBlank() }?.let { getString(R.string.appeal_detail_subject_format, it) }.orEmpty()
         binding.tvOldScore.text = appeal.newScore?.let {
             getString(R.string.appeal_score_changed_format, appeal.oldScore, it)
         } ?: getString(R.string.appeal_score_format, appeal.oldScore)
-        binding.tvReason.text = appeal.reason.ifBlank { "Không có ghi chú" }
-        binding.tvCreatedAt.text = "Gửi lúc: ${appeal.createdAt.toDisplayDateTime()}"
-        binding.tvDetectedInfo.text = buildDetectedInfo(appeal)
+        binding.tvReason.text = appeal.reason.ifBlank { getString(R.string.appeal_detail_reason_empty) }
+        binding.tvCreatedAt.text = getString(R.string.appeal_detail_created_at_format, appeal.createdAt.toDisplayDateTime())
+        binding.tvDetectedInfo.text = appeal.teacherNote.orEmpty()
         binding.chipStatus.text = appeal.status.toFriendlyAppealStatus()
-        binding.cardAppealItems.visibility = if (binding.tvDetectedInfo.text.isNullOrBlank()) View.GONE else View.VISIBLE
+        binding.cardAppealItems.visibility = if (appeal.teacherNote.isNullOrBlank()) View.GONE else View.VISIBLE
 
-        val imageUrl = appeal.processedImageUrl ?: appeal.dewarpedImageUrl
-        if (imageUrl.isNullOrBlank()) {
-            binding.cardProcessedImage.visibility = View.GONE
-        } else {
-            binding.cardProcessedImage.visibility = View.VISIBLE
-            Glide.with(this)
-                .load(resolveUrl(imageUrl))
-                .fitCenter()
-                .into(binding.ivProcessedImage)
-        }
-    }
-
-    private fun buildDetectedInfo(appeal: Appeal): String {
-        return listOfNotNull(
-            appeal.itemMessages.takeIf { it.isNotBlank() },
-            appeal.teacherNote?.takeIf { it.isNotBlank() }?.let { "Phản hồi giáo viên: $it" }
-        ).joinToString("\n\n")
-    }
-
-    private fun resolveUrl(url: String): String {
-        if (url.startsWith("http://") || url.startsWith("https://")) return url
-        val apiBase = BuildConfig.API_BASE_URL.trimEnd('/')
-        val origin = apiBase.substringBefore("/api/v1")
-        return origin + if (url.startsWith("/")) url else "/$url"
     }
 
     private fun String.toDisplayDateTime(): String {

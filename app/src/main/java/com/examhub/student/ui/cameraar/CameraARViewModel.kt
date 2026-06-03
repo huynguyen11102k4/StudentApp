@@ -5,6 +5,7 @@ import android.graphics.Bitmap
 import android.util.Base64
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.examhub.student.R
 import com.examhub.student.model.ApiException
 import com.examhub.student.model.ApiResult
 import com.examhub.student.model.request.lock.LockHeartbeatRequest
@@ -12,6 +13,7 @@ import com.examhub.student.model.request.lock.LockViolationRequest
 import com.examhub.student.model.request.submission.IdZoneResultRequest
 import com.examhub.student.model.request.submission.StudentAnswerRequest
 import com.examhub.student.model.request.submission.StudentSubmitRequest
+import com.examhub.student.model.response.submission.StudentSubmitResponse
 import com.examhub.student.omr.OmrProcessor
 import com.examhub.student.omr.OmrReviewStore
 import com.examhub.student.repository.LockModeRepository
@@ -56,7 +58,7 @@ class CameraARViewModel(
     private val _totalMarkers = MutableStateFlow(12)
     val totalMarkers: StateFlow<Int> = _totalMarkers.asStateFlow()
 
-    private val _markerStatusText = MutableStateFlow("Bấm chụp để xử lý OMR")
+    private val _markerStatusText = MutableStateFlow(context.getString(R.string.camera_ar_status_tap_capture))
     val markerStatusText: StateFlow<String> = _markerStatusText.asStateFlow()
 
     private val _allMarkersDetected = MutableStateFlow(false)
@@ -70,6 +72,8 @@ class CameraARViewModel(
 
     private val _navigateToReview = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     val navigateToReview: SharedFlow<Unit> = _navigateToReview.asSharedFlow()
+    private val _blankSubmissionFinished = MutableSharedFlow<StudentSubmitResponse?>(extraBufferCapacity = 1)
+    val blankSubmissionFinished: SharedFlow<StudentSubmitResponse?> = _blankSubmissionFinished.asSharedFlow()
 
     private val _toastMessage = MutableSharedFlow<String>(extraBufferCapacity = 1)
     val toastMessage: SharedFlow<String> = _toastMessage.asSharedFlow()
@@ -102,7 +106,7 @@ class CameraARViewModel(
 
     fun onCameraReady() {
         _cameraReady.value = true
-        _markerStatusText.value = "Căn đủ marker vào khung, app sẽ tự chụp"
+        _markerStatusText.value = context.getString(R.string.camera_ar_status_align_markers)
     }
 
     fun onMarkersDetected(detectedCount: Int, totalExpected: Int = 12) {
@@ -113,25 +117,25 @@ class CameraARViewModel(
         _allMarkersDetected.value = allFound
 
         _markerStatusText.value = when {
-            detectedCount == 0 -> "Chưa thấy marker - đưa camera gần hơn"
-            allFound -> "Đã đủ $detectedCount/$totalExpected marker - giữ nguyên tay để tự chụp"
-            detectedCount >= totalExpected * 0.75 -> "Gần đủ marker: $detectedCount/$totalExpected - giữ phiếu trong khung"
-            else -> "Đã nhận diện $detectedCount/$totalExpected marker"
+            detectedCount == 0 -> context.getString(R.string.camera_ar_status_no_marker)
+            allFound -> context.getString(R.string.camera_ar_status_all_markers, detectedCount, totalExpected)
+            detectedCount >= totalExpected * 0.75 -> context.getString(R.string.camera_ar_status_nearly_markers, detectedCount, totalExpected)
+            else -> context.getString(R.string.camera_ar_status_detected_markers, detectedCount, totalExpected)
         }
     }
 
     fun onAutoCaptureStarting() {
         if (_isProcessing.value) return
-        _markerStatusText.value = "Đã đủ marker - giữ nguyên tay, đang tự chụp..."
+        _markerStatusText.value = context.getString(R.string.camera_ar_status_auto_capture)
     }
 
     fun onImageCaptured(bitmap: Bitmap) {
         if (_isProcessing.value) return
         _isProcessing.value = true
-        _markerStatusText.value = "Đang xử lý OMR..."
+        _markerStatusText.value = context.getString(R.string.camera_ar_status_processing_omr)
 
         if (currentExamId.isBlank()) {
-            onProcessingError("Hãy mở camera từ một kỳ thi đã có mẫu OMR")
+            onProcessingError(context.getString(R.string.camera_ar_missing_exam_template))
             return
         }
 
@@ -151,14 +155,14 @@ class CameraARViewModel(
                 _isProcessing.value = false
                 _navigateToReview.tryEmit(Unit)
             }.onFailure { error ->
-                onProcessingError(error.message ?: "Xử lý OMR thất bại")
+                onProcessingError(error.message ?: context.getString(R.string.camera_ar_processing_failed))
             }
         }
     }
 
     fun resetProcessingState() {
         _isProcessing.value = false
-        _markerStatusText.value = "Căn đủ marker vào khung, app sẽ tự chụp"
+        _markerStatusText.value = context.getString(R.string.camera_ar_status_align_markers)
     }
 
     fun onProcessingComplete() {
@@ -168,7 +172,7 @@ class CameraARViewModel(
     fun onProcessingError(error: String) {
         _isProcessing.value = false
         _toastMessage.tryEmit(error)
-        _markerStatusText.value = "Lỗi: $error - thử lại"
+        _markerStatusText.value = context.getString(R.string.camera_ar_status_error_format, error)
     }
 
     fun logViolation(type: String, evidence: Map<String, Any?> = emptyMap()) {
@@ -260,9 +264,13 @@ class CameraARViewModel(
                     )
                 )
             ).collect { result ->
-                if (result is ApiResult.Success) {
-                    activeSessionStore.clear(examId)
-                    activeSessionStore.clearBySessionId(sessionId)
+                if (result !is ApiResult.Loading) {
+                    val submission = if (result is ApiResult.Success) {
+                        activeSessionStore.clear(examId)
+                        activeSessionStore.clearBySessionId(sessionId)
+                        result.data
+                    } else null
+                    _blankSubmissionFinished.tryEmit(submission)
                 }
             }
         }

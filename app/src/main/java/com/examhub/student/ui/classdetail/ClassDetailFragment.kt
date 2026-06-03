@@ -70,7 +70,7 @@ class ClassDetailFragment : Fragment() {
         binding.tvClassName.text = info?.className.orEmpty().ifBlank { getString(R.string.common_not_updated) }
         binding.tvSubject.text = listOfNotNull(info?.subject, info?.grade, info?.schoolYear)
             .filter { it.isNotBlank() }
-            .joinToString(" • ")
+            .joinToString(binding.root.context.getString(R.string.common_separator_dot))
             .ifBlank { getString(R.string.class_detail_subject_empty) }
         binding.tvDescription.text = info?.description.orEmpty().ifBlank {
             getString(R.string.class_detail_description_empty)
@@ -112,10 +112,14 @@ class ClassDetailFragment : Fragment() {
     }
 
     private fun openExam(exam: Exam) {
-        if (exam.hasSubmitted && !exam.resultSheetId.isNullOrBlank()) {
+        if (exam.canViewResult && !exam.resultSheetId.isNullOrBlank()) {
+            val resultId = exam.resultSheetId
             findNavController().navigate(
                 R.id.resultDetailFragment,
-                Bundle().apply { putString("sheetId", exam.resultSheetId) }
+                Bundle().apply {
+                    putString("sheetId", resultId)
+                    putString("examStatus", exam.status)
+                }
             )
             return
         }

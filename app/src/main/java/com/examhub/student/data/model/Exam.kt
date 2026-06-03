@@ -15,5 +15,10 @@ data class Exam(
     val isOfflineReady: Boolean = false,
     val date: String = "",
     val resultSheetId: String? = null,
-    val hasSubmitted: Boolean = false
+    val hasSubmitted: Boolean = false,
+    val gradingType: String = "",
+    val canStartSession: Boolean = false,
+    val canSubmit: Boolean = false,
+    val canViewResult: Boolean = false,
+    val resultOnly: Boolean = false
 ) : Serializable

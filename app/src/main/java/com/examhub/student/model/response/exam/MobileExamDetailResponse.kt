@@ -28,5 +28,15 @@ data class MobileExamDetailResponse(
     val versionCount: Int? = null,
     val template: ExamTemplateSummaryResponse? = null,
     @SerializedName("_count")
-    val count: ExamCountResponse? = null
+    val count: ExamCountResponse? = null,
+    @SerializedName(value = "result_id", alternate = ["resultId", "sheet_id", "sheetId", "answer_sheet_id", "answerSheetId"])
+    val resultId: String? = null,
+    @SerializedName(value = "can_start_session", alternate = ["canStartSession"])
+    val canStartSession: Boolean? = null,
+    @SerializedName(value = "can_submit", alternate = ["canSubmit"])
+    val canSubmit: Boolean? = null,
+    @SerializedName(value = "can_view_result", alternate = ["canViewResult"])
+    val canViewResult: Boolean? = null,
+    @SerializedName(value = "result_only", alternate = ["resultOnly"])
+    val resultOnly: Boolean? = null
 ) : Serializable

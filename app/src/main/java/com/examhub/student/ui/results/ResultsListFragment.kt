@@ -30,7 +30,10 @@ class ResultsListFragment : Fragment() {
         binding.toolbar.applySystemWindowInsets(top = true)
         binding.toolbar.setNavigationOnClickListener { findNavController().navigateUp() }
         adapter = ResultsAdapter { result ->
-            findNavController().navigate(R.id.action_results_list_to_result_detail, bundleOf("sheetId" to result.id))
+            findNavController().navigate(
+                R.id.action_results_list_to_result_detail,
+                bundleOf("sheetId" to result.id, "examStatus" to result.exam?.status.orEmpty())
+            )
         }
         binding.rvResults.adapter = adapter
         binding.swipeRefresh.setOnRefreshListener { adapter.refresh() }

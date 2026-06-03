@@ -55,6 +55,8 @@ class ExamStartViewModel(
 
     private var currentExamId: String = ""
     private var currentExamStatus: String = ""
+    private var currentGradingType: String = ""
+    private var serverCanStartSession: Boolean = false
     private var currentStartTime: String? = null
     private var currentEndTime: String? = null
 
@@ -68,6 +70,9 @@ class ExamStartViewModel(
                         _isLoading.value = false
                         offlineCacheManager.saveExamClassCode(examId, result.data.classInfo?.classCode)
                         currentExamStatus = result.data.status.orEmpty()
+                        currentGradingType = result.data.gradingType.orEmpty()
+                        serverCanStartSession = result.data.canStartSession == true &&
+                            currentGradingType.equals("STUDENT_SUBMISSION", ignoreCase = true)
                         currentStartTime = result.data.onlineConfig?.startTime
                         currentEndTime = result.data.onlineConfig?.endTime
                         refreshCanStartExam()
@@ -78,6 +83,8 @@ class ExamStartViewModel(
                         offlineCacheManager.getCachedExamBasic(examId)?.let { cached ->
                             _exam.value = cached.toExamDetail()
                             currentExamStatus = cached.status
+                            currentGradingType = cached.gradingType
+                            serverCanStartSession = cached.canStartSession
                             currentStartTime = cached.date
                             currentEndTime = null
                             refreshCanStartExam()
@@ -210,16 +217,15 @@ class ExamStartViewModel(
             ?.let { raw -> runCatching { gson.fromJson(raw, UserResponse::class.java) }.getOrNull() }
         val studentCode = when (mode) {
             StudentIdentifierMode.INTERNAL -> listOfNotNull(
-                profile?.student?.internalId,
-                profile?.student?.id
+                session.studentIdentifierCode,
+                profile?.student?.internalId
             ).firstOrNull { it.isNotBlank() }.orEmpty()
             StudentIdentifierMode.EXTERNAL -> session.studentIdentifierCode?.takeIf { it.isNotBlank() }
                 ?: profile?.student?.studentCode.orEmpty()
             StudentIdentifierMode.UNKNOWN -> listOfNotNull(
                 session.studentIdentifierCode,
                 profile?.student?.studentCode,
-                profile?.student?.internalId,
-                profile?.student?.id
+                profile?.student?.internalId
             ).firstOrNull { it.isNotBlank() }.orEmpty()
         }
         val classCode = resolveClassCode(session)
@@ -261,7 +267,8 @@ class ExamStartViewModel(
     }
 
     private fun refreshCanStartExam() {
-        _canStartExam.value = currentExamStatus.equals("ACTIVE", ignoreCase = true) &&
+        _canStartExam.value = currentGradingType.equals("STUDENT_SUBMISSION", ignoreCase = true) &&
+            serverCanStartSession &&
             offlineCacheManager.getTemplate(currentExamId) != null &&
             isWithinExamWindow(currentStartTime, currentEndTime)
     }
@@ -301,9 +308,14 @@ class ExamStartViewModel(
             durationMinutes = duration,
             status = status,
             examType = null,
-            gradingType = "STUDENT_SUBMISSION",
+            gradingType = gradingType.ifBlank { "STUDENT_SUBMISSION" },
             classInfo = null,
-            template = null
+            template = null,
+            resultId = resultSheetId,
+            canStartSession = canStartSession,
+            canSubmit = canSubmit,
+            canViewResult = canViewResult,
+            resultOnly = resultOnly
         )
     }
 

@@ -1,7 +1,9 @@
 package com.examhub.student.ui.examdetail
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.examhub.student.R
 import com.examhub.student.data.model.Exam
 import com.examhub.student.data.model.ExamSubmissionItem
 import com.examhub.student.model.ApiResult
@@ -37,7 +39,8 @@ class ExamDetailViewModel(
     private val offlineCacheManager: OfflineCacheManager,
     private val tokenManager: TokenManager,
     private val activeSessionStore: ActiveExamSessionStore,
-    private val gson: Gson
+    private val gson: Gson,
+    private val context: Context
 ) : ViewModel() {
 
     private val _examName = MutableStateFlow("")
@@ -52,7 +55,7 @@ class ExamDetailViewModel(
     val status: StateFlow<String> = _status.asStateFlow()
     private val _examType = MutableStateFlow("")
     val examType: StateFlow<String> = _examType.asStateFlow()
-    private val _gradingType = MutableStateFlow("Học sinh nộp bài")
+    private val _gradingType = MutableStateFlow("")
     val gradingType: StateFlow<String> = _gradingType.asStateFlow()
     private val _templateName = MutableStateFlow("")
     val templateName: StateFlow<String> = _templateName.asStateFlow()
@@ -78,6 +81,12 @@ class ExamDetailViewModel(
     val isStartingSession: StateFlow<Boolean> = _isStartingSession.asStateFlow()
     private val _canStartExam = MutableStateFlow(false)
     val canStartExam: StateFlow<Boolean> = _canStartExam.asStateFlow()
+    private val _canViewResult = MutableStateFlow(false)
+    val canViewResult: StateFlow<Boolean> = _canViewResult.asStateFlow()
+    private val _resultOnly = MutableStateFlow(false)
+    val resultOnly: StateFlow<Boolean> = _resultOnly.asStateFlow()
+    private val _resultId = MutableStateFlow("")
+    val resultId: StateFlow<String> = _resultId.asStateFlow()
     private val _toastMessage = MutableSharedFlow<String>(extraBufferCapacity = 1)
     val toastMessage: SharedFlow<String> = _toastMessage.asSharedFlow()
     private val _sessionStarted = MutableSharedFlow<StartExamSessionResponse>(extraBufferCapacity = 1)
@@ -85,6 +94,8 @@ class ExamDetailViewModel(
 
     private var currentExamId: String = ""
     private var currentExamStatus: String = ""
+    private var currentGradingType: String = ""
+    private var serverCanStartSession: Boolean = false
     private var currentStartTime: String? = null
     private var currentEndTime: String? = null
 
@@ -103,7 +114,7 @@ class ExamDetailViewModel(
                         _isLoading.value = false
                         offlineCacheManager.getCachedExamBasic(examId)?.let(::applyCachedExam)
                             ?: _toastMessage.tryEmit(
-                                (result.exception.message ?: "Không thể tải thông tin kỳ thi").replaceTechnicalLabels()
+                                (result.exception.message ?: context.getString(R.string.exam_detail_loading_failed)).replaceTechnicalLabels()
                             )
                     }
                 }
@@ -114,8 +125,15 @@ class ExamDetailViewModel(
 
     private fun bindExam(exam: MobileExamDetailResponse) {
         currentExamStatus = exam.status.orEmpty()
+        currentGradingType = exam.gradingType.orEmpty()
+        serverCanStartSession = exam.canStartSession == true &&
+            currentGradingType.equals("STUDENT_SUBMISSION", ignoreCase = true)
         currentStartTime = exam.onlineConfig?.startTime
         currentEndTime = exam.onlineConfig?.endTime
+        _resultId.value = exam.resultId.orEmpty()
+        _canViewResult.value = exam.canViewResult == true && !exam.resultId.isNullOrBlank()
+        _resultOnly.value = exam.resultOnly == true ||
+            currentGradingType.equals("TEACHER_GRADING", ignoreCase = true)
         _examName.value = exam.name
         _subject.value = exam.subject
         _duration.value = exam.durationMinutes
@@ -124,10 +142,10 @@ class ExamDetailViewModel(
         _examType.value = listOfNotNull(
             exam.classInfo?.className?.takeIf { it.isNotBlank() },
             exam.examType.toFriendlyExamType().takeIf { it.isNotBlank() }
-        ).joinToString(" • ").ifBlank { "Bài thi học sinh nộp" }
-        _gradingType.value = exam.gradingType.toFriendlyGradingType().ifBlank { "Học sinh nộp bài" }
-        _templateName.value = exam.template?.name ?: "Dữ liệu kỳ thi đã sẵn sàng khi bắt đầu bài"
-        _progressText.value = "Sẵn sàng nộp bài"
+        ).joinToString(context.getString(R.string.common_separator_dot)).ifBlank { context.getString(R.string.exam_detail_default_exam_type) }
+        _gradingType.value = exam.gradingType.toFriendlyGradingType().ifBlank { context.getString(R.string.exam_detail_default_grading_type) }
+        _templateName.value = exam.template?.name ?: context.getString(R.string.exam_detail_data_ready_on_start)
+        _progressText.value = context.getString(R.string.exam_detail_ready_to_submit)
         refreshExamWindowNotice()
         refreshCanStartExam()
         offlineCacheManager.saveExamClassCode(exam.id, exam.classInfo?.classCode)
@@ -148,7 +166,7 @@ class ExamDetailViewModel(
         if (currentExamId.isBlank()) return
         viewModelScope.launch {
             _isDownloading.value = true
-            _downloadStep.value = "Đang tải dữ liệu kỳ thi..."
+            _downloadStep.value = context.getString(R.string.exam_detail_downloading_data)
             examRepository.getExamTemplate(currentExamId).collect { result ->
                 when (result) {
                     is ApiResult.Success -> {
@@ -157,11 +175,11 @@ class ExamDetailViewModel(
                         refreshCanStartExam()
                         _downloadStep.value = ""
                         _isDownloading.value = false
-                        _toastMessage.tryEmit("Đã tải dữ liệu kỳ thi. Dữ liệu phiên thi sẽ tải khi bắt đầu bài.")
+                        _toastMessage.tryEmit(context.getString(R.string.exam_detail_download_success))
                     }
                     is ApiResult.Error -> {
                         _isDownloading.value = false
-                        _toastMessage.tryEmit((result.exception.message ?: "Không thể tải dữ liệu kỳ thi").replaceTechnicalLabels())
+                        _toastMessage.tryEmit((result.exception.message ?: context.getString(R.string.exam_detail_download_failed)).replaceTechnicalLabels())
                     }
                     else -> Unit
                 }
@@ -172,15 +190,15 @@ class ExamDetailViewModel(
     fun startSession() {
         if (currentExamId.isBlank() || _isStartingSession.value) return
         if (!_canStartExam.value) {
-            _toastMessage.tryEmit("Hãy tải dữ liệu kỳ thi và chỉ bắt đầu khi kỳ thi đang mở")
+            _toastMessage.tryEmit(context.getString(R.string.exam_detail_start_not_allowed))
             return
         }
         if (!currentExamStatus.equals("ACTIVE", ignoreCase = true)) {
-            _toastMessage.tryEmit("Chỉ có thể bắt đầu khi kỳ thi đang mở")
+            _toastMessage.tryEmit(context.getString(R.string.exam_detail_start_only_active))
             return
         }
         activeSessionStore.get(currentExamId)?.let {
-            _toastMessage.tryEmit("Đang mở lại phiên làm bài chưa nộp")
+            _toastMessage.tryEmit(context.getString(R.string.exam_start_resume_local_session))
             _sessionStarted.tryEmit(
                 StartExamSessionResponse(
                     legacySessionId = it.sessionId,
@@ -219,9 +237,9 @@ class ExamDetailViewModel(
                     is ApiResult.Error -> {
                         _isStartingSession.value = false
                         if (result.exception.code == "SESSION_ACTIVE") {
-                            _toastMessage.tryEmit("Bạn đang có phiên làm bài chưa kết thúc")
+                            _toastMessage.tryEmit(context.getString(R.string.exam_detail_remote_session_active))
                         } else {
-                            _toastMessage.tryEmit((result.exception.message ?: "Không thể bắt đầu phiên làm bài").replaceTechnicalLabels())
+                            _toastMessage.tryEmit((result.exception.message ?: context.getString(R.string.exam_detail_start_session_failed)).replaceTechnicalLabels())
                         }
                     }
                 }
@@ -242,12 +260,12 @@ class ExamDetailViewModel(
                     if (lockResult.data.valid) {
                         _sessionStarted.tryEmit(session)
                     } else {
-                        _toastMessage.tryEmit((lockResult.data.reason ?: "Phiên làm bài không hợp lệ trên thiết bị này").replaceTechnicalLabels())
+                        _toastMessage.tryEmit((lockResult.data.reason ?: context.getString(R.string.exam_detail_lock_invalid)).replaceTechnicalLabels())
                     }
                 }
                 is ApiResult.Error -> {
                     _isStartingSession.value = false
-                    _toastMessage.tryEmit((lockResult.exception.message ?: "Không thể xác thực chế độ khóa").replaceTechnicalLabels())
+                    _toastMessage.tryEmit((lockResult.exception.message ?: context.getString(R.string.exam_detail_lock_validate_failed)).replaceTechnicalLabels())
                 }
                 else -> Unit
             }
@@ -275,8 +293,13 @@ class ExamDetailViewModel(
 
     private fun applyCachedExam(exam: Exam) {
         currentExamStatus = exam.status
+        currentGradingType = exam.gradingType
+        serverCanStartSession = exam.canStartSession
         currentStartTime = exam.date
         currentEndTime = null
+        _resultId.value = exam.resultSheetId.orEmpty()
+        _canViewResult.value = exam.canViewResult && !exam.resultSheetId.isNullOrBlank()
+        _resultOnly.value = exam.resultOnly
         _examName.value = exam.name
         _subject.value = exam.subject
         _duration.value = exam.duration
@@ -284,9 +307,9 @@ class ExamDetailViewModel(
         _status.value = exam.status.toFriendlyExamStatus()
         _examType.value = ""
         _templateName.value = if (offlineCacheManager.getTemplate(exam.id) != null) {
-            "Dữ liệu kỳ thi đã sẵn sàng"
+            context.getString(R.string.exam_detail_data_ready)
         } else {
-            "Chưa có dữ liệu kỳ thi"
+            context.getString(R.string.exam_detail_data_missing)
         }
         _isOfflineReady.value = offlineCacheManager.getTemplate(exam.id) != null
         refreshExamWindowNotice()
@@ -294,17 +317,26 @@ class ExamDetailViewModel(
     }
 
     private fun refreshCanStartExam() {
-        _canStartExam.value = currentExamStatus.equals("ACTIVE", ignoreCase = true) &&
+        _canStartExam.value = currentGradingType.equals("STUDENT_SUBMISSION", ignoreCase = true) &&
+            serverCanStartSession &&
             _isOfflineReady.value &&
             isWithinExamWindow(currentStartTime, currentEndTime)
     }
 
     private fun refreshExamWindowNotice() {
+        if (_resultOnly.value && !_canViewResult.value) {
+            _examWindowNotice.value = context.getString(R.string.exam_detail_waiting_result)
+            return
+        }
+        if (_resultOnly.value) {
+            _examWindowNotice.value = context.getString(R.string.exam_detail_result_only_notice)
+            return
+        }
         _examWindowNotice.value = if (
             currentExamStatus.equals("END", ignoreCase = true) ||
             (currentExamStatus.equals("ACTIVE", ignoreCase = true) && isAfterEndTime(currentEndTime))
         ) {
-            "Đã hết thời gian làm bài. Bạn vẫn có thể xem kết quả và gửi khiếu nại nếu bài đã được chấm."
+            context.getString(R.string.exam_detail_after_end_notice)
         } else {
             ""
         }
@@ -353,7 +385,13 @@ class ExamDetailViewModel(
             gradedCount = 0,
             totalStudents = 0,
             isOfflineReady = offlineCacheManager.getTemplate(id) != null,
-            date = onlineConfig?.startTime.orEmpty()
+            date = onlineConfig?.startTime.orEmpty(),
+            resultSheetId = resultId,
+            gradingType = gradingType.orEmpty(),
+            canStartSession = canStartSession == true && gradingType.equals("STUDENT_SUBMISSION", ignoreCase = true),
+            canSubmit = canSubmit == true && gradingType.equals("STUDENT_SUBMISSION", ignoreCase = true),
+            canViewResult = canViewResult == true && !resultId.isNullOrBlank(),
+            resultOnly = resultOnly == true || gradingType.equals("TEACHER_GRADING", ignoreCase = true)
         )
     }
 

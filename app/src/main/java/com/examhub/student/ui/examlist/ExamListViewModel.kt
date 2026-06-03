@@ -61,7 +61,12 @@ class ExamListViewModel(
                                 isOfflineReady = offlineCacheManager.getTemplate(item.id) != null,
                                 date = item.displayTime,
                                 resultSheetId = item.resultId,
-                                hasSubmitted = !item.resultId.isNullOrBlank() || item.hasSubmittedStatus()
+                                hasSubmitted = !item.resultId.isNullOrBlank() || item.hasSubmittedStatus(),
+                                gradingType = item.gradingType.orEmpty(),
+                                canStartSession = item.canStartSession == true && item.gradingType.isStudentSubmission(),
+                                canSubmit = item.canSubmit == true && item.gradingType.isStudentSubmission(),
+                                canViewResult = item.canViewResult == true && !item.resultId.isNullOrBlank(),
+                                resultOnly = item.resultOnly == true || item.gradingType.isTeacherGrading()
                             )
                         }
                         offlineCacheManager.saveExamBasics(items)
@@ -91,10 +96,16 @@ class ExamListViewModel(
             listOf("SUBMITTED", "PROCESSING", "GRADED", "COMPLETED", "DONE").any(normalized::contains)
     }
 
+    private fun String?.isStudentSubmission(): Boolean =
+        equals("STUDENT_SUBMISSION", ignoreCase = true)
+
+    private fun String?.isTeacherGrading(): Boolean =
+        equals("TEACHER_GRADING", ignoreCase = true)
+
     private fun Exam.matches(value: ExamFilter): Boolean = when (value) {
         ExamFilter.ALL -> true
-        ExamFilter.READY -> isOpenForStudent() && !hasSubmitted
-        ExamFilter.PROCESSING -> hasSubmitted || isSubmittedLikeStatus()
+        ExamFilter.READY -> canStartSession && !hasSubmitted && !resultOnly
+        ExamFilter.PROCESSING -> hasSubmitted || canViewResult || resultOnly || isSubmittedLikeStatus()
         ExamFilter.CLOSED -> isClosedStatus()
     }
 

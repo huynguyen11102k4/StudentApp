@@ -83,7 +83,6 @@ class SmartReviewFragment : Fragment() {
                     Snackbar.make(binding.root, R.string.smart_review_submitted, Snackbar.LENGTH_SHORT).show()
                     val bundle = Bundle().apply {
                         putString("examId", viewModel.reviewState.value.examId)
-                        putString("submissionId", submission.submissionId)
                         putString("sheetId", submission.resultId.orEmpty())
                     }
                     findNavController().navigate(R.id.action_smart_review_to_submission_end, bundle)

@@ -70,9 +70,7 @@
     <string name="result_detail_create_appeal">Tạo khiếu nại</string>
     <string name="result_detail_default_title">Kết quả</string>
     <string name="result_detail_appeal_dialog_title">Tạo khiếu nại</string>
-    <string name="result_detail_appeal_reason_hint">Lý do khiếu nại</string>
-    <string name="result_detail_appeal_question_hint">Câu hỏi liên quan (tùy chọn)</string>
-    <string name="result_detail_appeal_message_hint">Ghi chú cho câu hỏi</string>
+    <string name="result_detail_appeal_reason_hint">Nội dung cần xem lại</string>
     <string name="result_detail_appeal_send">Gửi</string>
     <string name="results_load_failed">Không thể tải kết quả</string>
     <string name="result_detail_load_failed">Không thể tải chi tiết kết quả</string>

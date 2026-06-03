@@ -1,8 +1,10 @@
 package com.examhub.student.omr
 
+import android.content.Context
 import android.graphics.Bitmap
 import android.util.Log
 import com.google.gson.Gson
+import com.examhub.student.R
 import com.examhub.student.data.model.Answer
 import com.examhub.student.model.response.profile.UserResponse
 import com.examhub.student.omr.core.OmrEngine
@@ -17,7 +19,8 @@ import org.json.JSONObject
 
 class OmrProcessor(
     private val offlineCacheManager: OfflineCacheManager,
-    private val tokenManager: TokenManager
+    private val tokenManager: TokenManager,
+    private val context: Context
 ) {
     private val gson = Gson()
     private val tag = "OmrProcessorKt"
@@ -26,10 +29,10 @@ class OmrProcessor(
         bitmap: Bitmap,
         examId: String
     ): OmrProcessingResult = withContext(Dispatchers.Default) {
-        require(examId.isNotBlank()) { "Thiếu mã kỳ thi để xử lý OMR" }
+        require(examId.isNotBlank()) { context.getString(R.string.omr_missing_exam_id) }
 
         val templateJson = offlineCacheManager.getTemplate(examId)
-            ?: error("Chưa có mẫu OMR. Hãy tải mẫu OMR của kỳ thi trước.")
+            ?: error(context.getString(R.string.omr_missing_template))
 
         val normalizedTemplateJson = normalizeTemplateJson(templateJson)
         val enabledIdFields = readEnabledIdFields(normalizedTemplateJson)
@@ -54,7 +57,7 @@ class OmrProcessor(
         )
 
         if (!output.success) {
-            error(output.errorMessage.ifBlank { "Xử lý OMR thất bại (${output.errorCode})" })
+            error(output.errorMessage.ifBlank { context.getString(R.string.omr_processing_failed_format, output.errorCode) })
         }
 
         validateIdZone(output.idResult, enabledIdFields, studentIdentifierMode, examId)
@@ -135,18 +138,18 @@ class OmrProcessor(
         val scannedExamCode = idResult.examCode.trim()
 
         if (enabledFields.studentId && !isReadableCode(scannedStudentId)) {
-            error("Không đọc được mã học sinh trên phiếu. Vui lòng chụp lại.")
+            error(context.getString(R.string.omr_unreadable_student_code))
         }
         if (enabledFields.classCode && !isReadableCode(scannedClassCode)) {
-            error("Không đọc được mã lớp trên phiếu. Vui lòng chụp lại.")
+            error(context.getString(R.string.omr_unreadable_class_code))
         }
         if (enabledFields.examCode && !isReadableCode(scannedExamCode)) {
-            error("Không đọc được mã đề trên phiếu. Vui lòng chụp lại.")
+            error(context.getString(R.string.omr_unreadable_exam_code))
         }
 
         val expectedStudentCodes = getExpectedStudentCodes(studentIdentifierMode)
         if (enabledFields.studentId && expectedStudentCodes.isNotEmpty() && expectedStudentCodes.none { sameCode(it, scannedStudentId) }) {
-            error("Mã học sinh trên phiếu ($scannedStudentId) không trùng với tài khoản đăng nhập.")
+            error(context.getString(R.string.omr_student_code_mismatch_format, scannedStudentId))
         }
 
         if (enabledFields.classCode) {
@@ -157,7 +160,7 @@ class OmrProcessor(
                 .filter { it.isNotBlank() }
                 .distinctBy { it.trim().uppercase() }
             if (classCodes.isNotEmpty() && classCodes.none { sameClassCode(it, scannedClassCode) }) {
-                error("Mã lớp trên phiếu ($scannedClassCode) không trùng với lớp của học sinh.")
+                error(context.getString(R.string.omr_class_code_mismatch_format, scannedClassCode))
             }
         }
 
@@ -204,10 +207,7 @@ class OmrProcessor(
         val profile = getCachedProfile() ?: return emptyList()
 
         val externalCodes = listOfNotNull(profile.student?.studentCode)
-        val internalCodes = buildList {
-            addAll(listOfNotNull(profile.student?.internalId, profile.student?.id))
-            addAll(offlineCacheManager.getCachedClassBasics().map { it.classCode })
-        }
+        val internalCodes = listOfNotNull(profile.student?.internalId)
 
         return when (mode) {
             StudentIdentifierMode.EXTERNAL -> externalCodes

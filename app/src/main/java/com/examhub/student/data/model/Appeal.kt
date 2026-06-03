@@ -14,8 +14,5 @@ data class Appeal(
     val reason: String,
     val status: String,
     val createdAt: String,
-    val teacherNote: String? = null,
-    val processedImageUrl: String? = null,
-    val dewarpedImageUrl: String? = null,
-    val itemMessages: String = ""
+    val teacherNote: String? = null
 )

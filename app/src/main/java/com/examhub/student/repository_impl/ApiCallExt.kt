@@ -2,6 +2,8 @@ package com.examhub.student.repository_impl
 
 import com.google.gson.Gson
 import com.google.gson.JsonParseException
+import com.examhub.student.OmrApplication
+import com.examhub.student.R
 import com.examhub.student.model.ApiException
 import com.examhub.student.model.ApiResult
 import com.examhub.student.model.response.common.ApiEnvelope
@@ -77,7 +79,7 @@ private fun Throwable.toApiException(): ApiException {
         is IOException -> ApiException("NETWORK_ERROR", message ?: "Network error", causeThrowable = this)
         is JsonParseException -> ApiException(
             "PARSE_ERROR",
-            "Dữ liệu server chưa đúng định dạng ứng dụng mong đợi",
+            OmrApplication.appContext.getString(R.string.api_invalid_server_format),
             causeThrowable = this
         )
         else -> ApiException("UNKNOWN_ERROR", message ?: "Unknown error", causeThrowable = this)

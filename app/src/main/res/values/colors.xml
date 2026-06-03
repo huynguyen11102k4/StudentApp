@@ -103,6 +103,12 @@
     <color name="status_processing_text">#FF0B5864</color>
     <color name="status_ready_bg">#FFDCE4C5</color>
     <color name="status_ready_text">#FF3A411A</color>
+    <color name="lock_mode_timer_bg">#FFFFFFFF</color>
+    <color name="lock_mode_timer_stroke">#FFD97818</color>
+    <color name="lock_mode_panel_bg">#FFFFF7EB</color>
+    <color name="lock_mode_panel_stroke">#FFFFC77D</color>
+    <color name="lock_mode_chip_bg">#FFD2EEF4</color>
+    <color name="lock_mode_chip_text">#FF0B5864</color>
 
     <!-- Utility -->
     <color name="black">#FF000000</color>

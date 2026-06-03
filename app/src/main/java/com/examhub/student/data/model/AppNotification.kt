@@ -6,6 +6,7 @@ data class AppNotification(
     val title: String,
     val content: String,
     val link: String?,
+    val route: String? = null,
     val appealId: String?,
     val targetId: String? = null,
     val entityId: String? = null,

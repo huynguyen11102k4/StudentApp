@@ -49,6 +49,20 @@ class ExamDetailFragment : Fragment() {
         binding.btnDownloadOffline.setOnClickListener {
             viewModel.downloadGradingData()
         }
+        binding.btnViewResult.setOnClickListener {
+            val resultId = viewModel.resultId.value
+            if (resultId.isBlank()) {
+                Snackbar.make(binding.root, R.string.exam_detail_waiting_result, Snackbar.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+            findNavController().navigate(
+                R.id.resultDetailFragment,
+                Bundle().apply {
+                    putString("sheetId", resultId)
+                    putString("examStatus", viewModel.status.value)
+                }
+            )
+        }
         binding.cardPendingAppeals.setOnClickListener {
             val bundle = Bundle().apply { putString("examId", examId) }
             findNavController().navigate(R.id.action_exam_detail_to_appeals_list, bundle)
@@ -102,7 +116,9 @@ class ExamDetailFragment : Fragment() {
             launch {
                 viewModel.isStartingSession.collect { starting ->
                     binding.btnStartScanning.isEnabled = viewModel.canStartExam.value && !starting && !viewModel.isDownloading.value
-                    binding.btnStartScanning.text = if (starting) "Đang bắt đầu..." else getString(R.string.exam_detail_start_scanning)
+                    binding.btnStartScanning.text = getString(
+                        if (starting) R.string.exam_detail_starting else R.string.exam_detail_start_scanning
+                    )
                     if (starting) binding.btnStartScanning.alpha = 0.7f
                 }
             }
@@ -110,6 +126,17 @@ class ExamDetailFragment : Fragment() {
                 viewModel.canStartExam.collect { canStart ->
                     binding.btnStartScanning.isEnabled = canStart && !viewModel.isDownloading.value && !viewModel.isStartingSession.value
                     binding.btnStartScanning.alpha = if (canStart) 1.0f else 0.55f
+                }
+            }
+            launch {
+                viewModel.resultOnly.collect { resultOnly ->
+                    binding.btnStartScanning.visibility = if (resultOnly) View.GONE else View.VISIBLE
+                    binding.cardOfflineAlert.visibility = if (resultOnly || viewModel.isOfflineReady.value) View.GONE else View.VISIBLE
+                }
+            }
+            launch {
+                viewModel.canViewResult.collect { canViewResult ->
+                    binding.btnViewResult.visibility = if (canViewResult) View.VISIBLE else View.GONE
                 }
             }
             launch {
@@ -132,8 +159,8 @@ class ExamDetailFragment : Fragment() {
                         binding.btnDownloadOffline.text = getString(R.string.exam_detail_download_template)
                         binding.btnStartScanning.alpha = if (viewModel.canStartExam.value) 1.0f else 0.55f
                     }
-                    binding.cardOfflineAlert.visibility = if (ready) View.GONE else View.VISIBLE
-                    binding.btnStartScanning.visibility = View.VISIBLE
+                    binding.cardOfflineAlert.visibility = if (ready || viewModel.resultOnly.value) View.GONE else View.VISIBLE
+                    binding.btnStartScanning.visibility = if (viewModel.resultOnly.value) View.GONE else View.VISIBLE
                 }
             }
             launch {

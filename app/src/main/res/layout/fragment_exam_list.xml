@@ -26,7 +26,7 @@
         style="@style/Text_Body_Medium"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Chưa có kỳ thi nào"
+        android:text="@string/exam_list_empty"
         android:textColor="@color/text_secondary"
         android:visibility="gone"
         app:layout_constraintBottom_toBottomOf="parent"

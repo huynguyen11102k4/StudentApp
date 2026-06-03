@@ -23,7 +23,7 @@
             android:background="@drawable/bg_lock_status_chip"
             android:gravity="center"
             android:text="@string/lock_mode_title"
-            android:textColor="@color/status_processing_text"
+            android:textColor="@color/lock_mode_chip_text"
             android:textStyle="bold" />
 
         <LinearLayout

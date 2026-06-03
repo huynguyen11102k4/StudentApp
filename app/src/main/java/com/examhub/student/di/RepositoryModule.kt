@@ -31,7 +31,7 @@ object RepositoryModule {
         single<StudentSubmissionRepository> { StudentSubmissionRepositoryImpl(get(), get(), get(named("storageUploadOkHttp"))) }
         single<LockModeRepository> { LockModeRepositoryImpl(get(), get(), get()) }
         single<ResultsRepository> { ResultsRepositoryImpl(get(), get()) }
-        single { OmrProcessor(get(), get()) }
+        single { OmrProcessor(get(), get(), get()) }
         single { OmrReviewStore() }
     }
 }

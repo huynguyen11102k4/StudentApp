@@ -19,6 +19,7 @@ import com.google.android.material.textfield.TextInputLayout
 import com.examhub.student.BuildConfig
 import com.examhub.student.R
 import com.examhub.student.databinding.FragmentSettingsBinding
+import com.examhub.student.service.LanguagePreferenceManager
 import com.examhub.student.service.ThemePreferenceManager
 import com.examhub.student.util.extension.applySystemWindowInsets
 import com.examhub.student.util.extension.collectOnStarted
@@ -72,6 +73,10 @@ class SettingsFragment : Fragment() {
         binding.switchDarkMode.isChecked = ThemePreferenceManager.isDarkModeApplied(requireContext())
         binding.switchDarkMode.setOnCheckedChangeListener { _, isChecked ->
             ThemePreferenceManager.setDarkMode(requireContext(), isChecked)
+        }
+        bindLanguageValue()
+        binding.itemLanguage.setOnClickListener {
+            showLanguageDialog()
         }
 
         binding.btnLogout.setOnClickListener {
@@ -140,6 +145,37 @@ class SettingsFragment : Fragment() {
             }
         }
         viewModel.loadSettings()
+    }
+
+    private fun showLanguageDialog() {
+        val tags = arrayOf(
+            LanguagePreferenceManager.LANGUAGE_VI,
+            LanguagePreferenceManager.LANGUAGE_EN
+        )
+        val labels = arrayOf(
+            getString(R.string.settings_language_vietnamese),
+            getString(R.string.settings_language_english)
+        )
+        val currentIndex = tags.indexOf(LanguagePreferenceManager.languageTag(requireContext()))
+            .takeIf { it >= 0 } ?: 0
+
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.settings_language)
+            .setSingleChoiceItems(labels, currentIndex) { dialog, which ->
+                LanguagePreferenceManager.setLanguage(requireContext(), tags[which])
+                bindLanguageValue()
+                Snackbar.make(binding.root, R.string.settings_language_changed, Snackbar.LENGTH_SHORT).show()
+                dialog.dismiss()
+            }
+            .setNegativeButton(R.string.common_cancel, null)
+            .show()
+    }
+
+    private fun bindLanguageValue() {
+        binding.tvLanguageValue.text = when (LanguagePreferenceManager.languageTag(requireContext())) {
+            LanguagePreferenceManager.LANGUAGE_EN -> getString(R.string.settings_language_english)
+            else -> getString(R.string.settings_language_vietnamese)
+        }
     }
 
     private fun showChangePasswordDialog() {

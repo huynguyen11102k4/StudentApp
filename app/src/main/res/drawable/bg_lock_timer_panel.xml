@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <shape xmlns:android="http://schemas.android.com/apk/res/android">
-    <solid android:color="@color/surface" />
+    <solid android:color="@color/lock_mode_timer_bg" />
     <stroke
         android:width="2dp"
-        android:color="@color/student_accent" />
+        android:color="@color/lock_mode_timer_stroke" />
     <corners android:radius="@dimen/student_card_radius_xlarge" />
     <padding
         android:bottom="@dimen/spacing_24"

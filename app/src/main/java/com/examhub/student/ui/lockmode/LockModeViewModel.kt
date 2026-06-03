@@ -13,6 +13,7 @@ import com.examhub.student.model.request.submission.IdZoneResultRequest
 import com.examhub.student.model.request.submission.StudentAnswerRequest
 import com.examhub.student.model.request.submission.StudentSubmitRequest
 import com.examhub.student.model.response.profile.UserResponse
+import com.examhub.student.model.response.submission.StudentSubmitResponse
 import com.examhub.student.repository.LockModeRepository
 import com.examhub.student.repository.StudentSubmissionRepository
 import com.examhub.student.service.ActiveExamSessionStore
@@ -46,8 +47,8 @@ class LockModeViewModel(
     val remainingSeconds: StateFlow<Int> = _remainingSeconds.asStateFlow()
     private val _timeExpired = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     val timeExpired: SharedFlow<Unit> = _timeExpired.asSharedFlow()
-    private val _blankSubmissionFinished = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
-    val blankSubmissionFinished: SharedFlow<Unit> = _blankSubmissionFinished.asSharedFlow()
+    private val _blankSubmissionFinished = MutableSharedFlow<StudentSubmitResponse?>(extraBufferCapacity = 1)
+    val blankSubmissionFinished: SharedFlow<StudentSubmitResponse?> = _blankSubmissionFinished.asSharedFlow()
     private val _omrCodes = MutableStateFlow(LockModeOmrCodes())
     val omrCodes: StateFlow<LockModeOmrCodes> = _omrCodes.asStateFlow()
 
@@ -158,7 +159,7 @@ class LockModeViewModel(
     fun submitBlankOnTimeout() {
         val id = sessionId.takeIf { it.isNotBlank() } ?: return
         if (blankSubmitted) {
-            _blankSubmissionFinished.tryEmit(Unit)
+            _blankSubmissionFinished.tryEmit(null)
             return
         }
         blankSubmitted = true
@@ -198,11 +199,12 @@ class LockModeViewModel(
                 )
             ).collect { result ->
                 if (result !is ApiResult.Loading) {
-                    if (result is ApiResult.Success) {
+                    val submission = if (result is ApiResult.Success) {
                         activeSessionStore.clear(examId)
                         activeSessionStore.clearBySessionId(id)
-                    }
-                    _blankSubmissionFinished.tryEmit(Unit)
+                        result.data
+                    } else null
+                    _blankSubmissionFinished.tryEmit(submission)
                 }
             }
         }
@@ -236,14 +238,12 @@ class LockModeViewModel(
             ?.let { raw -> runCatching { gson.fromJson(raw, UserResponse::class.java) }.getOrNull() }
         val cachedStudentCode = when (mode) {
             StudentIdentifierMode.INTERNAL -> listOfNotNull(
-                profile?.student?.internalId,
-                profile?.student?.id
+                profile?.student?.internalId
             ).firstOrNull { it.isNotBlank() }.orEmpty()
             StudentIdentifierMode.EXTERNAL -> profile?.student?.studentCode.orEmpty()
             StudentIdentifierMode.UNKNOWN -> listOfNotNull(
                 profile?.student?.studentCode,
-                profile?.student?.internalId,
-                profile?.student?.id
+                profile?.student?.internalId
             ).firstOrNull { it.isNotBlank() }.orEmpty()
         }
         val cachedClassCode = offlineCacheManager.getExamClassCode(examId)

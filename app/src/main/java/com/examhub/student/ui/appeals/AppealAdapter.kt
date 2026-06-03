@@ -17,8 +17,13 @@ class AppealAdapter(
     class ViewHolder(private val binding: ItemAppealBinding) : RecyclerView.ViewHolder(binding.root) {
         fun bind(appeal: Appeal, onClick: (Appeal) -> Unit) {
             val context = binding.root.context
-            binding.tvStudentName.text = appeal.studentName.ifBlank { appeal.studentCode }
-            binding.tvStudentCode.text = "Mã HS: ${appeal.studentCode.ifBlank { "Chưa xác định" }}"
+            binding.tvStudentName.text = appeal.studentName.ifBlank {
+                appeal.studentCode.ifBlank { context.getString(R.string.appeal_detail_student_unknown) }
+            }
+            binding.tvStudentCode.text = context.getString(
+                R.string.result_detail_student_code_format,
+                appeal.studentCode.ifBlank { context.getString(R.string.appeal_detail_student_code_unknown) }
+            )
             binding.tvExamName.text = listOf(appeal.examName, appeal.subject)
                 .filter { it.isNotBlank() }
                 .joinToString(" - ")

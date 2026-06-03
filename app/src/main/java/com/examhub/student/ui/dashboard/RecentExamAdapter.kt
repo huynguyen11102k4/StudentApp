@@ -23,14 +23,22 @@ class RecentExamAdapter(
             binding.tvExamName.text = exam.name
             binding.tvClassName.text = listOf(exam.subject, exam.className)
                 .filter { it.isNotBlank() }
-                .joinToString(" • ")
+                .joinToString(binding.root.context.getString(R.string.common_separator_dot))
             binding.tvExamProgress.text = exam.status.ifBlank {
                 context.getString(R.string.exam_status_open)
             }.toFriendlyExamStatus()
             binding.tvExamUpdated.text = formatExamDate(exam.date).ifBlank {
                 context.getString(R.string.dashboard_exam_updated)
             }
-            if (exam.hasSubmitted) {
+            if (exam.canViewResult) {
+                binding.tvOfflineBadge.setText(R.string.dashboard_status_view_result)
+                binding.tvOfflineBadge.setBackgroundResource(R.drawable.bg_badge_online)
+                binding.tvOfflineBadge.setTextColor(context.getColor(R.color.status_online_text))
+            } else if (exam.resultOnly) {
+                binding.tvOfflineBadge.setText(R.string.dashboard_status_waiting_result)
+                binding.tvOfflineBadge.setBackgroundResource(R.drawable.bg_badge_processing)
+                binding.tvOfflineBadge.setTextColor(context.getColor(R.color.status_processing_text))
+            } else if (exam.hasSubmitted) {
                 binding.tvOfflineBadge.setText(R.string.dashboard_status_submitted)
                 binding.tvOfflineBadge.setBackgroundResource(R.drawable.bg_badge_online)
                 binding.tvOfflineBadge.setTextColor(context.getColor(R.color.status_online_text))
@@ -38,10 +46,14 @@ class RecentExamAdapter(
                 binding.tvOfflineBadge.setText(R.string.dashboard_status_in_progress)
                 binding.tvOfflineBadge.setBackgroundResource(R.drawable.bg_badge_processing)
                 binding.tvOfflineBadge.setTextColor(context.getColor(R.color.status_processing_text))
-            } else if (exam.isOfflineReady) {
+            } else if (exam.isOfflineReady && exam.status.isRunningExamStatus()) {
                 binding.tvOfflineBadge.setText(R.string.dashboard_status_ready)
                 binding.tvOfflineBadge.setBackgroundResource(R.drawable.bg_badge_ready)
                 binding.tvOfflineBadge.setTextColor(context.getColor(R.color.status_ready_text))
+            } else if (exam.status.isEndedExamStatus()) {
+                binding.tvOfflineBadge.setText(R.string.dashboard_status_ended)
+                binding.tvOfflineBadge.setBackgroundResource(R.drawable.bg_badge_processing)
+                binding.tvOfflineBadge.setTextColor(context.getColor(R.color.status_processing_text))
             } else {
                 binding.tvOfflineBadge.setText(R.string.dashboard_status_online)
                 binding.tvOfflineBadge.setBackgroundResource(R.drawable.bg_badge_online)
@@ -75,6 +87,14 @@ class RecentExamAdapter(
                 normalized == "OPEN" ||
                 normalized == "IN_PROGRESS" ||
                 normalized == "RUNNING"
+        }
+
+        private fun String.isEndedExamStatus(): Boolean {
+            val normalized = trim().replace('-', '_').uppercase(Locale.US)
+            return normalized == "END" ||
+                normalized == "ENDED" ||
+                normalized == "EXPIRED" ||
+                normalized == "CLOSED"
         }
     }
 

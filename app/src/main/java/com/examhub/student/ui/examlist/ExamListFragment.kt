@@ -52,9 +52,15 @@ class ExamListFragment : Fragment() {
         }
 
         adapter = ExamPagingAdapter { exam ->
-            if (exam.hasSubmitted && !exam.resultSheetId.isNullOrBlank()) {
-                val bundle = Bundle().apply { putString("sheetId", exam.resultSheetId) }
-                findNavController().navigate(R.id.resultDetailFragment, bundle)
+            if (exam.canViewResult && !exam.resultSheetId.isNullOrBlank()) {
+                val resultId = exam.resultSheetId
+                findNavController().navigate(
+                    R.id.resultDetailFragment,
+                    Bundle().apply {
+                        putString("sheetId", resultId)
+                        putString("examStatus", exam.status)
+                    }
+                )
             } else {
                 val bundle = Bundle().apply { putString("examId", exam.id) }
                 findNavController().navigate(R.id.action_exam_list_to_exam_detail, bundle)

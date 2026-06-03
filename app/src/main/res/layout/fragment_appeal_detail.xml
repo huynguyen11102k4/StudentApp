@@ -155,7 +155,7 @@
                         style="@style/Text_Label_Medium"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="@string/appeal_detail_detected_info"
+                        android:text="@string/appeal_detail_teacher_response"
                         android:textColor="@color/text_secondary" />
 
                     <TextView
@@ -206,42 +206,6 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="@dimen/spacing_4"
                         android:textColor="@color/text_secondary" />
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
-
-            <com.google.android.material.card.MaterialCardView
-                android:id="@+id/cardProcessedImage"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/spacing_12"
-                app:cardBackgroundColor="@color/surface"
-                app:cardCornerRadius="@dimen/student_card_radius"
-                app:cardElevation="@dimen/elevation_level0"
-                app:contentPadding="@dimen/spacing_16"
-                app:strokeColor="@color/outline_variant"
-                app:strokeWidth="1dp">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical">
-
-                    <TextView
-                        style="@style/Text_Label_Medium"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="@string/appeal_detail_processed_image"
-                        android:textColor="@color/text_secondary" />
-
-                    <ImageView
-                        android:id="@+id/ivProcessedImage"
-                        android:layout_width="match_parent"
-                        android:layout_height="240dp"
-                        android:layout_marginTop="@dimen/spacing_12"
-                        android:adjustViewBounds="true"
-                        android:background="@color/surface_variant"
-                        android:contentDescription="@string/appeal_detail_processed_image"
-                        android:scaleType="fitCenter" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 

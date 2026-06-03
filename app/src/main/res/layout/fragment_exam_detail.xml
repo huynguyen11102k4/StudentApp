@@ -246,6 +246,16 @@
                 android:text="@string/exam_detail_start_scanning"
                 app:icon="@drawable/ic_camera" />
 
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnViewResult"
+                style="@style/Student.PrimaryButton"
+                android:layout_width="match_parent"
+                android:layout_height="@dimen/button_height_large"
+                android:layout_marginTop="@dimen/spacing_12"
+                android:text="@string/exam_detail_view_result"
+                android:visibility="gone"
+                app:icon="@drawable/ic_assignment" />
+
             <com.google.android.material.progressindicator.CircularProgressIndicator
                 android:id="@+id/progressBar"
                 android:layout_width="wrap_content"

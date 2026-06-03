@@ -22,6 +22,9 @@ data class NotificationResponse(
     @SerializedName("link")
     val link: String?,
 
+    @SerializedName("route")
+    val route: String? = null,
+
     @SerializedName("appeal_id")
     val appealId: String? = null,
 

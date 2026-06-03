@@ -1,7 +1,9 @@
 package com.examhub.student.ui.classdetail
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.examhub.student.R
 import com.examhub.student.data.model.Exam
 import com.examhub.student.model.ApiResult
 import com.examhub.student.model.response.classroom.MobileClassResponse
@@ -23,7 +25,8 @@ class ClassDetailViewModel(
     private val classRepository: ClassRepository,
     private val examRepository: ExamRepository,
     private val resultsRepository: ResultsRepository,
-    private val offlineCacheManager: OfflineCacheManager
+    private val offlineCacheManager: OfflineCacheManager,
+    private val context: Context
 ) : ViewModel() {
     private val _classDetail = MutableStateFlow<MobileClassResponse?>(null)
     val classDetail: StateFlow<MobileClassResponse?> = _classDetail.asStateFlow()
@@ -55,7 +58,7 @@ class ClassDetailViewModel(
                     }
                     is ApiResult.Error -> {
                         _isLoading.value = false
-                        _message.tryEmit(result.exception.message ?: "Không thể tải chi tiết lớp")
+                        _message.tryEmit(result.exception.message ?: context.getString(R.string.class_detail_load_failed))
                     }
                 }
             }
@@ -78,7 +81,7 @@ class ClassDetailViewModel(
                     }
                     is ApiResult.Error -> {
                         _isLoading.value = false
-                        _message.tryEmit(result.exception.message ?: "Không thể gửi yêu cầu rời lớp")
+                        _message.tryEmit(result.exception.message ?: context.getString(R.string.class_detail_leave_request_failed))
                     }
                 }
             }
@@ -99,7 +102,7 @@ class ClassDetailViewModel(
                         applyExamSearch()
                     }
                     is ApiResult.Error -> {
-                        _message.tryEmit(result.exception.message ?: "Không thể tải danh sách kỳ thi của lớp")
+                        _message.tryEmit(result.exception.message ?: context.getString(R.string.class_detail_exam_list_failed))
                     }
                 }
             }
@@ -164,7 +167,12 @@ class ClassDetailViewModel(
             isOfflineReady = offlineCacheManager.getTemplate(id) != null,
             date = displayTime,
             resultSheetId = resultSheetId,
-            hasSubmitted = resultSheetId != null || hasSubmittedStatus()
+            hasSubmitted = resultSheetId != null || hasSubmittedStatus(),
+            gradingType = gradingType.orEmpty(),
+            canStartSession = canStartSession == true && gradingType.isStudentSubmission(),
+            canSubmit = canSubmit == true && gradingType.isStudentSubmission(),
+            canViewResult = canViewResult == true && resultSheetId != null,
+            resultOnly = resultOnly == true || gradingType.isTeacherGrading()
         )
     }
 
@@ -175,4 +183,10 @@ class ClassDetailViewModel(
         return attemptsUsed?.let { it > 0 } == true ||
             listOf("SUBMITTED", "PROCESSING", "GRADED", "COMPLETED", "DONE").any { normalized.contains(it) }
     }
+
+    private fun String?.isStudentSubmission(): Boolean =
+        equals("STUDENT_SUBMISSION", ignoreCase = true)
+
+    private fun String?.isTeacherGrading(): Boolean =
+        equals("TEACHER_GRADING", ignoreCase = true)
 }

@@ -27,15 +27,12 @@ data class AppealSummaryResponse(
     @SerializedName(value = "updated_at", alternate = ["updatedAt"])
     val updatedAt: String? = null,
 
-    @SerializedName("student")
+    @SerializedName(value = "student", alternate = ["student_info", "studentInfo"])
     val student: AppealStudentResponse?,
 
     @SerializedName("exam")
     val exam: AppealExamResponse? = null,
 
     @SerializedName("sheet")
-    val sheet: AppealSheetResponse?,
-
-    @SerializedName("items")
-    val items: List<AppealItemResponse>? = null
+    val sheet: AppealSheetResponse?
 )

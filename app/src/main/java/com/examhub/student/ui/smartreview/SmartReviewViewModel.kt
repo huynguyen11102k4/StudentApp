@@ -1,8 +1,10 @@
 package com.examhub.student.ui.smartreview
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import android.util.Base64
+import com.examhub.student.R
 import com.examhub.student.model.ApiResult
 import com.examhub.student.model.request.submission.PresignSubmissionImageRequest
 import com.examhub.student.model.request.submission.IdZoneResultRequest
@@ -32,7 +34,8 @@ class SmartReviewViewModel(
     private val omrReviewStore: OmrReviewStore,
     private val studentSubmissionRepository: StudentSubmissionRepository,
     private val activeSessionStore: ActiveExamSessionStore,
-    private val examRepository: ExamRepository
+    private val examRepository: ExamRepository,
+    private val context: Context
 ) : ViewModel() {
 
     private val _filteredAnswers = MutableStateFlow<List<Answer>>(emptyList())
@@ -118,14 +121,14 @@ class SmartReviewViewModel(
     fun saveResults(totalScore: Double, examId: String, studentId: String) {
         val sessionId = currentSessionId.ifBlank { _reviewState.value.sessionId }
         if (sessionId.isBlank()) {
-            _errorMessage.tryEmit("Thiếu phiên làm bài, vui lòng bắt đầu lại từ màn chi tiết kỳ thi")
+            _errorMessage.tryEmit(context.getString(R.string.smart_review_missing_session))
             return
         }
         val rawImageBase64 = currentRawImageBase64.ifBlank { currentDebugImageBase64 }
         val dewarpedImageBase64 = currentDewarpedImageBase64.ifBlank { currentDebugImageBase64 }
         val processedImageBase64 = currentDebugImageBase64
         if (rawImageBase64.isBlank() || dewarpedImageBase64.isBlank() || processedImageBase64.isBlank()) {
-            _errorMessage.tryEmit("Chưa có ảnh OMR để nộp bài")
+            _errorMessage.tryEmit(context.getString(R.string.smart_review_missing_omr_image))
             return
         }
 
@@ -133,22 +136,22 @@ class SmartReviewViewModel(
             _isLoading.value = true
             if (!canSubmitCurrentExam()) {
                 _isLoading.value = false
-                _errorMessage.tryEmit("Kỳ thi đã đóng nên không thể nộp thêm")
+                _errorMessage.tryEmit(context.getString(R.string.smart_review_exam_closed_no_submit))
                 return@launch
             }
             val rawImageBytes = decodeBase64Image(rawImageBase64) ?: run {
                 _isLoading.value = false
-                _errorMessage.tryEmit("Ảnh gốc không hợp lệ")
+                _errorMessage.tryEmit(context.getString(R.string.smart_review_invalid_raw_image))
                 return@launch
             }
             val dewarpedImageBytes = decodeBase64Image(dewarpedImageBase64) ?: run {
                 _isLoading.value = false
-                _errorMessage.tryEmit("Ảnh đã nắn chỉnh không hợp lệ")
+                _errorMessage.tryEmit(context.getString(R.string.smart_review_invalid_dewarped_image))
                 return@launch
             }
             val processedImageBytes = decodeBase64Image(processedImageBase64) ?: run {
                 _isLoading.value = false
-                _errorMessage.tryEmit("Ảnh review không hợp lệ")
+                _errorMessage.tryEmit(context.getString(R.string.smart_review_invalid_review_image))
                 return@launch
             }
             val fileType = "image/jpeg"
@@ -185,7 +188,7 @@ class SmartReviewViewModel(
                     activeSessionStore.clearBySessionId(sessionId)
                     _savedSuccess.tryEmit(submit.data)
                 }
-                is ApiResult.Error -> _errorMessage.tryEmit(submit.exception.message ?: "Nộp bài thất bại")
+                is ApiResult.Error -> _errorMessage.tryEmit(submit.exception.message ?: context.getString(R.string.smart_review_submit_failed))
                 else -> Unit
             }
         }
@@ -210,7 +213,7 @@ class SmartReviewViewModel(
 
         if (presign !is ApiResult.Success<PresignSubmissionImageResponse>) {
             _isLoading.value = false
-            _errorMessage.tryEmit((presign as? ApiResult.Error)?.exception?.message ?: "Không thể tạo URL upload ảnh $imageKind")
+            _errorMessage.tryEmit((presign as? ApiResult.Error)?.exception?.message ?: context.getString(R.string.smart_review_presign_failed_format, imageKind))
             return null
         }
 
@@ -219,7 +222,7 @@ class SmartReviewViewModel(
             .first { it !is ApiResult.Loading }
         if (uploadResult is ApiResult.Error) {
             _isLoading.value = false
-            _errorMessage.tryEmit(uploadResult.exception.message ?: "Upload ảnh $imageKind thất bại")
+            _errorMessage.tryEmit(uploadResult.exception.message ?: context.getString(R.string.smart_review_upload_failed_format, imageKind))
             return null
         }
 

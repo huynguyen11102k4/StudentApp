@@ -34,7 +34,11 @@ class AppealsListFragment : Fragment() {
         binding.toolbar.setNavigationOnClickListener { findNavController().navigateUp() }
 
         adapter = AppealAdapter { appeal ->
-            val bundle = Bundle().apply { putString("appealId", appeal.id) }
+            val bundle = Bundle().apply {
+                putString("appealId", appeal.id)
+                putString("studentName", appeal.studentName)
+                putString("studentCode", appeal.studentCode)
+            }
             findNavController().navigate(R.id.action_appeals_list_to_appeal_detail, bundle)
         }
         binding.rvAppeals.layoutManager = LinearLayoutManager(requireContext())

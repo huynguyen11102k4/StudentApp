@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:paddingStart="@dimen/spacing_24"
+    android:paddingTop="@dimen/spacing_4"
+    android:paddingEnd="@dimen/spacing_24"
+    android:paddingBottom="@dimen/spacing_8">
+
+    <TextView
+        style="@style/Text_Body_Medium"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/result_detail_appeal_dialog_message"
+        android:textColor="@color/text_secondary" />
+
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/layoutReason"
+        style="@style/Student.InputField"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/spacing_16"
+        android:hint="@string/result_detail_appeal_reason_hint">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/etReason"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="top|start"
+            android:inputType="textCapSentences|textMultiLine"
+            android:maxLines="6"
+            android:minLines="4" />
+    </com.google.android.material.textfield.TextInputLayout>
+</LinearLayout>

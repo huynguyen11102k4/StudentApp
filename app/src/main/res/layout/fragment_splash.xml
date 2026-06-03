@@ -36,7 +36,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="@dimen/spacing_8"
-        android:text="Đang khởi động..."
+        android:text="@string/splash_starting"
         android:textColor="@color/text_secondary"
         android:textSize="@dimen/text_size_body_medium"
         app:layout_constraintBottom_toBottomOf="parent"

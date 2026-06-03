@@ -1,7 +1,9 @@
 package com.examhub.student.ui.dashboard
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.examhub.student.R
 import com.examhub.student.data.model.Exam
 import com.examhub.student.data.model.SchoolClass
 import com.examhub.student.model.ApiResult
@@ -27,7 +29,8 @@ class DashboardViewModel(
     private val authRepository: AuthRepository,
     private val classRepository: ClassRepository,
     private val resultsRepository: ResultsRepository,
-    private val offlineCacheManager: OfflineCacheManager
+    private val offlineCacheManager: OfflineCacheManager,
+    private val context: Context
 ) : ViewModel() {
 
     private val _recentExams = MutableStateFlow<List<Exam>>(emptyList())
@@ -46,7 +49,7 @@ class DashboardViewModel(
     val classCount: StateFlow<Int> = _classCount.asStateFlow()
 
     fun loadDashboard() {
-        // Load from cache for instant display — but only show if not stale
+        // Load from cache for instant display â€” but only show if not stale
         val cachedExams = offlineCacheManager.getCachedExamBasics()
         if (cachedExams.isNotEmpty()) {
             _recentExams.value = cachedExams.take(5)
@@ -119,7 +122,12 @@ class DashboardViewModel(
                                 isOfflineReady = offlineCacheManager.getTemplate(exam.id) != null,
                                 date = exam.displayTime,
                                 resultSheetId = resultSheetId,
-                                hasSubmitted = resultSheetId != null || exam.hasSubmittedStatus()
+                                hasSubmitted = resultSheetId != null || exam.hasSubmittedStatus(),
+                                gradingType = exam.gradingType.orEmpty(),
+                                canStartSession = exam.canStartSession == true && exam.gradingType.isStudentSubmission(),
+                                canSubmit = exam.canSubmit == true && exam.gradingType.isStudentSubmission(),
+                                canViewResult = exam.canViewResult == true && resultSheetId != null,
+                                resultOnly = exam.resultOnly == true || exam.gradingType.isTeacherGrading()
                             )
                         }
                         val missingSubmittedExams = resultSummaries
@@ -136,7 +144,7 @@ class DashboardViewModel(
                         if (_recentExams.value.isEmpty()) {
                             _recentExams.value = cachedExams
                         }
-                        _toastMessage.tryEmit(result.exception.message ?: "Không thể tải dữ liệu")
+                        _toastMessage.tryEmit(result.exception.message ?: context.getString(R.string.dashboard_load_failed))
                     }
                 }
             }
@@ -163,9 +171,9 @@ class DashboardViewModel(
         val examId = exam.id?.takeIf { it.isNotBlank() } ?: return null
         return Exam(
             id = examId,
-            name = exam.name.orEmpty().ifBlank { "Bài kiểm tra đã nộp" },
+            name = exam.name.orEmpty().ifBlank { context.getString(R.string.dashboard_submitted_exam_name) },
             subject = exam.subject.orEmpty(),
-            className = "Kết quả học sinh",
+            className = context.getString(R.string.dashboard_student_result_class),
             duration = exam.duration ?: 0,
             questionCount = exam.totalQuestions ?: 0,
             status = "SUBMITTED",
@@ -174,7 +182,9 @@ class DashboardViewModel(
             isOfflineReady = false,
             date = gradedAt ?: createdAt.orEmpty(),
             resultSheetId = id,
-            hasSubmitted = true
+            hasSubmitted = true,
+            canViewResult = true,
+            resultOnly = true
         )
     }
 
@@ -185,4 +195,10 @@ class DashboardViewModel(
         return attemptsUsed?.let { it > 0 } == true ||
             listOf("SUBMITTED", "PROCESSING", "GRADED", "COMPLETED", "DONE").any { normalized.contains(it) }
     }
+
+    private fun String?.isStudentSubmission(): Boolean =
+        equals("STUDENT_SUBMISSION", ignoreCase = true)
+
+    private fun String?.isTeacherGrading(): Boolean =
+        equals("TEACHER_GRADING", ignoreCase = true)
 }

@@ -99,6 +99,7 @@ class NotificationsFragment : Fragment() {
 
     private fun handleNotificationClick(notification: AppNotification) {
         val type = notification.type.uppercase()
+        val route = notification.route.orEmpty()
         val link = notification.link.orEmpty()
         val sheetId = notification.data?.stringValue("sheet_id")
             ?: notification.data?.stringValue("sheetId")
@@ -121,12 +122,12 @@ class NotificationsFragment : Fragment() {
             ?: notification.metadata?.stringValue("exam_id")
             ?: notification.metadata?.stringValue("examId")
             ?: notification.link?.extractLastId()
-        if (!sheetId.isNullOrBlank() && isResultNotification(type, link)) {
+        if (!sheetId.isNullOrBlank() && isResultNotification(type, link, route)) {
             val bundle = Bundle().apply { putString("sheetId", sheetId) }
             findNavController().navigate(R.id.resultDetailFragment, bundle)
             return
         }
-        if ((type == "APPEAL_CREATED" || type == "APPEAL_UPDATED" || type == "APPEAL_NEW" || type == "APPEAL_RESOLVED" || type == "APPEAL_REPLIED") && !appealId.isNullOrBlank()) {
+        if ((route.equals("appeal_detail", ignoreCase = true) || type == "APPEAL_CREATED" || type == "APPEAL_UPDATED" || type == "APPEAL_NEW" || type == "APPEAL_RESOLVED" || type == "APPEAL_REPLIED") && !appealId.isNullOrBlank()) {
             val bundle = Bundle().apply { putString("appealId", appealId) }
             findNavController().navigate(R.id.action_notifications_to_appeal_detail, bundle)
             return
@@ -208,8 +209,10 @@ class NotificationsFragment : Fragment() {
             .firstOrNull { it.length >= 16 && it.any(Char::isDigit) }
     }
 
-    private fun isResultNotification(type: String, link: String): Boolean {
-        return type.contains("GRADE") ||
+    private fun isResultNotification(type: String, link: String, route: String): Boolean {
+        return route.equals("result_detail", ignoreCase = true) ||
+            route.equals("result", ignoreCase = true) ||
+            type.contains("GRADE") ||
             type.contains("RESULT") ||
             type == "EXAM_GRADED" ||
             link.contains("/results/", ignoreCase = true)

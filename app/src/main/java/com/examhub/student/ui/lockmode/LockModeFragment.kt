@@ -75,8 +75,8 @@ class LockModeFragment : Fragment() {
                 }
             }
             launch {
-                viewModel.blankSubmissionFinished.collect {
-                    navigateToSubmissionEnd()
+                viewModel.blankSubmissionFinished.collect { submission ->
+                    navigateToSubmissionEnd(submission?.resultId)
                 }
             }
         }
@@ -103,8 +103,8 @@ class LockModeFragment : Fragment() {
                     mapOf(
                         "reason" to "network_lost",
                         "screen" to "lock_mode",
-                        "violation_label" to "Mất kết nối mạng trong lúc làm bài",
-                        "teacher_message" to "Thiết bị của học sinh bị mất kết nối mạng trong lúc làm bài."
+                        "violation_label" to getString(R.string.lock_violation_network_lost_label),
+                        "teacher_message" to getString(R.string.lock_violation_network_lost_teacher_message)
                     )
                 )
             },
@@ -116,8 +116,8 @@ class LockModeFragment : Fragment() {
                     "screen_off",
                     mapOf(
                         "screen" to "lock_mode",
-                        "violation_label" to "Tắt màn hình trong lúc làm bài",
-                        "teacher_message" to "Học sinh đã tắt màn hình hoặc thiết bị bị khóa trong lúc làm bài."
+                        "violation_label" to getString(R.string.lock_violation_screen_off_label),
+                        "teacher_message" to getString(R.string.lock_violation_screen_off_teacher_message)
                     )
                 )
             }
@@ -132,13 +132,13 @@ class LockModeFragment : Fragment() {
         Snackbar.make(binding.root, R.string.lock_mode_time_expired, Snackbar.LENGTH_SHORT).show()
     }
 
-    private fun navigateToSubmissionEnd() {
+    private fun navigateToSubmissionEnd(resultId: String?) {
         if (_binding == null) return
         findNavController().navigate(
             R.id.submissionEndFragment,
             Bundle().apply {
                 putString("examId", examId)
-                putString("sheetId", "")
+                putString("sheetId", resultId.orEmpty())
             },
             navOptions {
                 popUpTo(R.id.lockModeFragment) { inclusive = true }
