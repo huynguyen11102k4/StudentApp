@@ -175,10 +175,28 @@ private:
         const std::vector<BubbleCell>& cells
     );
 
+    std::vector<BubbleCell> autoFitIdCells(
+        const cv::Mat& warped,
+        const std::vector<BubbleCell>& cells
+    );
+
     // ─── Answer Reading ──────────────────────────────────────
     std::vector<AnswerReadResult> readAnswerZones(
         const cv::Mat& warped,
         const std::vector<AnswerZoneConfig>& answerZones
+    );
+
+    /**
+     * Second-pass answer reading. Each answer zone is warped from the camera
+     * image with nearby markers only, which reduces drift on strongly folded
+     * paper.
+     */
+    std::vector<AnswerReadResult> readAnswerZonesLocalDewarp(
+        const cv::Mat& image,
+        const std::vector<DetectedMarker>& markers,
+        const std::vector<AnchorPoint>& anchors,
+        const std::vector<AnswerZoneConfig>& answerZones,
+        std::map<std::string, cv::Mat>* debugLocalGrays = nullptr
     );
 
     /** Overload that uses pre-cached cell positions. */
@@ -238,7 +256,9 @@ private:
         const IdReadResult& idResult,
         const std::vector<AnswerReadResult>& answers,
         const ScoreResult* score,
-        const std::map<int, std::string>* correctAnswers
+        const std::map<int, std::string>* correctAnswers,
+        const cv::Mat* idAlignedDebugGray = nullptr,
+        const std::map<std::string, cv::Mat>* answerAlignedDebugGrays = nullptr
     );
 
     void drawBubbleCell(

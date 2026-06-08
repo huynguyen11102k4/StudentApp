@@ -1,5 +1,6 @@
 #include "include/marker_detector.h"
 #include "include/distortion_analyzer.h"
+#include "include/tps_warper.h"
 #include <opencv2/objdetect/aruco_detector.hpp>
 #include <opencv2/objdetect/aruco_dictionary.hpp>
 #include <opencv2/calib3d.hpp>
@@ -18,6 +19,14 @@ namespace omr {
 namespace {
 
 constexpr size_t MIN_MARKERS_FOR_FAST_DEWARP = 8;
+constexpr float POINT_MATCH_EPS = 1.25f;
+
+std::map<int, cv::Point2f> buildBestDetectedMap(
+    const std::vector<DetectedMarker>& detectedMarkers,
+    const std::vector<AnchorPoint>& expectedAnchors
+);
+
+std::vector<cv::Point> directSectionMaskPoly(const std::vector<int>& quad);
 
 size_t countUniqueMarkerIds(const std::vector<DetectedMarker>& markers) {
     std::set<int> uniqueIds;
@@ -28,6 +37,13 @@ size_t countUniqueMarkerIds(const std::vector<DetectedMarker>& markers) {
 }
 
 bool hasAllMarkers(const std::map<int, cv::Point2f>& markers, const std::vector<int>& ids) {
+    for (int id : ids) {
+        if (markers.find(id) == markers.end()) return false;
+    }
+    return true;
+}
+
+bool hasAllDetectedMarkers(const std::map<int, DetectedMarker>& markers, const std::vector<int>& ids) {
     for (int id : ids) {
         if (markers.find(id) == markers.end()) return false;
     }
@@ -54,6 +70,18 @@ void appendUniqueMarkers(
                  passName, candidate.id, candidate.center.x, candidate.center.y);
         }
     }
+}
+
+bool isInsidePage(const cv::Point2f& p) {
+    return p.x >= -0.5f && p.y >= -0.5f &&
+           p.x <= PAGE_WIDTH + 0.5f && p.y <= PAGE_HEIGHT + 0.5f;
+}
+
+cv::Point2f clampToPage(const cv::Point2f& p) {
+    return {
+        std::max(0.0f, std::min(PAGE_WIDTH - 1.0f, p.x)),
+        std::max(0.0f, std::min(PAGE_HEIGHT - 1.0f, p.y))
+    };
 }
 
 cv::Mat applyGamma(const cv::Mat& gray, double gamma) {
@@ -117,6 +145,402 @@ float scoreMarkerAssignment(
     float avg = projected.empty() ? std::numeric_limits<float>::max()
                                   : sum / static_cast<float>(projected.size());
     return avg + maxErr * 0.25f;
+}
+
+std::vector<cv::Point2f> expectedMarkerCorners(const AnchorPoint& ap) {
+    const float h = MARKER_SIZE * 0.5f;
+    return {
+        clampToPage({ap.abs_x - h, ap.abs_y - h}),
+        clampToPage({ap.abs_x + h, ap.abs_y - h}),
+        clampToPage({ap.abs_x + h, ap.abs_y + h}),
+        clampToPage({ap.abs_x - h, ap.abs_y + h})
+    };
+}
+
+std::map<int, DetectedMarker> buildBestDetectedMarkerMap(
+    const std::vector<DetectedMarker>& detectedMarkers,
+    const std::vector<AnchorPoint>& expectedAnchors
+) {
+    std::map<int, cv::Point2f> bestCenters = buildBestDetectedMap(detectedMarkers, expectedAnchors);
+    std::map<int, DetectedMarker> selected;
+
+    for (const auto& pair : bestCenters) {
+        const int id = pair.first;
+        const cv::Point2f& center = pair.second;
+        float bestDist = std::numeric_limits<float>::max();
+        const DetectedMarker* best = nullptr;
+
+        for (const auto& marker : detectedMarkers) {
+            if (marker.id != id) continue;
+            float dx = marker.center.x - center.x;
+            float dy = marker.center.y - center.y;
+            float d = std::sqrt(dx * dx + dy * dy);
+            if (d < bestDist) {
+                bestDist = d;
+                best = &marker;
+            }
+        }
+
+        if (best != nullptr) {
+            selected[id] = *best;
+        }
+    }
+
+    return selected;
+}
+
+void appendUniqueControlPoint(
+    std::vector<cv::Point2f>& srcPts,
+    std::vector<cv::Point2f>& dstPts,
+    const cv::Point2f& src,
+    const cv::Point2f& dst
+) {
+    if (!isInsidePage(dst)) return;
+
+    for (const auto& existing : dstPts) {
+        float dx = existing.x - dst.x;
+        float dy = existing.y - dst.y;
+        if (dx * dx + dy * dy < 0.25f) {
+            return;
+        }
+    }
+
+    srcPts.push_back(src);
+    dstPts.push_back(clampToPage(dst));
+}
+
+bool buildGlobalHomographyFromCenters(
+    const std::map<int, DetectedMarker>& selectedMarkers,
+    const std::vector<AnchorPoint>& expectedAnchors,
+    cv::Mat& homography
+) {
+    std::map<int, cv::Point2f> expectedMap = buildExpectedMap(expectedAnchors);
+    std::vector<cv::Point2f> srcPts;
+    std::vector<cv::Point2f> dstPts;
+
+    for (const auto& ap : expectedAnchors) {
+        auto detectedIt = selectedMarkers.find(ap.id);
+        auto expectedIt = expectedMap.find(ap.id);
+        if (detectedIt == selectedMarkers.end() || expectedIt == expectedMap.end()) continue;
+        srcPts.push_back(detectedIt->second.center);
+        dstPts.push_back(expectedIt->second);
+    }
+
+    if (srcPts.size() < 4) {
+        return false;
+    }
+
+    homography = cv::findHomography(srcPts, dstPts, cv::RANSAC, 8.0);
+    return !homography.empty();
+}
+
+float homographyMaxResidual(
+    const std::map<int, DetectedMarker>& selectedMarkers,
+    const std::vector<AnchorPoint>& expectedAnchors,
+    const cv::Mat& homography
+) {
+    if (homography.empty()) return std::numeric_limits<float>::max();
+
+    std::vector<cv::Point2f> srcPts;
+    std::vector<cv::Point2f> dstPts;
+    for (const auto& ap : expectedAnchors) {
+        auto detectedIt = selectedMarkers.find(ap.id);
+        if (detectedIt == selectedMarkers.end()) continue;
+        srcPts.push_back(detectedIt->second.center);
+        dstPts.push_back({ap.abs_x, ap.abs_y});
+    }
+
+    if (srcPts.size() < 4) return std::numeric_limits<float>::max();
+
+    std::vector<cv::Point2f> projected;
+    cv::perspectiveTransform(srcPts, projected, homography);
+    float maxResidual = 0.0f;
+    for (size_t i = 0; i < projected.size() && i < dstPts.size(); i++) {
+        float dx = projected[i].x - dstPts[i].x;
+        float dy = projected[i].y - dstPts[i].y;
+        maxResidual = std::max(maxResidual, std::sqrt(dx * dx + dy * dy));
+    }
+    return maxResidual;
+}
+
+void appendPageBoundaryControls(
+    std::vector<cv::Point2f>& srcPts,
+    std::vector<cv::Point2f>& dstPts,
+    const cv::Mat& cameraToTemplateH
+) {
+    if (cameraToTemplateH.empty()) return;
+    cv::Mat templateToCameraH = cameraToTemplateH.inv();
+    if (templateToCameraH.empty()) return;
+
+    std::vector<cv::Point2f> dstBoundary = {
+        {0.0f, 0.0f},
+        {PAGE_WIDTH - 1.0f, 0.0f},
+        {PAGE_WIDTH - 1.0f, PAGE_HEIGHT - 1.0f},
+        {0.0f, PAGE_HEIGHT - 1.0f},
+        {PAGE_WIDTH * 0.5f, 0.0f},
+        {PAGE_WIDTH - 1.0f, PAGE_HEIGHT * 0.5f},
+        {PAGE_WIDTH * 0.5f, PAGE_HEIGHT - 1.0f},
+        {0.0f, PAGE_HEIGHT * 0.5f}
+    };
+
+    std::vector<cv::Point2f> srcBoundary;
+    cv::perspectiveTransform(dstBoundary, srcBoundary, templateToCameraH);
+    for (size_t i = 0; i < dstBoundary.size() && i < srcBoundary.size(); i++) {
+        appendUniqueControlPoint(srcPts, dstPts, srcBoundary[i], dstBoundary[i]);
+    }
+}
+
+void appendMarkerCenterMidpointControls(
+    std::vector<cv::Point2f>& srcPts,
+    std::vector<cv::Point2f>& dstPts,
+    const std::map<int, DetectedMarker>& selectedMarkers,
+    const std::vector<AnchorPoint>& expectedAnchors
+) {
+    std::vector<AnchorPoint> anchors = expectedAnchors;
+    std::sort(anchors.begin(), anchors.end(), [](const AnchorPoint& a, const AnchorPoint& b) {
+        if (std::abs(a.abs_y - b.abs_y) > 1.0f) return a.abs_y < b.abs_y;
+        return a.abs_x < b.abs_x;
+    });
+
+    auto appendPairMidpoint = [&](const AnchorPoint& a, const AnchorPoint& b) {
+        auto da = selectedMarkers.find(a.id);
+        auto db = selectedMarkers.find(b.id);
+        if (da == selectedMarkers.end() || db == selectedMarkers.end()) return;
+
+        cv::Point2f srcMid(
+            (da->second.center.x + db->second.center.x) * 0.5f,
+            (da->second.center.y + db->second.center.y) * 0.5f
+        );
+        cv::Point2f dstMid(
+            (a.abs_x + b.abs_x) * 0.5f,
+            (a.abs_y + b.abs_y) * 0.5f
+        );
+        appendUniqueControlPoint(srcPts, dstPts, srcMid, dstMid);
+    };
+
+    const float sameLineEps = 2.0f;
+    for (size_t i = 0; i < anchors.size(); i++) {
+        for (size_t j = i + 1; j < anchors.size(); j++) {
+            const AnchorPoint& a = anchors[i];
+            const AnchorPoint& b = anchors[j];
+            bool sameRow = std::abs(a.abs_y - b.abs_y) <= sameLineEps;
+            bool sameCol = std::abs(a.abs_x - b.abs_x) <= sameLineEps;
+            if (!sameRow && !sameCol) continue;
+
+            bool hasIntermediate = false;
+            for (const auto& c : anchors) {
+                if (c.id == a.id || c.id == b.id) continue;
+                if (sameRow &&
+                    std::abs(c.abs_y - a.abs_y) <= sameLineEps &&
+                    c.abs_x > std::min(a.abs_x, b.abs_x) &&
+                    c.abs_x < std::max(a.abs_x, b.abs_x)) {
+                    hasIntermediate = true;
+                    break;
+                }
+                if (sameCol &&
+                    std::abs(c.abs_x - a.abs_x) <= sameLineEps &&
+                    c.abs_y > std::min(a.abs_y, b.abs_y) &&
+                    c.abs_y < std::max(a.abs_y, b.abs_y)) {
+                    hasIntermediate = true;
+                    break;
+                }
+            }
+            if (!hasIntermediate) {
+                appendPairMidpoint(a, b);
+            }
+        }
+    }
+}
+
+int appendLocalSectionMeshControls(
+    std::vector<cv::Point2f>& srcPts,
+    std::vector<cv::Point2f>& dstPts,
+    const std::map<int, DetectedMarker>& selectedMarkers,
+    const std::vector<AnchorPoint>& expectedAnchors
+) {
+    std::map<int, cv::Point2f> expectedMap = buildExpectedMap(expectedAnchors);
+    const std::vector<std::vector<int>> sectionQuads = {
+        {1, 12, 6, 5},
+        {12, 2, 7, 6},
+        {5, 6, 9, 10},
+        {6, 7, 8, 9},
+        {10, 9, 11, 4},
+        {9, 8, 3, 11}
+    };
+
+    int added = 0;
+    for (const auto& quad : sectionQuads) {
+        if (!hasAllDetectedMarkers(selectedMarkers, quad) || !hasAllMarkers(expectedMap, quad)) {
+            continue;
+        }
+
+        std::vector<cv::Point2f> srcQuad;
+        std::vector<cv::Point2f> dstQuad;
+        for (int id : quad) {
+            srcQuad.push_back(selectedMarkers.at(id).center);
+            dstQuad.push_back(expectedMap[id]);
+        }
+
+        cv::Mat templateToCameraH = cv::getPerspectiveTransform(dstQuad, srcQuad);
+        if (templateToCameraH.empty()) continue;
+
+        std::vector<cv::Point> maskPoly = directSectionMaskPoly(quad);
+        if (maskPoly.size() < 4) continue;
+
+        std::vector<cv::Point2f> dstControls;
+        for (const auto& p : maskPoly) {
+            dstControls.emplace_back(static_cast<float>(p.x), static_cast<float>(p.y));
+        }
+
+        for (size_t i = 0; i < maskPoly.size(); i++) {
+            const cv::Point& a = maskPoly[i];
+            const cv::Point& b = maskPoly[(i + 1) % maskPoly.size()];
+            dstControls.emplace_back(
+                (static_cast<float>(a.x) + static_cast<float>(b.x)) * 0.5f,
+                (static_cast<float>(a.y) + static_cast<float>(b.y)) * 0.5f
+            );
+        }
+
+        cv::Rect rect = cv::boundingRect(maskPoly);
+        const float samples[] = {1.0f / 3.0f, 2.0f / 3.0f};
+        for (float u : samples) {
+            for (float v : samples) {
+                dstControls.emplace_back(
+                    static_cast<float>(rect.x) + static_cast<float>(rect.width) * u,
+                    static_cast<float>(rect.y) + static_cast<float>(rect.height) * v
+                );
+            }
+        }
+
+        std::vector<cv::Point2f> srcControls;
+        cv::perspectiveTransform(dstControls, srcControls, templateToCameraH);
+        for (size_t i = 0; i < dstControls.size() && i < srcControls.size(); i++) {
+            if (!std::isfinite(srcControls[i].x) || !std::isfinite(srcControls[i].y)) {
+                continue;
+            }
+            size_t before = dstPts.size();
+            appendUniqueControlPoint(srcPts, dstPts, srcControls[i], dstControls[i]);
+            if (dstPts.size() > before) {
+                added++;
+            }
+        }
+    }
+    return added;
+}
+
+void buildMarkerControlPoints(
+    const std::vector<DetectedMarker>& detectedMarkers,
+    const std::vector<AnchorPoint>& expectedAnchors,
+    std::vector<cv::Point2f>& srcPts,
+    std::vector<cv::Point2f>& dstPts,
+    bool includeCorners,
+    bool includeBoundary
+) {
+    srcPts.clear();
+    dstPts.clear();
+
+    std::map<int, DetectedMarker> selectedMarkers =
+        buildBestDetectedMarkerMap(detectedMarkers, expectedAnchors);
+
+    for (const auto& ap : expectedAnchors) {
+        auto detectedIt = selectedMarkers.find(ap.id);
+        if (detectedIt == selectedMarkers.end()) continue;
+
+        const DetectedMarker& detected = detectedIt->second;
+        appendUniqueControlPoint(srcPts, dstPts, detected.center, {ap.abs_x, ap.abs_y});
+
+        if (includeCorners && detected.corners.size() == 4) {
+            std::vector<cv::Point2f> dstCorners = expectedMarkerCorners(ap);
+            for (size_t i = 0; i < 4 && i < detected.corners.size(); i++) {
+                appendUniqueControlPoint(srcPts, dstPts, detected.corners[i], dstCorners[i]);
+            }
+        }
+    }
+
+    appendMarkerCenterMidpointControls(srcPts, dstPts, selectedMarkers, expectedAnchors);
+
+    if (includeBoundary) {
+        cv::Mat globalH;
+        if (buildGlobalHomographyFromCenters(selectedMarkers, expectedAnchors, globalH)) {
+            float maxResidual = homographyMaxResidual(selectedMarkers, expectedAnchors, globalH);
+            if (maxResidual <= DEWARP_MODERATE_PX) {
+                appendPageBoundaryControls(srcPts, dstPts, globalH);
+            } else {
+                LOGI("Mesh boundary controls skipped: global homography residual %.2fpx is too high", maxResidual);
+            }
+        }
+    }
+}
+
+int findControlPointIndex(const std::vector<cv::Point2f>& points, const cv::Point2f& p) {
+    int bestIdx = -1;
+    float bestDist2 = POINT_MATCH_EPS * POINT_MATCH_EPS;
+    for (int i = 0; i < static_cast<int>(points.size()); i++) {
+        float dx = points[i].x - p.x;
+        float dy = points[i].y - p.y;
+        float d2 = dx * dx + dy * dy;
+        if (d2 <= bestDist2) {
+            bestDist2 = d2;
+            bestIdx = i;
+        }
+    }
+    return bestIdx;
+}
+
+std::vector<int> chooseLocalMarkerIds(
+    const std::vector<AnchorPoint>& anchors,
+    const std::map<int, DetectedMarker>& selectedMarkers,
+    const cv::Rect2f& targetRect
+) {
+    const cv::Point2f center(
+        targetRect.x + targetRect.width * 0.5f,
+        targetRect.y + targetRect.height * 0.5f
+    );
+
+    std::vector<int> chosen;
+    auto chooseQuadrant = [&](bool left, bool top) {
+        int bestId = -1;
+        float bestDist2 = std::numeric_limits<float>::max();
+        for (const auto& ap : anchors) {
+            if (selectedMarkers.find(ap.id) == selectedMarkers.end()) continue;
+            bool isLeft = ap.abs_x <= center.x;
+            bool isTop = ap.abs_y <= center.y;
+            if (isLeft != left || isTop != top) continue;
+            float dx = ap.abs_x - center.x;
+            float dy = ap.abs_y - center.y;
+            float d2 = dx * dx + dy * dy;
+            if (d2 < bestDist2) {
+                bestDist2 = d2;
+                bestId = ap.id;
+            }
+        }
+        if (bestId >= 0 &&
+            std::find(chosen.begin(), chosen.end(), bestId) == chosen.end()) {
+            chosen.push_back(bestId);
+        }
+    };
+
+    chooseQuadrant(true, true);
+    chooseQuadrant(false, true);
+    chooseQuadrant(false, false);
+    chooseQuadrant(true, false);
+
+    std::vector<std::pair<float, int>> nearest;
+    for (const auto& ap : anchors) {
+        if (selectedMarkers.find(ap.id) == selectedMarkers.end()) continue;
+        float dx = ap.abs_x - center.x;
+        float dy = ap.abs_y - center.y;
+        nearest.emplace_back(dx * dx + dy * dy, ap.id);
+    }
+    std::sort(nearest.begin(), nearest.end());
+    for (const auto& pair : nearest) {
+        if (chosen.size() >= 6) break;
+        if (std::find(chosen.begin(), chosen.end(), pair.second) == chosen.end()) {
+            chosen.push_back(pair.second);
+        }
+    }
+
+    return chosen;
 }
 
 void blendWarpedSection(
@@ -190,6 +614,66 @@ std::vector<cv::Point> directSectionMaskPoly(const std::vector<int>& quad) {
         return {pt(414, 763), pt(PAGE_WIDTH, 763), pt(PAGE_WIDTH, PAGE_HEIGHT), pt(414, PAGE_HEIGHT)};
     }
 
+    return {};
+}
+
+std::vector<int> chooseContainingSectionQuad(
+    const std::map<int, DetectedMarker>& selectedMarkers,
+    const std::map<int, cv::Point2f>& expectedMap,
+    const cv::Rect2f& targetRect
+) {
+    const cv::Point2f center(
+        targetRect.x + targetRect.width * 0.5f,
+        targetRect.y + targetRect.height * 0.5f
+    );
+    const std::vector<std::vector<int>> sectionQuads = {
+        {1, 12, 6, 5},
+        {12, 2, 7, 6},
+        {5, 6, 9, 10},
+        {6, 7, 8, 9},
+        {10, 9, 11, 4},
+        {9, 8, 3, 11}
+    };
+
+    for (const auto& quad : sectionQuads) {
+        if (!hasAllDetectedMarkers(selectedMarkers, quad) || !hasAllMarkers(expectedMap, quad)) {
+            continue;
+        }
+        std::vector<cv::Point> maskPoly = directSectionMaskPoly(quad);
+        if (maskPoly.empty()) continue;
+        cv::Rect sectionRect = cv::boundingRect(maskPoly);
+        if (sectionRect.contains(cv::Point(cvRound(center.x), cvRound(center.y)))) {
+            return quad;
+        }
+    }
+
+    return {};
+}
+
+std::vector<int> targetSectionQuad(
+    const cv::Rect2f& targetRect
+) {
+    const cv::Point2f center(
+        targetRect.x + targetRect.width * 0.5f,
+        targetRect.y + targetRect.height * 0.5f
+    );
+    const std::vector<std::vector<int>> sectionQuads = {
+        {1, 12, 6, 5},
+        {12, 2, 7, 6},
+        {5, 6, 9, 10},
+        {6, 7, 8, 9},
+        {10, 9, 11, 4},
+        {9, 8, 3, 11}
+    };
+
+    for (const auto& quad : sectionQuads) {
+        std::vector<cv::Point> maskPoly = directSectionMaskPoly(quad);
+        if (maskPoly.empty()) continue;
+        cv::Rect sectionRect = cv::boundingRect(maskPoly);
+        if (sectionRect.contains(cv::Point(cvRound(center.x), cvRound(center.y)))) {
+            return quad;
+        }
+    }
     return {};
 }
 
@@ -532,7 +1016,7 @@ cv::Mat MarkerDetector::dewarpPerspective(
     cv::Mat warped;
     cv::warpPerspective(src, warped, globalH,
                         cv::Size(static_cast<int>(PAGE_WIDTH), static_cast<int>(PAGE_HEIGHT)),
-                        cv::INTER_LINEAR, cv::BORDER_CONSTANT, cv::Scalar(255, 255, 255));
+                        cv::INTER_CUBIC, cv::BORDER_CONSTANT, cv::Scalar(255, 255, 255));
 
     LOGI("Template canvas size: %.0fx%.0f. Global perspective maps markers 1,2,3,4 to their template anchor positions, not page outer corners.",
          PAGE_WIDTH, PAGE_HEIGHT);
@@ -622,7 +1106,7 @@ cv::Mat MarkerDetector::dewarpPerspective(
         cv::Mat localH = cv::getPerspectiveTransform(localSrc, localDst);
         cv::Mat localWarped;
         cv::warpPerspective(sectionInput, localWarped, localH, warped.size(),
-                            cv::INTER_LINEAR, cv::BORDER_CONSTANT, cv::Scalar(255, 255, 255));
+                            cv::INTER_CUBIC, cv::BORDER_CONSTANT, cv::Scalar(255, 255, 255));
 
         std::vector<cv::Point> maskPoly = directSectionMaskPoly(quad);
         const bool usesSectionBoundaryMask = !maskPoly.empty();
@@ -658,6 +1142,256 @@ cv::Mat MarkerDetector::dewarpHybrid(
 ) {
     std::vector<cv::Point2f> corners;
     return dewarpPerspective(src, detectedMarkers, expectedAnchors, corners);
+}
+
+cv::Mat MarkerDetector::dewarpPiecewiseMesh(
+    const cv::Mat& src,
+    const std::vector<DetectedMarker>& detectedMarkers,
+    const std::vector<AnchorPoint>& expectedAnchors
+) {
+    std::vector<cv::Point2f> srcPts;
+    std::vector<cv::Point2f> dstPts;
+    buildMarkerControlPoints(
+        detectedMarkers,
+        expectedAnchors,
+        srcPts,
+        dstPts,
+        false,
+        true
+    );
+
+    if (srcPts.size() < 6 || dstPts.size() < 6) {
+        LOGE("PiecewiseMesh skipped: insufficient control points src=%zu dst=%zu",
+             srcPts.size(), dstPts.size());
+        return cv::Mat();
+    }
+
+    cv::Rect pageRect(
+        0,
+        0,
+        static_cast<int>(PAGE_WIDTH),
+        static_cast<int>(PAGE_HEIGHT)
+    );
+    cv::Subdiv2D subdiv(pageRect);
+    for (const auto& p : dstPts) {
+        if (isInsidePage(p)) {
+            subdiv.insert(p);
+        }
+    }
+
+    std::vector<cv::Vec6f> triangleList;
+    subdiv.getTriangleList(triangleList);
+    if (triangleList.empty()) {
+        LOGE("PiecewiseMesh failed: Delaunay returned no triangles");
+        return cv::Mat();
+    }
+
+    cv::Size outputSize(static_cast<int>(PAGE_WIDTH), static_cast<int>(PAGE_HEIGHT));
+    std::vector<cv::Point2f> fallbackCorners;
+    cv::Mat perspectiveFallback = dewarpPerspective(
+        src,
+        detectedMarkers,
+        expectedAnchors,
+        fallbackCorners
+    );
+    cv::Mat refined = perspectiveFallback.empty()
+        ? cv::Mat(outputSize, src.type(), cv::Scalar::all(255))
+        : perspectiveFallback.clone();
+    cv::Mat coverageMask = cv::Mat::zeros(outputSize, CV_8UC1);
+    int applied = 0;
+
+    for (const auto& t : triangleList) {
+        cv::Point2f d0(t[0], t[1]);
+        cv::Point2f d1(t[2], t[3]);
+        cv::Point2f d2(t[4], t[5]);
+        if (!isInsidePage(d0) || !isInsidePage(d1) || !isInsidePage(d2)) {
+            continue;
+        }
+
+        int i0 = findControlPointIndex(dstPts, d0);
+        int i1 = findControlPointIndex(dstPts, d1);
+        int i2 = findControlPointIndex(dstPts, d2);
+        if (i0 < 0 || i1 < 0 || i2 < 0) {
+            continue;
+        }
+
+        std::vector<cv::Point2f> srcTri = {srcPts[i0], srcPts[i1], srcPts[i2]};
+        std::vector<cv::Point2f> dstTri = {dstPts[i0], dstPts[i1], dstPts[i2]};
+
+        double dstArea = std::abs(cv::contourArea(dstTri));
+        double srcArea = std::abs(cv::contourArea(srcTri));
+        if (dstArea < 8.0 || srcArea < 8.0) {
+            continue;
+        }
+
+        cv::Mat affine = cv::getAffineTransform(srcTri, dstTri);
+        if (affine.empty()) {
+            continue;
+        }
+
+        cv::Mat localWarped;
+        cv::warpAffine(src, localWarped, affine, outputSize,
+                       cv::INTER_CUBIC, cv::BORDER_CONSTANT,
+                       cv::Scalar(255, 255, 255, 255));
+
+        std::vector<cv::Point> maskPoly = {
+            cv::Point(cvRound(dstTri[0].x), cvRound(dstTri[0].y)),
+            cv::Point(cvRound(dstTri[1].x), cvRound(dstTri[1].y)),
+            cv::Point(cvRound(dstTri[2].x), cvRound(dstTri[2].y))
+        };
+        cv::Mat mask = cv::Mat::zeros(outputSize, CV_8UC1);
+        cv::fillConvexPoly(mask, maskPoly, cv::Scalar(255));
+        localWarped.copyTo(refined, mask);
+        cv::bitwise_or(coverageMask, mask, coverageMask);
+        applied++;
+    }
+
+    if (applied == 0) {
+        return cv::Mat();
+    }
+
+    int coveredPixels = cv::countNonZero(coverageMask);
+    double coverageRatio = outputSize.area() > 0
+        ? static_cast<double>(coveredPixels) / static_cast<double>(outputSize.area())
+        : 0.0;
+    LOGI("PiecewiseMesh completed controls=%zu triangles=%zu applied=%d coverage=%.3f fallbackFilled=%d",
+         dstPts.size(), triangleList.size(), applied, coverageRatio, !perspectiveFallback.empty());
+    return refined;
+}
+
+cv::Mat MarkerDetector::dewarpTps(
+    const cv::Mat& src,
+    const std::vector<DetectedMarker>& detectedMarkers,
+    const std::vector<AnchorPoint>& expectedAnchors,
+    double smoothness
+) {
+    std::vector<cv::Point2f> srcPts;
+    std::vector<cv::Point2f> dstPts;
+    buildMarkerControlPoints(
+        detectedMarkers,
+        expectedAnchors,
+        srcPts,
+        dstPts,
+        false,
+        true
+    );
+
+    if (srcPts.size() < 6 || dstPts.size() < 6) {
+        LOGE("TPS skipped: insufficient control points src=%zu dst=%zu",
+             srcPts.size(), dstPts.size());
+        return cv::Mat();
+    }
+
+    cv::Mat warped = TpsWarper::tpsWarp(
+        src,
+        srcPts,
+        dstPts,
+        cv::Size(static_cast<int>(PAGE_WIDTH), static_cast<int>(PAGE_HEIGHT)),
+        smoothness
+    );
+
+    LOGI("TPS completed controls=%zu smoothness=%.2f outputEmpty=%d",
+         dstPts.size(), smoothness, warped.empty());
+    return warped;
+}
+
+cv::Mat MarkerDetector::dewarpLocalRegion(
+    const cv::Mat& src,
+    const std::vector<DetectedMarker>& detectedMarkers,
+    const std::vector<AnchorPoint>& expectedAnchors,
+    const cv::Rect2f& targetRect,
+    std::vector<int>& usedMarkerIds
+) {
+    usedMarkerIds.clear();
+    std::map<int, DetectedMarker> selectedMarkers =
+        buildBestDetectedMarkerMap(detectedMarkers, expectedAnchors);
+    std::vector<int> localIds = chooseLocalMarkerIds(expectedAnchors, selectedMarkers, targetRect);
+
+    if (localIds.size() < 4) {
+        LOGE("LocalRegion skipped: only %zu nearby markers", localIds.size());
+        return cv::Mat();
+    }
+
+    std::map<int, AnchorPoint> anchorById;
+    for (const auto& ap : expectedAnchors) {
+        anchorById[ap.id] = ap;
+    }
+
+    std::map<int, cv::Point2f> expectedMap = buildExpectedMap(expectedAnchors);
+    std::vector<int> requiredSectionQuad = targetSectionQuad(targetRect);
+    std::vector<int> sectionQuad = chooseContainingSectionQuad(
+        selectedMarkers,
+        expectedMap,
+        targetRect
+    );
+    if (!requiredSectionQuad.empty() && sectionQuad.empty()) {
+        LOGI("LocalRegion skipped target=(%.1f,%.1f,%.1f,%.1f): missing section quad=(%d,%d,%d,%d)",
+             targetRect.x, targetRect.y, targetRect.width, targetRect.height,
+             requiredSectionQuad[0], requiredSectionQuad[1],
+             requiredSectionQuad[2], requiredSectionQuad[3]);
+        return cv::Mat();
+    }
+    if (sectionQuad.size() == 4) {
+        std::vector<cv::Point2f> srcQuad;
+        std::vector<cv::Point2f> dstQuad;
+        for (int id : sectionQuad) {
+            srcQuad.push_back(selectedMarkers.at(id).center);
+            dstQuad.push_back(expectedMap.at(id));
+            usedMarkerIds.push_back(id);
+        }
+
+        cv::Mat h = cv::getPerspectiveTransform(srcQuad, dstQuad);
+        if (!h.empty()) {
+            cv::Mat warped;
+            cv::warpPerspective(src, warped, h,
+                                cv::Size(static_cast<int>(PAGE_WIDTH), static_cast<int>(PAGE_HEIGHT)),
+                                cv::INTER_CUBIC, cv::BORDER_CONSTANT,
+                                cv::Scalar(255, 255, 255, 255));
+            LOGI("LocalRegion section completed target=(%.1f,%.1f,%.1f,%.1f) quad=(%d,%d,%d,%d) outputEmpty=%d",
+                 targetRect.x, targetRect.y, targetRect.width, targetRect.height,
+                 sectionQuad[0], sectionQuad[1], sectionQuad[2], sectionQuad[3],
+                 warped.empty());
+            return warped;
+        }
+        usedMarkerIds.clear();
+    }
+
+    std::vector<cv::Point2f> srcPts;
+    std::vector<cv::Point2f> dstPts;
+    for (int id : localIds) {
+        auto detectedIt = selectedMarkers.find(id);
+        auto anchorIt = anchorById.find(id);
+        if (detectedIt == selectedMarkers.end() || anchorIt == anchorById.end()) continue;
+
+        const DetectedMarker& detected = detectedIt->second;
+        const AnchorPoint& anchor = anchorIt->second;
+        appendUniqueControlPoint(srcPts, dstPts, detected.center, {anchor.abs_x, anchor.abs_y});
+        usedMarkerIds.push_back(id);
+    }
+
+    if (srcPts.size() < 4 || dstPts.size() < 4) {
+        LOGE("LocalRegion skipped: insufficient local controls src=%zu dst=%zu",
+             srcPts.size(), dstPts.size());
+        return cv::Mat();
+    }
+
+    cv::Mat h = cv::findHomography(srcPts, dstPts, cv::RANSAC, 6.0);
+    if (h.empty()) {
+        LOGE("LocalRegion failed: homography empty controls=%zu", srcPts.size());
+        return cv::Mat();
+    }
+
+    cv::Mat warped;
+    cv::warpPerspective(src, warped, h,
+                        cv::Size(static_cast<int>(PAGE_WIDTH), static_cast<int>(PAGE_HEIGHT)),
+                        cv::INTER_CUBIC, cv::BORDER_CONSTANT,
+                        cv::Scalar(255, 255, 255, 255));
+
+    LOGI("LocalRegion completed target=(%.1f,%.1f,%.1f,%.1f) markers=%zu controls=%zu outputEmpty=%d",
+         targetRect.x, targetRect.y, targetRect.width, targetRect.height,
+         usedMarkerIds.size(), dstPts.size(), warped.empty());
+
+    return warped;
 }
 
 void MarkerDetector::checkQuality(

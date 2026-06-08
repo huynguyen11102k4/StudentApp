@@ -303,7 +303,8 @@ class SmartReviewViewModel(
             total = allAnswers.size,
             empty = allAnswers.count { it.status == "empty" },
             debugImageBase64 = currentDebugImageBase64,
-            hasOmrResult = allAnswers.isNotEmpty()
+            hasOmrResult = allAnswers.isNotEmpty(),
+            hasOmrWarning = currentWarnings.isNotEmpty()
         )
     }
 
@@ -325,5 +326,6 @@ data class ReviewUiState(
     val total: Int = 0,
     val empty: Int = 0,
     val debugImageBase64: String = "",
-    val hasOmrResult: Boolean = false
+    val hasOmrResult: Boolean = false,
+    val hasOmrWarning: Boolean = false
 )

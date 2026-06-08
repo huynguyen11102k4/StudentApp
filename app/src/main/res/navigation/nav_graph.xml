@@ -139,6 +139,7 @@
         <argument android:name="examId" app:argType="string" android:defaultValue="" />
         <argument android:name="sessionId" app:argType="string" android:defaultValue="" />
         <argument android:name="remainingSeconds" app:argType="integer" android:defaultValue="0" />
+        <argument android:name="questionCount" app:argType="integer" android:defaultValue="0" />
         <argument android:name="isLockedMode" app:argType="boolean" android:defaultValue="false" />
         <argument android:name="classCode" app:argType="string" android:defaultValue="" />
         <argument android:name="studentCode" app:argType="string" android:defaultValue="" />
@@ -154,6 +155,7 @@
         <argument android:name="examId" app:argType="string" android:defaultValue="" />
         <argument android:name="sessionId" app:argType="string" android:defaultValue="" />
         <argument android:name="remainingSeconds" app:argType="integer" android:defaultValue="0" />
+        <argument android:name="questionCount" app:argType="integer" android:defaultValue="0" />
         <argument android:name="timerStartedAt" app:argType="long" android:defaultValue="0L" />
         <action android:id="@+id/action_camera_ar_to_smart_review" app:destination="@id/smartReviewFragment" />
         <action android:id="@+id/action_camera_ar_to_manual_crop" app:destination="@id/manualCropFragment" />
@@ -177,6 +179,7 @@
         <argument android:name="studentId" app:argType="string" android:defaultValue="" />
         <argument android:name="submissionId" app:argType="string" android:defaultValue="" />
         <argument android:name="remainingSeconds" app:argType="integer" android:defaultValue="0" />
+        <argument android:name="questionCount" app:argType="integer" android:defaultValue="0" />
         <argument android:name="timerStartedAt" app:argType="long" android:defaultValue="0L" />
         <action android:id="@+id/action_smart_review_to_camera_ar" app:destination="@id/cameraARFragment" />
         <action android:id="@+id/action_smart_review_to_results" app:destination="@id/resultsListFragment" />

@@ -40,13 +40,14 @@ class CameraManager(
     private val onImageCaptured: (Bitmap) -> Unit,
     private val onCaptureFailed: (Throwable) -> Unit = {},
     private val onMarkersDetected: (detected: Int, expected: Int) -> Unit = { _, _ -> },
-    private val onAutoCaptureReady: () -> Unit = {}
+    private val onAutoCaptureReady: () -> Boolean = { true }
 ) {
     companion object {
         private const val TAG = "CameraManager"
         private const val EXPECTED_MARKERS = 12
-        private const val STABLE_FRAMES_FOR_AUTO_CAPTURE = 3
-        private const val ANALYSIS_THROTTLE_MS = 300L
+        private const val STABLE_FRAMES_FOR_AUTO_CAPTURE = 2
+        private const val ANALYSIS_THROTTLE_MS = 120L
+        private const val FULL_MARKER_FRAME_MAX_AGE_MS = 900L
         private const val AUTO_CAPTURE_COOLDOWN_MS = 4_000L
         @Volatile private var openCvLoaded = false
     }
@@ -57,10 +58,12 @@ class CameraManager(
     private var cameraProvider: ProcessCameraProvider? = null
     private val cameraExecutor: ExecutorService = Executors.newSingleThreadExecutor()
     private var flashMode = ImageCapture.FLASH_MODE_OFF
+    private var torchEnabled = false
     private var lensFacing = CameraSelector.LENS_FACING_BACK
     private var isTakingPicture = false
     private var stableFullMarkerFrames = 0
     private var lastAnalysisAt = 0L
+    private var lastFullMarkerAt = 0L
     private var lastAutoCaptureAt = 0L
     private var arucoDetector: ArucoDetector? = null
 
@@ -110,6 +113,9 @@ class CameraManager(
                 imageAnalysis
             )
             cameraControl = camera?.cameraControl
+            if (isFlashAvailable()) {
+                cameraControl?.enableTorch(torchEnabled)
+            }
         } catch (e: Exception) {
             Log.e(TAG, "Failed to bind camera use cases", e)
             onCaptureFailed(e)
@@ -117,6 +123,11 @@ class CameraManager(
     }
 
     fun capturePhoto(): Boolean {
+        if (!hasRecentFullMarkerFrame()) return false
+        return captureHighResolutionPhoto()
+    }
+
+    private fun captureHighResolutionPhoto(): Boolean {
         val capture = imageCapture ?: return false
         if (isTakingPicture) return false
         isTakingPicture = true
@@ -146,17 +157,25 @@ class CameraManager(
     }
 
     fun toggleFlash(): String {
-        flashMode = when (flashMode) {
-            ImageCapture.FLASH_MODE_OFF -> ImageCapture.FLASH_MODE_ON
-            ImageCapture.FLASH_MODE_ON -> ImageCapture.FLASH_MODE_AUTO
-            else -> ImageCapture.FLASH_MODE_OFF
+        if (!isFlashAvailable()) {
+            torchEnabled = false
+            imageCapture?.flashMode = ImageCapture.FLASH_MODE_OFF
+            return "off"
         }
+
+        torchEnabled = !torchEnabled
+        flashMode = if (torchEnabled) ImageCapture.FLASH_MODE_ON else ImageCapture.FLASH_MODE_OFF
         imageCapture?.flashMode = flashMode
-        return when (flashMode) {
-            ImageCapture.FLASH_MODE_OFF -> "off"
-            ImageCapture.FLASH_MODE_ON -> "on"
-            else -> "auto"
-        }
+        cameraControl?.enableTorch(torchEnabled)
+        return if (torchEnabled) "on" else "off"
+    }
+
+    fun turnFlashOff(): String {
+        torchEnabled = false
+        flashMode = ImageCapture.FLASH_MODE_OFF
+        imageCapture?.flashMode = flashMode
+        cameraControl?.enableTorch(false)
+        return "off"
     }
 
     fun isFlashAvailable(): Boolean = camera?.cameraInfo?.hasFlashUnit() == true
@@ -168,6 +187,10 @@ class CameraManager(
     fun shutdown() {
         cameraProvider?.unbindAll()
         cameraExecutor.shutdown()
+    }
+
+    fun hasRecentFullMarkerFrame(): Boolean {
+        return System.currentTimeMillis() - lastFullMarkerAt <= FULL_MARKER_FRAME_MAX_AGE_MS
     }
 
     private fun analyzeMarkers(image: ImageProxy) {
@@ -183,13 +206,14 @@ class CameraManager(
             val rejected = ArrayList<Mat>()
             try {
                 detector.detectMarkers(gray, corners, ids, rejected)
-                val detected = corners.size
+                val detected = countUniqueMarkerIds(ids)
                 ContextCompat.getMainExecutor(previewView.context).execute {
                     onMarkersDetected(detected, EXPECTED_MARKERS)
                 }
 
                 if (detected >= EXPECTED_MARKERS) {
                     stableFullMarkerFrames += 1
+                    lastFullMarkerAt = now
                 } else {
                     stableFullMarkerFrames = 0
                 }
@@ -201,7 +225,10 @@ class CameraManager(
                     stableFullMarkerFrames = 0
                     lastAutoCaptureAt = now
                     ContextCompat.getMainExecutor(previewView.context).execute {
-                        onAutoCaptureReady()
+                        val accepted = onAutoCaptureReady()
+                        if (accepted && !captureHighResolutionPhoto()) {
+                            onCaptureFailed(IllegalStateException(previewView.context.getString(R.string.camera_ar_capture_read_failed)))
+                        }
                     }
                 }
             } finally {
@@ -217,6 +244,18 @@ class CameraManager(
         }
     }
 
+    private fun countUniqueMarkerIds(ids: Mat): Int {
+        val uniqueIds = mutableSetOf<Int>()
+        for (row in 0 until ids.rows()) {
+            for (col in 0 until ids.cols()) {
+                ids.get(row, col)?.firstOrNull()?.let { value ->
+                    uniqueIds.add(value.toInt())
+                }
+            }
+        }
+        return uniqueIds.size
+    }
+
     private fun getArucoDetector(): ArucoDetector? {
         arucoDetector?.let { return it }
         if (!openCvLoaded) {
@@ -227,9 +266,24 @@ class CameraManager(
             }
         }
         return runCatching {
+            val params = DetectorParameters().apply {
+                set_adaptiveThreshWinSizeMin(3)
+                set_adaptiveThreshWinSizeMax(53)
+                set_adaptiveThreshWinSizeStep(8)
+                set_adaptiveThreshConstant(5.0)
+                set_minMarkerPerimeterRate(0.015)
+                set_maxMarkerPerimeterRate(4.0)
+                set_minCornerDistanceRate(0.03)
+                set_minOtsuStdDev(3.0)
+                set_errorCorrectionRate(0.8)
+                set_cornerRefinementMethod(Objdetect.CORNER_REFINE_SUBPIX)
+                set_cornerRefinementWinSize(5)
+                set_cornerRefinementMaxIterations(30)
+                set_cornerRefinementMinAccuracy(0.01)
+            }
             ArucoDetector(
                 Objdetect.getPredefinedDictionary(Objdetect.DICT_APRILTAG_16h5),
-                DetectorParameters()
+                params
             )
         }.onSuccess {
             arucoDetector = it
@@ -242,6 +296,7 @@ class CameraManager(
         if (image.format != ImageFormat.YUV_420_888) return null
         val plane = image.planes.firstOrNull() ?: return null
         val buffer = plane.buffer
+        buffer.rewind()
         val width = image.width
         val height = image.height
         val rowStride = plane.rowStride
@@ -298,6 +353,9 @@ class CameraManager(
         val yBuffer = planes[0].buffer
         val uBuffer = planes[1].buffer
         val vBuffer = planes[2].buffer
+        yBuffer.rewind()
+        uBuffer.rewind()
+        vBuffer.rewind()
         val ySize = yBuffer.remaining()
         val uSize = uBuffer.remaining()
         val vSize = vBuffer.remaining()

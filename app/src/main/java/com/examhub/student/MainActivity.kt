@@ -25,6 +25,7 @@ import com.examhub.student.repository.LockModeRepository
 import com.examhub.student.service.AuthEvent
 import com.examhub.student.service.FcmTokenRegistrar
 import com.examhub.student.service.TokenManager
+import com.examhub.student.util.helper.NotificationNavigationHelper
 import kotlinx.coroutines.launch
 import org.koin.android.ext.android.inject
 import java.text.SimpleDateFormat
@@ -122,15 +123,18 @@ class MainActivity : AppCompatActivity() {
                 null
             }
 
+            if (target == R.id.dashboardFragment && navController.popBackStack(R.id.dashboardFragment, false)) {
+                return@setOnItemSelectedListener true
+            }
+
             navController.navigate(
                 target,
                 args,
                 navOptions {
                     launchSingleTop = true
-                    restoreState = true
                     popUpTo(R.id.dashboardFragment) {
                         inclusive = false
-                        saveState = true
+                        saveState = false
                     }
                 }
             )
@@ -169,39 +173,58 @@ class MainActivity : AppCompatActivity() {
         val extras = intent?.extras ?: return
         val route = extras.getString("route").orEmpty()
         val type = extras.getString("type").orEmpty()
+        val link = extras.getString("link").orEmpty()
+        val targetId = extras.getString("target_id") ?: extras.getString("targetId")
+        val entityId = extras.getString("entity_id") ?: extras.getString("entityId")
+        val isAppeal = NotificationNavigationHelper.isAppealNotification(route, type, link)
+        val isResult = NotificationNavigationHelper.isResultNotification(route, type, link)
+        val isExam = NotificationNavigationHelper.isExamNotification(route, type, link)
         val appealId = extras.getString("appeal_id")
             ?: extras.getString("appealId")
-            ?: extras.getString("target_id")
-            ?: extras.getString("entity_id")
-            ?: extras.getString("link")?.extractLastId()
+            ?: NotificationNavigationHelper.extractIdFromLink(link, "appeal_id", "appealId")
+            ?: if (isAppeal) targetId ?: entityId ?: NotificationNavigationHelper.extractLastId(link) else null
         val sheetId = extras.getString("sheet_id")
             ?: extras.getString("sheetId")
             ?: extras.getString("answer_sheet_id")
             ?: extras.getString("answerSheetId")
             ?: extras.getString("result_id")
             ?: extras.getString("resultId")
-            ?: extras.getString("link")?.takeIf { it.contains("/results/", ignoreCase = true) }?.extractLastId()
+            ?: if (isResult) {
+                NotificationNavigationHelper.extractIdFromLink(
+                    link,
+                    "sheet_id",
+                    "sheetId",
+                    "answer_sheet_id",
+                    "answerSheetId",
+                    "result_id",
+                    "resultId"
+                )
+            } else {
+                null
+            }
         val examId = extras.getString("exam_id")
             ?: extras.getString("examId")
-            ?: extras.getString("target_id")
-            ?: extras.getString("entity_id")
-            ?: extras.getString("link")?.extractLastId()
+            ?: if (isExam) {
+                targetId ?: entityId ?: NotificationNavigationHelper.extractIdFromLink(link, "exam_id", "examId")
+            } else {
+                null
+            }
 
-        if (isResultNotification(route, type, extras.getString("link").orEmpty()) && !sheetId.isNullOrBlank()) {
-            navController.navigate(
-                R.id.resultDetailFragment,
-                bundleOf("sheetId" to sheetId),
-                navOptions { launchSingleTop = true }
-            )
-            intent.replaceExtras(Bundle())
-        } else if (isAppealNotification(route, type) && !appealId.isNullOrBlank()) {
+        if (isAppeal && !appealId.isNullOrBlank()) {
             navController.navigate(
                 R.id.appealDetailFragment,
                 bundleOf("appealId" to appealId),
                 navOptions { launchSingleTop = true }
             )
             intent.replaceExtras(Bundle())
-        } else if ((isExamNotification(route, type) || isExamLink(extras.getString("link").orEmpty())) && !examId.isNullOrBlank()) {
+        } else if (isResult && !sheetId.isNullOrBlank()) {
+            navController.navigate(
+                R.id.resultDetailFragment,
+                bundleOf("sheetId" to sheetId),
+                navOptions { launchSingleTop = true }
+            )
+            intent.replaceExtras(Bundle())
+        } else if (isExam && !examId.isNullOrBlank()) {
             navController.navigate(
                 R.id.examDetailFragment,
                 bundleOf("examId" to examId),
@@ -209,33 +232,6 @@ class MainActivity : AppCompatActivity() {
             )
             intent.replaceExtras(Bundle())
         }
-    }
-
-    private fun isExamNotification(route: String, type: String): Boolean {
-        return route.equals("exam_detail", ignoreCase = true) ||
-            route.equals("exam", ignoreCase = true) ||
-            listOf("exam_created", "exam_opened", "exam_upcoming", "exam_reminder", "exam_assigned")
-                .any { type.equals(it, ignoreCase = true) }
-    }
-
-    private fun isExamLink(link: String): Boolean {
-        return link.contains("/exams/", ignoreCase = true) ||
-            link.contains("examId=", ignoreCase = true) ||
-            link.contains("exam_id=", ignoreCase = true)
-    }
-
-    private fun isResultNotification(route: String, type: String, link: String): Boolean {
-        return route.equals("result_detail", ignoreCase = true) ||
-            route.equals("result", ignoreCase = true) ||
-            link.contains("/results/", ignoreCase = true) ||
-            listOf("grade_updated", "result_ready", "exam_graded")
-                .any { type.equals(it, ignoreCase = true) }
-    }
-
-    private fun isAppealNotification(route: String, type: String): Boolean {
-        return route.equals("appeal_detail", ignoreCase = true) ||
-            listOf("appeal_created", "appeal_updated", "appeal_new", "appeal_resolved", "appeal_replied")
-                .any { type.equals(it, ignoreCase = true) }
     }
 
     private fun observeAuthEvents() {
@@ -324,17 +320,6 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         )
-    }
-
-    private fun String.extractLastId(): String? {
-        Regex("[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}")
-            .findAll(this)
-            .lastOrNull()
-            ?.value
-            ?.let { return it }
-        return split('/', '?', '#', '&', '=')
-            .asReversed()
-            .firstOrNull { it.length >= 16 && it.any(Char::isDigit) }
     }
 
     companion object {

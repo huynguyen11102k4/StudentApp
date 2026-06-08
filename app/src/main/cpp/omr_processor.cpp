@@ -9,6 +9,7 @@
 #include <limits>
 #include <sstream>
 #include <cstring>
+#include <set>
 
 #define LOG_TAG "OmrProcessor"
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__)
@@ -49,6 +50,14 @@ bool answerKeyContainsMultipleCorrectAnswers(const std::map<int, std::string>& a
     return false;
 }
 
+size_t countUniqueDetectedMarkerIds(const std::vector<DetectedMarker>& markers) {
+    std::set<int> uniqueIds;
+    for (const auto& marker : markers) {
+        uniqueIds.insert(marker.id);
+    }
+    return uniqueIds.size();
+}
+
 int countAnswerOptions(const std::string& answer) {
     bool seen[26] = {false};
     int count = 0;
@@ -85,6 +94,43 @@ std::string normalizedAnswerSet(const std::string& answer) {
         result += chars[i];
     }
     return result;
+}
+
+bool isReadableOmrCode(const std::string& value) {
+    return !value.empty() && value.find('?') == std::string::npos;
+}
+
+int knownOmrDigitCount(const std::string& value) {
+    int count = 0;
+    for (char c : value) {
+        if (c >= '0' && c <= '9') {
+            count++;
+        }
+    }
+    return count;
+}
+
+float medianValue(std::vector<float> values) {
+    if (values.empty()) return 0.0f;
+    size_t mid = values.size() / 2;
+    std::nth_element(values.begin(), values.begin() + mid, values.end());
+    float med = values[mid];
+    if (values.size() % 2 == 0 && mid > 0) {
+        std::nth_element(values.begin(), values.begin() + mid - 1, values.end());
+        med = (med + values[mid - 1]) * 0.5f;
+    }
+    return med;
+}
+
+int idReadQualityScore(const IdReadResult& id) {
+    int score = 0;
+    if (isReadableOmrCode(id.student_id)) score += 1000;
+    if (isReadableOmrCode(id.exam_code)) score += 600;
+    if (isReadableOmrCode(id.class_code)) score += 200;
+    score += knownOmrDigitCount(id.student_id) * 10;
+    score += knownOmrDigitCount(id.exam_code) * 6;
+    score += knownOmrDigitCount(id.class_code) * 2;
+    return score;
 }
 
 AnswerReadResult buildAnswerResult(
@@ -298,21 +344,16 @@ OmrResult OmrProcessor::processWithConfig(
     // ── Step 3: Detect markers ────────────────────────────────
     MarkerDetector markerDetector;
     std::vector<DetectedMarker> detectedMarkers = markerDetector.detectMarkers(grayForMarkers);
-    LOGI("OMR_PIPELINE marker detection completed count=%zu", detectedMarkers.size());
+    size_t uniqueMarkerCount = countUniqueDetectedMarkerIds(detectedMarkers);
+    LOGI("OMR_PIPELINE marker detection completed count=%zu unique=%zu expected=%zu",
+         detectedMarkers.size(), uniqueMarkerCount, anchorPoints.size());
 
-    if (detectedMarkers.size() < 4) {
+    if (uniqueMarkerCount < anchorPoints.size()) {
         result.error_code = "MARKER_NOT_FOUND";
         result.error_message = "Not enough markers found: " +
-                               std::to_string(detectedMarkers.size()) + " (need >= 4)";
+                               std::to_string(uniqueMarkerCount) + "/" +
+                               std::to_string(anchorPoints.size());
         return result;
-    }
-    if (detectedMarkers.size() < anchorPoints.size()) {
-        result.warnings.push_back(
-            "PARTIAL_MARKER_HOMOGRAPHY:" + std::to_string(detectedMarkers.size()) +
-            "/" + std::to_string(anchorPoints.size())
-        );
-        LOGI("OMR_DEWARP partial-marker mode enabled detected=%zu expected=%zu",
-             detectedMarkers.size(), anchorPoints.size());
     }
 
     // ── Step 4: Align/Warp image ──────────────────────────────
@@ -341,6 +382,25 @@ OmrResult OmrProcessor::processWithConfig(
     }
 
     // ── Adaptive threshold preprocessing (optional) ──────────
+    bool geometryDistortedForRead = false;
+    for (const auto& warning : result.warnings) {
+        if (warning.rfind("HOMOGRAPHY_HIGH_RESIDUAL", 0) == 0 ||
+            warning.rfind("PARTIAL_MARKER_HOMOGRAPHY", 0) == 0 ||
+            warning == "PIECEWISE_MESH_DEWARP" ||
+            warning == "TPS_DEWARP") {
+            geometryDistortedForRead = true;
+            break;
+        }
+    }
+    if (geometryDistortedForRead && !options_.use_adaptive_threshold) {
+        options_.use_adaptive_threshold = true;
+        options_.adaptive_block_size = ADAPTIVE_BLOCK_SIZE;
+        options_.adaptive_c = ADAPTIVE_C;
+        options_.morph_cleanup = true;
+        result.warnings.push_back("GEOMETRY_ADAPTIVE_THRESHOLD");
+        LOGI("OMR_THRESHOLD forced: geometry distortion detected -> adaptive + morph");
+    }
+
     warpedBinary_.release();
     if (options_.use_adaptive_threshold) {
         // Ensure block size is odd and in valid range
@@ -375,14 +435,101 @@ OmrResult OmrProcessor::processWithConfig(
     uint64_t tplHash = templateHash(templateJson);
     const LayoutCacheEntry* cacheEntry = getCachedLayout(tplHash);
 
+    bool strongDewarpUsed = false;
+    for (const auto& warning : result.warnings) {
+        if (warning == "PIECEWISE_MESH_DEWARP" || warning == "TPS_DEWARP") {
+            strongDewarpUsed = true;
+            break;
+        }
+    }
+
+    cv::Mat idReadGray = warpedGray;
+    cv::Mat idAlignedDebugGray;
+
     if (cacheEntry != nullptr) {
         LOGI("Layout cache HIT (hash=%llu)", static_cast<unsigned long long>(tplHash));
         LOGI("OMR_PIPELINE layout selected: CACHE_HIT hash=%llu", static_cast<unsigned long long>(tplHash));
-        result.id_result = readIdZoneCached(warpedGray, idZone, cacheEntry->idCells);
     } else {
         LOGI("Layout cache MISS (hash=%llu), computing...", static_cast<unsigned long long>(tplHash));
         LOGI("OMR_PIPELINE layout selected: CACHE_MISS_COMPUTE hash=%llu", static_cast<unsigned long long>(tplHash));
-        result.id_result = readIdZone(warpedGray, idZone);
+    }
+
+    auto readIdCandidate = [&](const cv::Mat& candidateGray, const cv::Mat& candidateBinary) {
+        cv::Mat savedBinary = warpedBinary_;
+        if (!candidateBinary.empty()) {
+            warpedBinary_ = candidateBinary;
+        }
+
+        IdReadResult candidate = cacheEntry != nullptr
+            ? readIdZoneCached(candidateGray, idZone, cacheEntry->idCells)
+            : readIdZone(candidateGray, idZone);
+
+        warpedBinary_ = savedBinary;
+        return candidate;
+    };
+
+    result.id_result = readIdCandidate(idReadGray, warpedBinary_);
+    LOGI("OMR_ID selected: SHARED_MAIN_WARP quality=%d strongDewarp=%d",
+         idReadQualityScore(result.id_result), strongDewarpUsed);
+
+    if (geometryDistortedForRead && !idZone.items.empty()) {
+        LOGI("OMR_ID geometry mode: shared main warp first, then one local ID-zone pass");
+
+        MarkerDetector idMarkerDetector;
+        std::vector<int> usedIdMarkerIds;
+        cv::Mat localIdWarped = idMarkerDetector.dewarpLocalRegion(
+            image,
+            detectedMarkers,
+            anchorPoints,
+            idZone.bounding_box,
+            usedIdMarkerIds
+        );
+
+        if (!localIdWarped.empty()) {
+            cv::Mat localIdGray;
+            if (localIdWarped.channels() >= 3) {
+                cv::cvtColor(localIdWarped, localIdGray, cv::COLOR_BGR2GRAY);
+            } else {
+                localIdGray = localIdWarped;
+            }
+
+            if (options_.preprocess_post_warp) {
+                localIdGray = preprocessPostWarp(localIdGray);
+            }
+
+            cv::Mat localIdBinary;
+            if (options_.use_adaptive_threshold) {
+                int bs = options_.adaptive_block_size | 1;
+                bs = std::max(3, std::min(255, bs));
+
+                cv::adaptiveThreshold(localIdGray, localIdBinary, 255,
+                    cv::ADAPTIVE_THRESH_GAUSSIAN_C,
+                    cv::THRESH_BINARY,
+                    bs,
+                    options_.adaptive_c);
+
+                if (options_.morph_cleanup) {
+                    applyMorphCleanup(localIdBinary);
+                }
+            }
+
+            IdReadResult localIdResult = readIdCandidate(localIdGray, localIdBinary);
+            int currentQuality = idReadQualityScore(result.id_result);
+            int localQuality = idReadQualityScore(localIdResult);
+            if (localQuality > currentQuality && localQuality > 0) {
+                result.id_result = localIdResult;
+                idReadGray = localIdGray;
+                idAlignedDebugGray = localIdGray;
+                result.warnings.push_back("LOCAL_ID_ZONE_READ");
+                LOGI("OMR_ID selected: LOCAL_ZONE_DEWARP markers=%zu quality=%d previous=%d",
+                     usedIdMarkerIds.size(), localQuality, currentQuality);
+            } else {
+                LOGI("OMR_ID local zone read skipped markers=%zu quality=%d previous=%d",
+                     usedIdMarkerIds.size(), localQuality, currentQuality);
+            }
+        } else {
+            LOGI("OMR_ID local zone read skipped: local warp failed");
+        }
     }
 
     std::vector<AnswerZoneConfig> answerZonesForRead = answerZones;
@@ -409,13 +556,43 @@ OmrResult OmrProcessor::processWithConfig(
     } else {
         result.answers = readAnswerZones(warpedGray, answerZonesForRead);
 
-        // Populate cache
         LayoutCacheEntry entry;
         LayoutCalculator::computeIdZoneLayout(idZone, entry.idCells);
         for (const auto& az : answerZones) {
             LayoutCalculator::computeAnswerZoneLayout(az, entry.answerCells[az.zone_id]);
         }
         putCachedLayout(tplHash, entry);
+    }
+
+    bool geometryWarning = false;
+    std::map<std::string, cv::Mat> answerAlignedDebugGrays;
+    for (const auto& warning : result.warnings) {
+        if (warning.rfind("HOMOGRAPHY_HIGH_RESIDUAL", 0) == 0 ||
+            warning.rfind("PARTIAL_MARKER_HOMOGRAPHY", 0) == 0 ||
+            warning == "PIECEWISE_MESH_DEWARP" ||
+            warning == "TPS_DEWARP") {
+            geometryWarning = true;
+            break;
+        }
+    }
+    if (geometryWarning && !answerZonesForRead.empty()) {
+        std::vector<AnswerReadResult> localAnswers = readAnswerZonesLocalDewarp(
+            image,
+            detectedMarkers,
+            anchorPoints,
+            answerZonesForRead,
+            &answerAlignedDebugGrays
+        );
+        if (localAnswers.size() >= result.answers.size() && !localAnswers.empty()) {
+            result.answers = localAnswers;
+            result.warnings.push_back("LOCAL_ANSWER_ZONE_READ");
+            LOGI("OMR_PIPELINE answer reading selected: LOCAL_ZONE_DEWARP answers=%zu",
+                 result.answers.size());
+        } else {
+            answerAlignedDebugGrays.clear();
+            LOGI("OMR_PIPELINE local zone read skipped: global=%zu local=%zu",
+                 result.answers.size(), localAnswers.size());
+        }
     }
     LOGI(
         "OMR_PIPELINE read completed student_id=%s class_code=%s exam_code=%s answers=%zu",
@@ -486,7 +663,9 @@ OmrResult OmrProcessor::processWithConfig(
             warpedGray, idZone, answerZones,
             result.id_result, result.answers,
             result.scored ? &result.score_result : nullptr,
-            correctKeyForDebug
+            correctKeyForDebug,
+            idAlignedDebugGray.empty() ? nullptr : &idAlignedDebugGray,
+            answerAlignedDebugGrays.empty() ? nullptr : &answerAlignedDebugGrays
         );
 
         if (!debugImg.empty()) {
@@ -966,15 +1145,32 @@ cv::Mat OmrProcessor::alignImage(
     cv::Mat warped;
 
     switch (dewarpInfo.method) {
-        case DewarpMethod::PERSPECTIVE:
-        case DewarpMethod::HYBRID: {
+        case DewarpMethod::PERSPECTIVE: {
             LOGI("OMR_DEWARP executing piecewiseMesh method=%s", dewarpMethodName(dewarpInfo.method));
             warped = md.dewarpPerspective(image, markers, anchors, usedCorners);
             break;
         }
-        case DewarpMethod::TPS: {
-            LOGI("OMR_DEWARP executing severePiecewiseMesh: full TPS skipped because template has only marker-center anchors");
+        case DewarpMethod::HYBRID: {
+            LOGI("OMR_DEWARP executing perspective section refinement for moderate residual");
             warped = md.dewarpPerspective(image, markers, anchors, usedCorners);
+            break;
+        }
+        case DewarpMethod::TPS: {
+            LOGI("OMR_DEWARP executing severe automatic piecewise mesh");
+            warped = md.dewarpPiecewiseMesh(image, markers, anchors);
+            if (warped.empty()) {
+                LOGI("OMR_DEWARP piecewise mesh fallback: full TPS");
+                warped = md.dewarpTps(image, markers, anchors, 0.25);
+                if (!warped.empty()) {
+                    result.warnings.push_back("TPS_DEWARP");
+                }
+            } else {
+                result.warnings.push_back("PIECEWISE_MESH_DEWARP");
+            }
+            if (warped.empty()) {
+                LOGI("OMR_DEWARP TPS fallback: perspective");
+                warped = md.dewarpPerspective(image, markers, anchors, usedCorners);
+            }
             break;
         }
         default:
@@ -987,6 +1183,62 @@ cv::Mat OmrProcessor::alignImage(
 }
 
 // ─── Read ID Zone ───────────────────────────────────────────────────
+
+std::vector<BubbleCell> OmrProcessor::autoFitIdCells(
+    const cv::Mat& warpedGray,
+    const std::vector<BubbleCell>& cells
+) {
+    if (warpedGray.empty() || cells.empty()) {
+        return cells;
+    }
+
+    std::map<int, std::vector<float>> colDx;
+    std::map<int, std::vector<float>> colDy;
+    std::map<int, std::vector<float>> rowDy;
+    std::vector<float> allDx;
+    std::vector<float> allDy;
+
+    for (const auto& cell : cells) {
+        cv::Point2f refined = refineBubbleCenter(warpedGray, cell.cx, cell.cy, cell.radius);
+        float dx = refined.x - cell.cx;
+        float dy = refined.y - cell.cy;
+        float dist = std::sqrt(dx * dx + dy * dy);
+        if (dist < 0.5f || dist > cell.radius * 0.85f) {
+            continue;
+        }
+        colDx[cell.col].push_back(dx);
+        colDy[cell.col].push_back(dy);
+        rowDy[cell.row].push_back(dy);
+        allDx.push_back(dx);
+        allDy.push_back(dy);
+    }
+
+    if (allDx.size() < 8) {
+        LOGI("ID auto-fit skipped: usableCorrections=%zu", allDx.size());
+        return cells;
+    }
+
+    float globalDx = medianValue(allDx);
+    float globalDy = medianValue(allDy);
+    std::vector<BubbleCell> fitted = cells;
+
+    float maxShift = 0.0f;
+    for (auto& cell : fitted) {
+        bool hasCol = colDx[cell.col].size() >= 3 && colDy[cell.col].size() >= 3;
+        bool hasRow = rowDy[cell.row].size() >= 3;
+        float dx = hasCol ? medianValue(colDx[cell.col]) : globalDx;
+        float dy = hasRow ? medianValue(rowDy[cell.row]) : (hasCol ? medianValue(colDy[cell.col]) : globalDy);
+        dx = std::max(-cell.radius * 0.85f, std::min(cell.radius * 0.85f, dx));
+        dy = std::max(-cell.radius * 0.85f, std::min(cell.radius * 0.85f, dy));
+        cell.cx += dx;
+        cell.cy += dy;
+        maxShift = std::max(maxShift, std::sqrt(dx * dx + dy * dy));
+    }
+
+    LOGI("ID auto-fit applied usableCorrections=%zu global=(%.2f,%.2f) maxShift=%.2f",
+         allDx.size(), globalDx, globalDy, maxShift);
+    return fitted;
+}
 
 IdReadResult OmrProcessor::readIdZone(
     const cv::Mat& warpedGray,
@@ -1012,6 +1264,8 @@ IdReadResult OmrProcessor::readIdZone(
         return result;
     }
 
+    cells = autoFitIdCells(warpedGray, cells);
+
     // Group cells by column index
     // col 0..(totalDigits-1), each has 10 rows
     std::map<int, std::vector<BubbleCell>> colGroups;
@@ -1024,23 +1278,26 @@ IdReadResult OmrProcessor::readIdZone(
     std::vector<int> digitResults(totalCols, -1);
 
     for (int col = 0; col < totalCols; col++) {
-        const auto& colCells = colGroups[col];
+        auto colCells = colGroups[col];
+        std::sort(colCells.begin(), colCells.end(),
+            [](const BubbleCell& a, const BubbleCell& b) { return a.row < b.row; });
 
-        // Build cy list sorted by row
-        std::vector<float> cyList(10);
-        for (const auto& c : colCells) {
-            if (c.row >= 0 && c.row < 10) {
-                cyList[c.row] = c.cy;
+        float top1Density = 0.0f;
+        float top2Density = 0.0f;
+        int topRow = -1;
+        for (const auto& cell : colCells) {
+            if (cell.row < 0 || cell.row >= 10) continue;
+            float density = readBubbleDensity(warpedGray, cell.cx, cell.cy, cell.radius);
+            if (density > top1Density) {
+                top2Density = top1Density;
+                top1Density = density;
+                topRow = cell.row;
+            } else if (density > top2Density) {
+                top2Density = density;
             }
         }
 
-        float cx = colCells[0].cx;
-        float radius = colCells[0].radius;
-
-        float top1Density = 0.0f, top2Density = 0.0f;
-        int digit = readBubbleColumn(warpedGray, cyList, cx, radius, top1Density, top2Density);
-
-        digitResults[col] = digit;
+        digitResults[col] = top1Density >= options_.density_threshold ? topRow : -1;
     }
 
     // Map digits to items
@@ -1104,9 +1361,11 @@ IdReadResult OmrProcessor::readIdZoneCached(
         return readIdZone(warpedGray, idZone);
     }
 
+    std::vector<BubbleCell> fittedCells = autoFitIdCells(warpedGray, cells);
+
     // Group cells by column index (same logic as readIdZone)
     std::map<int, std::vector<BubbleCell>> colGroups;
-    for (const auto& cell : cells) {
+    for (const auto& cell : fittedCells) {
         colGroups[cell.col].push_back(cell);
     }
 
@@ -1114,20 +1373,25 @@ IdReadResult OmrProcessor::readIdZoneCached(
     std::vector<int> digitResults(totalCols, -1);
 
     for (int col = 0; col < totalCols; col++) {
-        const auto& colCells = colGroups[col];
+        auto colCells = colGroups[col];
+        std::sort(colCells.begin(), colCells.end(),
+            [](const BubbleCell& a, const BubbleCell& b) { return a.row < b.row; });
 
-        std::vector<float> cyList(10);
-        for (const auto& c : colCells) {
-            if (c.row >= 0 && c.row < 10) {
-                cyList[c.row] = c.cy;
+        float top1Density = 0.0f;
+        float top2Density = 0.0f;
+        int topRow = -1;
+        for (const auto& cell : colCells) {
+            if (cell.row < 0 || cell.row >= 10) continue;
+            float density = readBubbleDensity(warpedGray, cell.cx, cell.cy, cell.radius);
+            if (density > top1Density) {
+                top2Density = top1Density;
+                top1Density = density;
+                topRow = cell.row;
+            } else if (density > top2Density) {
+                top2Density = density;
             }
         }
-
-        float cx = colCells[0].cx;
-        float radius = colCells[0].radius;
-        float top1Density = 0.0f, top2Density = 0.0f;
-        int digit = readBubbleColumn(warpedGray, cyList, cx, radius, top1Density, top2Density);
-        digitResults[col] = digit;
+        digitResults[col] = top1Density >= options_.density_threshold ? topRow : -1;
     }
 
     int colIdx = 0;
@@ -1187,7 +1451,8 @@ std::vector<AnswerReadResult> OmrProcessor::readAnswerZones(
             std::vector<float> densities;
             densities.reserve(qCells.size());
             for (const auto& cell : qCells) {
-                float d = readBubbleDensity(warpedGray, cell.cx, cell.cy, cell.radius);
+                cv::Point2f center = refineBubbleCenter(warpedGray, cell.cx, cell.cy, cell.radius);
+                float d = readBubbleDensity(warpedGray, center.x, center.y, cell.radius);
                 densities.push_back(d);
             }
 
@@ -1212,6 +1477,86 @@ std::vector<AnswerReadResult> OmrProcessor::readAnswerZones(
 }
 
 // ─── Read Answer Zones (cached cells) ─────────────────────────────
+
+std::vector<AnswerReadResult> OmrProcessor::readAnswerZonesLocalDewarp(
+    const cv::Mat& image,
+    const std::vector<DetectedMarker>& markers,
+    const std::vector<AnchorPoint>& anchors,
+    const std::vector<AnswerZoneConfig>& answerZones,
+    std::map<std::string, cv::Mat>* debugLocalGrays
+) {
+    std::vector<AnswerReadResult> allResults;
+    if (image.empty() || markers.size() < 4 || answerZones.empty()) {
+        return allResults;
+    }
+
+    MarkerDetector markerDetector;
+    cv::Mat savedBinary = warpedBinary_;
+
+    for (const auto& zone : answerZones) {
+        std::vector<int> usedMarkerIds;
+        cv::Mat localWarped = markerDetector.dewarpLocalRegion(
+            image,
+            markers,
+            anchors,
+            zone.bounding_box,
+            usedMarkerIds
+        );
+
+        if (localWarped.empty()) {
+            LOGI("LOCAL_ZONE_READ skipped zone=%s: local warp failed",
+                 zone.zone_id.c_str());
+            continue;
+        }
+
+        cv::Mat localGray;
+        if (localWarped.channels() >= 3) {
+            cv::cvtColor(localWarped, localGray, cv::COLOR_BGR2GRAY);
+        } else {
+            localGray = localWarped;
+        }
+
+        if (options_.preprocess_post_warp) {
+            localGray = preprocessPostWarp(localGray);
+        }
+
+        if (debugLocalGrays != nullptr) {
+            (*debugLocalGrays)[zone.zone_id] = localGray.clone();
+        }
+
+        warpedBinary_.release();
+        if (options_.use_adaptive_threshold) {
+            int bs = options_.adaptive_block_size | 1;
+            bs = std::max(3, std::min(255, bs));
+
+            cv::adaptiveThreshold(localGray, warpedBinary_, 255,
+                cv::ADAPTIVE_THRESH_GAUSSIAN_C,
+                cv::THRESH_BINARY,
+                bs,
+                options_.adaptive_c);
+
+            if (options_.morph_cleanup) {
+                applyMorphCleanup(warpedBinary_);
+            }
+        }
+
+        std::vector<AnswerZoneConfig> singleZone = {zone};
+        std::vector<AnswerReadResult> zoneAnswers = readAnswerZones(localGray, singleZone);
+        allResults.insert(allResults.end(), zoneAnswers.begin(), zoneAnswers.end());
+
+        LOGI("LOCAL_ZONE_READ completed zone=%s markers=%zu answers=%zu",
+             zone.zone_id.c_str(), usedMarkerIds.size(), zoneAnswers.size());
+    }
+
+    warpedBinary_ = savedBinary;
+
+    std::sort(allResults.begin(), allResults.end(),
+        [](const AnswerReadResult& a, const AnswerReadResult& b) {
+            return a.question_number < b.question_number;
+        });
+
+    return allResults;
+}
 
 std::vector<AnswerReadResult> OmrProcessor::readAnswerZonesCached(
     const cv::Mat& warpedGray,
@@ -1242,7 +1587,8 @@ std::vector<AnswerReadResult> OmrProcessor::readAnswerZonesCached(
             std::vector<float> densities;
             densities.reserve(qCells.size());
             for (const auto& cell : qCells) {
-                densities.push_back(readBubbleDensity(warpedGray, cell.cx, cell.cy, cell.radius));
+                cv::Point2f center = refineBubbleCenter(warpedGray, cell.cx, cell.cy, cell.radius);
+                densities.push_back(readBubbleDensity(warpedGray, center.x, center.y, cell.radius));
             }
 
             allResults.push_back(buildAnswerResult(
@@ -1304,21 +1650,31 @@ cv::Point2f OmrProcessor::refineBubbleCenter(
 
     for (const auto& contour : contours) {
         double area = cv::contourArea(contour);
-        if (area < 6.0 || area > CV_PI * radius * radius * 3.0) {
+        double expectedArea = CV_PI * radius * radius;
+        if (area < 6.0 || area > expectedArea * 1.8) {
             continue;
         }
 
         cv::Point2f center;
         float enclosingRadius = 0.0f;
         cv::minEnclosingCircle(contour, center, enclosingRadius);
-        if (enclosingRadius < radius * 0.35f || enclosingRadius > radius * 1.6f) {
+        if (enclosingRadius < radius * 0.35f || enclosingRadius > radius * 1.45f) {
+            continue;
+        }
+
+        double perimeter = cv::arcLength(contour, true);
+        if (perimeter <= 0.0) {
+            continue;
+        }
+        double circularity = 4.0 * CV_PI * area / (perimeter * perimeter);
+        if (circularity < 0.45) {
             continue;
         }
 
         float dx = center.x - expectedLocal.x;
         float dy = center.y - expectedLocal.y;
         float dist = std::sqrt(dx * dx + dy * dy);
-        if (dist > static_cast<float>(search)) {
+        if (dist > radius * 0.85f) {
             continue;
         }
 
@@ -1483,7 +1839,9 @@ cv::Mat OmrProcessor::generateDebugImage(
     const IdReadResult& idResult,
     const std::vector<AnswerReadResult>& answers,
     const ScoreResult* score,
-    const std::map<int, std::string>* correctAnswers
+    const std::map<int, std::string>* correctAnswers,
+    const cv::Mat* idAlignedDebugGray,
+    const std::map<std::string, cv::Mat>* answerAlignedDebugGrays
 ) {
     // Always produce a BGR image for color drawing
     cv::Mat debug;
@@ -1493,12 +1851,65 @@ cv::Mat OmrProcessor::generateDebugImage(
     const cv::Scalar GREEN(0, 255, 0);       // Correct selection
     const cv::Scalar RED(0, 0, 255);         // Wrong selection
     const cv::Scalar YELLOW(0, 255, 255);    // Missed correct / ambiguous
-    const cv::Scalar BLUE(255, 0, 0);        // Filled (no scoring)
-    const cv::Scalar DIM_GRAY(180, 180, 180); // Not filled (subtle)
+    const cv::Scalar BLUE(255, 0, 0);        // Selected (no scoring)
     const cv::Scalar GRID_GRAY(120, 120, 120); // All computed answer bubbles
-    const cv::Scalar ID_MAGENTA(255, 0, 255);  // All computed ID/code bubbles
+
+    if (idAlignedDebugGray != nullptr &&
+        !idAlignedDebugGray->empty() &&
+        idAlignedDebugGray->size() == warpedGray.size()) {
+        cv::Mat idAlignedBgr;
+        if (idAlignedDebugGray->channels() >= 3) {
+            idAlignedBgr = *idAlignedDebugGray;
+        } else {
+            cv::cvtColor(*idAlignedDebugGray, idAlignedBgr, cv::COLOR_GRAY2BGR);
+        }
+
+        const int pad = 24;
+        cv::Rect imageRect(0, 0, debug.cols, debug.rows);
+        cv::Rect idRoi(
+            static_cast<int>(std::floor(idZone.bounding_box.x)) - pad,
+            static_cast<int>(std::floor(idZone.bounding_box.y)) - pad,
+            static_cast<int>(std::ceil(idZone.bounding_box.width)) + pad * 2,
+            static_cast<int>(std::ceil(idZone.bounding_box.height)) + pad * 2
+        );
+        idRoi &= imageRect;
+        if (idRoi.width > 0 && idRoi.height > 0) {
+            idAlignedBgr(idRoi).copyTo(debug(idRoi));
+        }
+    }
 
     // ── Build lookup maps ─────────────────────────────────────
+    if (answerAlignedDebugGrays != nullptr) {
+        const int pad = 16;
+        cv::Rect imageRect(0, 0, debug.cols, debug.rows);
+        for (const auto& zone : answerZones) {
+            auto localIt = answerAlignedDebugGrays->find(zone.zone_id);
+            if (localIt == answerAlignedDebugGrays->end() ||
+                localIt->second.empty() ||
+                localIt->second.size() != warpedGray.size()) {
+                continue;
+            }
+
+            cv::Mat answerAlignedBgr;
+            if (localIt->second.channels() >= 3) {
+                answerAlignedBgr = localIt->second;
+            } else {
+                cv::cvtColor(localIt->second, answerAlignedBgr, cv::COLOR_GRAY2BGR);
+            }
+
+            cv::Rect zoneRoi(
+                static_cast<int>(std::floor(zone.bounding_box.x)) - pad,
+                static_cast<int>(std::floor(zone.bounding_box.y)) - pad,
+                static_cast<int>(std::ceil(zone.bounding_box.width)) + pad * 2,
+                static_cast<int>(std::ceil(zone.bounding_box.height)) + pad * 2
+            );
+            zoneRoi &= imageRect;
+            if (zoneRoi.width > 0 && zoneRoi.height > 0) {
+                answerAlignedBgr(zoneRoi).copyTo(debug(zoneRoi));
+            }
+        }
+    }
+
     std::map<int, AnswerReadResult> answerMap;
     for (const auto& ar : answers) {
         answerMap[ar.question_number] = ar;
@@ -1508,6 +1919,16 @@ cv::Mat OmrProcessor::generateDebugImage(
 
     // ── Draw all answer zone cells ────────────────────────────
     for (const auto& zone : answerZones) {
+        const cv::Mat* answerRefineGray = &warpedGray;
+        if (answerAlignedDebugGrays != nullptr) {
+            auto localIt = answerAlignedDebugGrays->find(zone.zone_id);
+            if (localIt != answerAlignedDebugGrays->end() &&
+                !localIt->second.empty() &&
+                localIt->second.size() == warpedGray.size()) {
+                answerRefineGray = &localIt->second;
+            }
+        }
+
         std::vector<BubbleCell> cells;
         if (!LayoutCalculator::computeAnswerZoneLayout(zone, cells)) continue;
 
@@ -1515,9 +1936,7 @@ cv::Mat OmrProcessor::generateDebugImage(
             if (cell.is_number_cell) continue;
 
             int qIdx = cell.question_index;
-            float density = readBubbleDensity(warpedGray, cell.cx, cell.cy, cell.radius);
-            bool isFilled = (density >= options_.density_threshold);
-            cv::Point2f refinedCenter = refineBubbleCenter(warpedGray, cell.cx, cell.cy, cell.radius);
+            cv::Point2f refinedCenter = refineBubbleCenter(*answerRefineGray, cell.cx, cell.cy, cell.radius);
             drawBubbleCell(debug, refinedCenter.x, refinedCenter.y, cell.radius, GRID_GRAY, 1);
 
             // Determine what student selected for this question
@@ -1571,21 +1990,16 @@ cv::Mat OmrProcessor::generateDebugImage(
                     // answer position when flag=1 and student answer exists.
                     color = YELLOW;
                     thickness = 2;
-                } else if (isFilled) {
-                    // Filled but neither chosen nor correct — draw dim
-                    color = DIM_GRAY;
-                    thickness = 1;
                 } else {
-                    // Not filled, skip or draw very faint
-                    continue;  // skip unfilled cells in scored mode
+                    continue;
                 }
             } else {
                 // ── No-scoring mode: only show filled bubbles ──
-                if (isFilled) {
+                if (studentChoseThis) {
                     color = BLUE;
                     thickness = 2;
                 } else {
-                    continue;  // skip unfilled
+                    continue;
                 }
             }
 
@@ -1615,7 +2029,7 @@ cv::Mat OmrProcessor::generateDebugImage(
 
                 if (isCorrectOpt) {
                     // Yellow circle on the correct answer of a flagged question
-                    cv::Point2f refinedCenter = refineBubbleCenter(warpedGray, cell.cx, cell.cy, cell.radius);
+                    cv::Point2f refinedCenter = refineBubbleCenter(*answerRefineGray, cell.cx, cell.cy, cell.radius);
                     drawBubbleCell(debug, refinedCenter.x, refinedCenter.y, cell.radius * 1.15f,
                                    YELLOW, 2);
                 }
@@ -1624,19 +2038,51 @@ cv::Mat OmrProcessor::generateDebugImage(
     }
 
     // ── Draw ID zone cells ────────────────────────────────────
+    // ── Overlay text info ─────────────────────────────────────
+    std::vector<int> selectedIdDigits;
+    auto appendIdValue = [&](const std::string& value, int digits) {
+        for (int i = 0; i < digits; i++) {
+            if (i < static_cast<int>(value.size()) &&
+                value[i] >= '0' && value[i] <= '9') {
+                selectedIdDigits.push_back(value[i] - '0');
+            } else {
+                selectedIdDigits.push_back(-1);
+            }
+        }
+    };
+
+    for (const auto& item : idZone.items) {
+        if (!item.enabled) continue;
+        if (item.type == "student_id") {
+            appendIdValue(idResult.student_id, item.num_digits);
+        } else if (item.type == "class_code") {
+            appendIdValue(idResult.class_code, item.num_digits);
+        } else if (item.type == "exam_code") {
+            appendIdValue(idResult.exam_code, item.num_digits);
+        }
+    }
+
     std::vector<BubbleCell> idCells;
-    if (LayoutCalculator::computeIdZoneLayout(idZone, idCells)) {
+    const cv::Mat& idRefineGray =
+        (idAlignedDebugGray != nullptr &&
+         !idAlignedDebugGray->empty() &&
+         idAlignedDebugGray->size() == warpedGray.size())
+            ? *idAlignedDebugGray
+            : warpedGray;
+    if (!selectedIdDigits.empty() &&
+        LayoutCalculator::computeIdZoneLayout(idZone, idCells)) {
+        idCells = autoFitIdCells(idRefineGray, idCells);
         for (const auto& cell : idCells) {
-            cv::Point2f refinedCenter = refineBubbleCenter(warpedGray, cell.cx, cell.cy, cell.radius);
-            drawBubbleCell(debug, refinedCenter.x, refinedCenter.y, cell.radius, ID_MAGENTA, 1);
-            float density = readBubbleDensity(warpedGray, cell.cx, cell.cy, cell.radius);
-            if (density >= options_.density_threshold) {
-                drawBubbleCell(debug, refinedCenter.x, refinedCenter.y, cell.radius, GREEN, 2);
+            drawBubbleCell(debug, cell.cx, cell.cy, cell.radius, GRID_GRAY, 1);
+
+            if (cell.col >= 0 &&
+                cell.col < static_cast<int>(selectedIdDigits.size()) &&
+                selectedIdDigits[cell.col] == cell.row) {
+                drawBubbleCell(debug, cell.cx, cell.cy, cell.radius, GREEN, 2);
             }
         }
     }
 
-    // ── Overlay text info ─────────────────────────────────────
     int fontFace = cv::FONT_HERSHEY_SIMPLEX;
     double fontScale = 0.6;
     int textThick = 1;
@@ -1644,6 +2090,16 @@ cv::Mat OmrProcessor::generateDebugImage(
 
     if (!idResult.student_id.empty()) {
         cv::putText(debug, "SBD: " + idResult.student_id,
+                    cv::Point(10, yOff), fontFace, fontScale, GREEN, textThick);
+        yOff += 25;
+    }
+    if (!idResult.class_code.empty()) {
+        cv::putText(debug, "Class: " + idResult.class_code,
+                    cv::Point(10, yOff), fontFace, fontScale, GREEN, textThick);
+        yOff += 25;
+    }
+    if (!idResult.exam_code.empty()) {
+        cv::putText(debug, "Exam: " + idResult.exam_code,
                     cv::Point(10, yOff), fontFace, fontScale, GREEN, textThick);
         yOff += 25;
     }
@@ -1661,7 +2117,7 @@ cv::Mat OmrProcessor::generateDebugImage(
         cv::putText(debug, "GREEN=Correct  RED=Wrong  YELLOW=Missed/Flagged",
                     cv::Point(10, legendY), fontFace, 0.45, GREEN, 1);
     } else {
-        cv::putText(debug, "GRAY=Answer grid  MAGENTA=ID grid  BLUE/GREEN=Filled",
+        cv::putText(debug, "GRAY=Answer grid  BLUE=Selected",
                     cv::Point(10, legendY), fontFace, 0.45, BLUE, 1);
     }
 

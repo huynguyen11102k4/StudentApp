@@ -25,6 +25,7 @@ coroutinesVersion = "1.10.2"
 googleAuthVersion = "21.3.0"
 googleServicesVersion = "4.4.2"
 firebaseBomVersion = "33.7.0"
+workVersion = "2.9.1"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -79,6 +80,7 @@ androidx-recyclerview = { group = "androidx.recyclerview", name = "recyclerview"
 # SwipeRefreshLayout
 androidx-swiperefreshlayout = { group = "androidx.swiperefreshlayout", name = "swiperefreshlayout", version.ref = "swiperefreshlayout" }
 androidx-paging-runtime-ktx = { group = "androidx.paging", name = "paging-runtime-ktx", version.ref = "paging" }
+androidx-work-runtime-ktx = { group = "androidx.work", name = "work-runtime-ktx", version.ref = "workVersion" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

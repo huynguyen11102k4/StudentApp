@@ -51,6 +51,10 @@ class LockModeViewModel(
     val blankSubmissionFinished: SharedFlow<StudentSubmitResponse?> = _blankSubmissionFinished.asSharedFlow()
     private val _omrCodes = MutableStateFlow(LockModeOmrCodes())
     val omrCodes: StateFlow<LockModeOmrCodes> = _omrCodes.asStateFlow()
+    private val _currentSessionId = MutableStateFlow("")
+    val currentSessionId: StateFlow<String> = _currentSessionId.asStateFlow()
+    private val _currentQuestionCount = MutableStateFlow(0)
+    val currentQuestionCount: StateFlow<Int> = _currentQuestionCount.asStateFlow()
 
     private var timerJob: Job? = null
     private var heartbeatJob: Job? = null
@@ -59,6 +63,7 @@ class LockModeViewModel(
     private var questionCount: Int = 0
     private var blankSubmitted = false
     private var stopped = false
+    private var offlineEventOpen = false
 
     fun start(
         sessionId: String,
@@ -67,13 +72,17 @@ class LockModeViewModel(
         questionCount: Int,
         argCodes: LockModeOmrCodes = LockModeOmrCodes()
     ) {
-        this.sessionId = sessionId
+        val activeSession = activeSessionStore.get(examId)
+        this.sessionId = sessionId.ifBlank { activeSession?.sessionId.orEmpty() }
+        _currentSessionId.value = this.sessionId
         this.examId = examId
-        this.questionCount = questionCount.coerceAtLeast(0)
+        this.questionCount = questionCount.takeIf { it > 0 } ?: activeSession?.questionCount ?: 0
+        _currentQuestionCount.value = this.questionCount
         stopped = false
-        if (_remainingSeconds.value <= 0) _remainingSeconds.value = initialSeconds.coerceAtLeast(0)
+        val resolvedInitialSeconds = initialSeconds.takeIf { it > 0 } ?: activeSession?.currentRemainingSeconds() ?: 0
+        if (_remainingSeconds.value <= 0) _remainingSeconds.value = resolvedInitialSeconds.coerceAtLeast(0)
         loadOmrCodes(examId, argCodes)
-        startTimer()
+        if (_remainingSeconds.value > 0) startTimer()
         startHeartbeat()
     }
 
@@ -88,6 +97,33 @@ class LockModeViewModel(
         )
         lockModeRepository.queueViolation(request)
         flushViolations()
+    }
+
+    fun markNetworkOffline(evidence: Map<String, Any?> = emptyMap()) {
+        if (offlineEventOpen) return
+        offlineEventOpen = true
+        logViolation(
+            "network_offline",
+            evidence + mapOf(
+                "reason" to "network_offline",
+                "offline_started_at" to nowIso()
+            )
+        )
+    }
+
+    fun markNetworkRestored(evidence: Map<String, Any?> = emptyMap()) {
+        if (!offlineEventOpen) {
+            flushViolations()
+            return
+        }
+        offlineEventOpen = false
+        logViolation(
+            "network_restored",
+            evidence + mapOf(
+                "reason" to "network_restored",
+                "restored_at" to nowIso()
+            )
+        )
     }
 
     fun flushViolations() {
@@ -127,12 +163,20 @@ class LockModeViewModel(
                 ).collect { result ->
                     if (result is ApiResult.Success) {
                         _remainingSeconds.value = result.data.remainingSeconds
+                        offlineEventOpen = false
                         flushViolations()
                     } else if (result is ApiResult.Error) {
                         if (result.exception.isTerminalSessionStatusError()) {
                             stopHeartbeat()
                             return@collect
                         }
+                        markNetworkOffline(
+                            mapOf(
+                                "reason" to "heartbeat_failed",
+                                "screen" to "lock_mode",
+                                "network" to NetworkStatusProvider.currentNetwork(context)
+                            )
+                        )
                     }
                 }
                 delay(30_000)

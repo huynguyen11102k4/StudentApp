@@ -244,6 +244,7 @@
     <string name="camera_ar_permission_allow">Cho phép</string>
     <string name="camera_ar_capture_failed">Chụp ảnh thất bại, vui lòng thử lại</string>
     <string name="camera_ar_camera_not_ready">Camera chưa sẵn sàng, vui lòng thử lại</string>
+    <string name="camera_ar_need_all_markers">Cần nhận đủ marker trước khi chụp</string>
     <string name="camera_ar_gallery_read_failed">Không thể đọc ảnh từ thư viện</string>
     <string name="camera_ar_gallery_open_failed">Không thể mở ảnh đã chọn</string>
     <string name="camera_ar_gallery_decode_failed">Không thể giải mã ảnh đã chọn</string>
@@ -278,6 +279,8 @@
     <string name="smart_review_save">Lưu nháp</string>
     <string name="smart_review_saving">Đang lưu...</string>
     <string name="smart_review_saved">Đã lưu nháp bài làm!</string>
+    <string name="smart_review_omr_warning_title">Lưu ý</string>
+    <string name="smart_review_omr_warning_message">Ảnh bài làm có thể chưa thật rõ. Hãy kiểm tra lại thông tin và đáp án, hoặc chụp lại nếu cần.</string>
 
     <!-- Notifications Screen -->
     <string name="notifications_title">Thông báo</string>
@@ -472,6 +475,8 @@
     <string name="lock_violation_screen_off_teacher_message">Học sinh đã tắt màn hình hoặc khóa thiết bị trong lúc làm bài.</string>
     <string name="lock_violation_network_lost_label">Mất kết nối mạng trong lúc làm bài</string>
     <string name="lock_violation_network_lost_teacher_message">Thiết bị của học sinh đã mất kết nối mạng trong lúc làm bài.</string>
+    <string name="lock_violation_network_restored_label">Kết nối mạng đã khôi phục</string>
+    <string name="lock_violation_network_restored_teacher_message">Thiết bị của học sinh đã có mạng trở lại và đồng bộ các sự kiện đã lưu cục bộ.</string>
     <string name="notifications_mark_all_read_success">Đã đánh dấu tất cả là đã đọc</string>
     <plurals name="notifications_unread_count">
         <item quantity="one">%d chưa đọc</item>

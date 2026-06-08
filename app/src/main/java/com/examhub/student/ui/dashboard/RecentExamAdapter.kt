@@ -8,10 +8,9 @@ import androidx.recyclerview.widget.RecyclerView
 import com.examhub.student.R
 import com.examhub.student.data.model.Exam
 import com.examhub.student.databinding.ItemExamBinding
+import com.examhub.student.util.extension.toLocalDisplayDateTime
 import com.examhub.student.util.extension.toFriendlyExamStatus
-import java.text.SimpleDateFormat
 import java.util.Locale
-import java.util.TimeZone
 
 class RecentExamAdapter(
     private val onItemClick: (Exam) -> Unit
@@ -27,7 +26,7 @@ class RecentExamAdapter(
             binding.tvExamProgress.text = exam.status.ifBlank {
                 context.getString(R.string.exam_status_open)
             }.toFriendlyExamStatus()
-            binding.tvExamUpdated.text = formatExamDate(exam.date).ifBlank {
+            binding.tvExamUpdated.text = exam.date.toLocalDisplayDateTime().ifBlank {
                 context.getString(R.string.dashboard_exam_updated)
             }
             if (exam.canViewResult) {
@@ -60,25 +59,6 @@ class RecentExamAdapter(
                 binding.tvOfflineBadge.setTextColor(context.getColor(R.color.status_online_text))
             }
             binding.root.setOnClickListener { onClick(exam) }
-        }
-
-        private fun formatExamDate(raw: String): String {
-            if (raw.isBlank()) return ""
-            val normalized = raw.trim()
-            val parsers = listOf(
-                SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US).apply {
-                    timeZone = TimeZone.getTimeZone("UTC")
-                },
-                SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US).apply {
-                    timeZone = TimeZone.getTimeZone("UTC")
-                },
-                SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSXXX", Locale.US),
-                SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX", Locale.US)
-            )
-            val date = parsers.firstNotNullOfOrNull { parser ->
-                runCatching { parser.parse(normalized) }.getOrNull()
-            } ?: return normalized.removeSuffix("Z")
-            return SimpleDateFormat("HH:mm dd/MM/yyyy", Locale("vi", "VN")).format(date)
         }
 
         private fun String.isRunningExamStatus(): Boolean {

@@ -23,21 +23,27 @@ import com.google.android.material.snackbar.Snackbar
 import com.examhub.student.MainActivity
 import com.examhub.student.R
 import com.examhub.student.databinding.FragmentCameraArBinding
+import com.examhub.student.repository.LockModeRepository
 import com.examhub.student.util.extension.collectOnStarted
 import com.examhub.student.util.helper.protectScreenFromCapture
+import com.examhub.student.ui.lockmode.LockFlowMonitorController
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
+import org.koin.android.ext.android.inject
 
 class CameraARFragment : Fragment() {
 
     private var _binding: FragmentCameraArBinding? = null
     private val binding get() = _binding!!
     private val viewModel: CameraARViewModel by viewModel()
+    private val lockModeRepository: LockModeRepository by inject()
     private var cameraManager: CameraManager? = null
     private var hasCameraPermission = false
     private var sessionTimeoutJob: Job? = null
+    private var lockFlowMonitor: LockFlowMonitorController? = null
+    private var captureInFlight = false
     private val pickImageLauncher =
         registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
             uri?.let { handleGalleryImage(it) }
@@ -64,6 +70,8 @@ class CameraARFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         protectScreenFromCapture()
+        enterKioskModeIfLocked()
+        setupLockFlowMonitor()
         viewModel.resetProcessingState()
         viewModel.setExamId(arguments?.getString("examId").orEmpty())
         viewModel.setSessionId(arguments?.getString("sessionId").orEmpty())
@@ -76,10 +84,28 @@ class CameraARFragment : Fragment() {
 
     override fun onResume() {
         super.onResume()
+        enterKioskModeIfLocked()
         viewModel.resetProcessingState()
         if (_binding != null) {
             showCaptureLoading(false)
         }
+    }
+
+    private fun enterKioskModeIfLocked() {
+        if (arguments?.getString("sessionId").isNullOrBlank()) return
+        (requireActivity() as? MainActivity)?.enterKioskMode()
+    }
+
+    private fun setupLockFlowMonitor() {
+        val sessionId = arguments?.getString("sessionId").orEmpty()
+        if (sessionId.isBlank()) return
+        lockFlowMonitor = LockFlowMonitorController(
+            context = requireContext(),
+            lockModeRepository = lockModeRepository,
+            scope = viewLifecycleOwner.lifecycleScope,
+            sessionIdProvider = { arguments?.getString("sessionId").orEmpty() },
+            screenName = "camera_ar"
+        ).also { it.start() }
     }
 
     private fun checkCameraPermission() {
@@ -111,25 +137,26 @@ class CameraARFragment : Fragment() {
             lifecycleOwner = viewLifecycleOwner,
             previewView = binding.previewView,
             onImageCaptured = { bitmap ->
-                viewModel.onImageCaptured(bitmap)
+                processCapturedBitmap(bitmap)
             },
             onCaptureFailed = { error ->
                 activity?.runOnUiThread {
                     if (_binding == null) return@runOnUiThread
-                    showCaptureLoading(false)
-                    binding.fabCapture.isEnabled = !viewModel.isProcessing.value
-                    Toast.makeText(
-                        requireContext(),
-                        error.message ?: getString(R.string.camera_ar_capture_failed),
-                        Toast.LENGTH_SHORT
-                    ).show()
+                    handleCaptureFailure(error)
                 }
             },
             onMarkersDetected = { detected, expected ->
                 viewModel.onMarkersDetected(detected, expected)
             },
             onAutoCaptureReady = {
-                autoCapturePhoto()
+                if (_binding != null && !viewModel.isProcessing.value && !captureInFlight) {
+                    captureInFlight = true
+                    viewModel.onAutoCaptureStarting()
+                    showCaptureLoading(true)
+                    true
+                } else {
+                    false
+                }
             }
         )
         cameraManager?.startCamera()
@@ -139,6 +166,8 @@ class CameraARFragment : Fragment() {
 
     private fun setupClickListeners() {
         binding.btnClose.setOnClickListener {
+            val flashMode = cameraManager?.turnFlashOff() ?: "off"
+            viewModel.onFlashModeUpdated(flashMode)
             cameraManager?.shutdown()
             findNavController().navigateUp()
         }
@@ -150,23 +179,25 @@ class CameraARFragment : Fragment() {
         }
 
         binding.fabCapture.setOnClickListener {
-            capturePhoto(showNotReadyMessage = true)
+            requestCameraCapture(showNotReadyMessage = true)
         }
 
         binding.btnGallery.setOnClickListener {
-            if (viewModel.isProcessing.value) return@setOnClickListener
+            if (viewModel.isProcessing.value || captureInFlight) return@setOnClickListener
             pickImageLauncher.launch("image/*")
         }
     }
 
-    private fun autoCapturePhoto() {
-        if (_binding == null || viewModel.isProcessing.value) return
-        viewModel.onAutoCaptureStarting()
-        capturePhoto(showNotReadyMessage = false)
-    }
-
-    private fun capturePhoto(showNotReadyMessage: Boolean) {
-        if (viewModel.isProcessing.value) return
+    private fun requestCameraCapture(showNotReadyMessage: Boolean) {
+        if (viewModel.isProcessing.value || captureInFlight) return
+        val markersReady = viewModel.allMarkersDetected.value && cameraManager?.hasRecentFullMarkerFrame() == true
+        if (!markersReady) {
+            showCaptureLoading(false)
+            if (showNotReadyMessage) {
+                Toast.makeText(requireContext(), R.string.camera_ar_need_all_markers, Toast.LENGTH_SHORT).show()
+            }
+            return
+        }
         val started = cameraManager?.capturePhoto() == true
         if (!started) {
             showCaptureLoading(false)
@@ -174,8 +205,38 @@ class CameraARFragment : Fragment() {
                 Toast.makeText(requireContext(), R.string.camera_ar_camera_not_ready, Toast.LENGTH_SHORT).show()
             }
         } else {
+            captureInFlight = true
             showCaptureLoading(true)
         }
+    }
+
+    private fun processCapturedBitmap(bitmap: Bitmap) {
+        activity?.runOnUiThread {
+            if (_binding == null || viewModel.isProcessing.value) {
+                captureInFlight = false
+                return@runOnUiThread
+            }
+            captureInFlight = true
+            val flashMode = cameraManager?.turnFlashOff() ?: "off"
+            viewModel.onFlashModeUpdated(flashMode)
+            updateFlashIcon(flashMode)
+            showCaptureLoading(true)
+            viewModel.onImageCaptured(bitmap)
+        }
+    }
+
+    private fun handleCaptureFailure(error: Throwable) {
+        captureInFlight = false
+        val flashMode = cameraManager?.turnFlashOff() ?: "off"
+        viewModel.onFlashModeUpdated(flashMode)
+        updateFlashIcon(flashMode)
+        showCaptureLoading(false)
+        binding.fabCapture.isEnabled = !viewModel.isProcessing.value
+        Toast.makeText(
+            requireContext(),
+            error.message ?: getString(R.string.camera_ar_capture_failed),
+            Toast.LENGTH_SHORT
+        ).show()
     }
 
     private fun handleGalleryImage(uri: Uri) {
@@ -188,8 +249,7 @@ class CameraARFragment : Fragment() {
             return
         }
 
-        showCaptureLoading(true)
-        viewModel.onImageCaptured(bitmap)
+        processCapturedBitmap(bitmap)
     }
 
     private fun decodeGalleryBitmap(uri: Uri): Bitmap {
@@ -288,6 +348,9 @@ class CameraARFragment : Fragment() {
             }
             launch {
                 viewModel.isProcessing.collect { processing ->
+                    if (!processing) {
+                        captureInFlight = false
+                    }
                     showCaptureLoading(processing)
                 }
             }
@@ -299,6 +362,7 @@ class CameraARFragment : Fragment() {
                         putString("sessionId", arguments?.getString("sessionId").orEmpty())
                         putString("studentId", "")
                         putInt("remainingSeconds", remainingSeconds())
+                        putInt("questionCount", arguments?.getInt("questionCount") ?: 0)
                         putLong("timerStartedAt", System.currentTimeMillis())
                     }
                     findNavController().navigate(R.id.action_camera_ar_to_smart_review, bundle)
@@ -339,6 +403,8 @@ class CameraARFragment : Fragment() {
         if (_binding == null) return
         viewModel.stopSessionWork()
         viewModel.submitBlankOnTimeout(arguments?.getInt("questionCount") ?: 0)
+        val flashMode = cameraManager?.turnFlashOff() ?: "off"
+        viewModel.onFlashModeUpdated(flashMode)
         cameraManager?.shutdown()
         (requireActivity() as? MainActivity)?.exitKioskMode()
         Toast.makeText(requireContext(), R.string.lock_mode_time_expired, Toast.LENGTH_LONG).show()
@@ -361,7 +427,10 @@ class CameraARFragment : Fragment() {
     override fun onDestroyView() {
         super.onDestroyView()
         sessionTimeoutJob?.cancel()
+        lockFlowMonitor?.stop()
+        lockFlowMonitor = null
         viewModel.stopSessionWork()
+        cameraManager?.turnFlashOff()
         cameraManager?.shutdown()
         cameraManager = null
         _binding = null

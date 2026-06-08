@@ -15,6 +15,7 @@ import com.examhub.student.data.model.AppNotification
 import com.examhub.student.databinding.FragmentNotificationsBinding
 import com.examhub.student.util.extension.applySystemWindowInsets
 import com.examhub.student.util.extension.collectOnStarted
+import com.examhub.student.util.helper.NotificationNavigationHelper
 import com.google.android.material.snackbar.Snackbar
 import kotlinx.coroutines.launch
 import org.koin.androidx.viewmodel.ext.android.viewModel
@@ -98,9 +99,12 @@ class NotificationsFragment : Fragment() {
     }
 
     private fun handleNotificationClick(notification: AppNotification) {
-        val type = notification.type.uppercase()
+        val type = notification.type
         val route = notification.route.orEmpty()
         val link = notification.link.orEmpty()
+        val isAppeal = NotificationNavigationHelper.isAppealNotification(route, type, link)
+        val isResult = NotificationNavigationHelper.isResultNotification(route, type, link)
+        val isExam = NotificationNavigationHelper.isExamNotification(route, type, link)
         val sheetId = notification.data?.stringValue("sheet_id")
             ?: notification.data?.stringValue("sheetId")
             ?: notification.data?.stringValue("answer_sheet_id")
@@ -113,44 +117,64 @@ class NotificationsFragment : Fragment() {
             ?: notification.data?.stringValue("resultId")
             ?: notification.metadata?.stringValue("result_id")
             ?: notification.metadata?.stringValue("resultId")
-            ?: link.takeIf { it.contains("/results/", ignoreCase = true) }?.extractLastId()
-        val appealId = notification.appealId ?: notification.link?.extractLastId()
-        val examId = notification.targetId
-            ?: notification.entityId
-            ?: notification.data?.stringValue("exam_id")
+            ?: if (isResult) {
+                NotificationNavigationHelper.extractIdFromLink(
+                    link,
+                    "sheet_id",
+                    "sheetId",
+                    "answer_sheet_id",
+                    "answerSheetId",
+                    "result_id",
+                    "resultId"
+                )
+            } else {
+                null
+            }
+        val appealId = notification.appealId?.takeIf { it.isNotBlank() }
+            ?: notification.data?.stringValue("appeal_id")
+            ?: notification.data?.stringValue("appealId")
+            ?: notification.metadata?.stringValue("appeal_id")
+            ?: notification.metadata?.stringValue("appealId")
+            ?: NotificationNavigationHelper.extractIdFromLink(link, "appeal_id", "appealId")
+            ?: if (isAppeal) notification.targetId ?: notification.entityId ?: NotificationNavigationHelper.extractLastId(link) else null
+        val examId = notification.data?.stringValue("exam_id")
             ?: notification.data?.stringValue("examId")
             ?: notification.metadata?.stringValue("exam_id")
             ?: notification.metadata?.stringValue("examId")
-            ?: notification.link?.extractLastId()
-        if (!sheetId.isNullOrBlank() && isResultNotification(type, link, route)) {
-            val bundle = Bundle().apply { putString("sheetId", sheetId) }
-            findNavController().navigate(R.id.resultDetailFragment, bundle)
-            return
-        }
-        if ((route.equals("appeal_detail", ignoreCase = true) || type == "APPEAL_CREATED" || type == "APPEAL_UPDATED" || type == "APPEAL_NEW" || type == "APPEAL_RESOLVED" || type == "APPEAL_REPLIED") && !appealId.isNullOrBlank()) {
+            ?: if (isExam) {
+                notification.targetId ?: notification.entityId ?: NotificationNavigationHelper.extractIdFromLink(link, "exam_id", "examId")
+            } else {
+                null
+            }
+        if (isAppeal && !appealId.isNullOrBlank()) {
             val bundle = Bundle().apply { putString("appealId", appealId) }
             findNavController().navigate(R.id.action_notifications_to_appeal_detail, bundle)
             return
         }
-        if ((type == "EXAM_CREATED" || type == "EXAM_OPENED" || type == "EXAM_UPCOMING" || type == "EXAM_REMINDER" || type == "EXAM_ASSIGNED") && !examId.isNullOrBlank()) {
+        if (isResult && !sheetId.isNullOrBlank()) {
+            val bundle = Bundle().apply { putString("sheetId", sheetId) }
+            findNavController().navigate(R.id.resultDetailFragment, bundle)
+            return
+        }
+        if (isExam && !examId.isNullOrBlank()) {
             val bundle = Bundle().apply { putString("examId", examId) }
             findNavController().navigate(R.id.examDetailFragment, bundle)
             return
         }
 
         when {
-            link.contains("results", ignoreCase = true) && !sheetId.isNullOrBlank() -> {
+            isResult && !sheetId.isNullOrBlank() -> {
                 val bundle = Bundle().apply { putString("sheetId", sheetId) }
                 findNavController().navigate(R.id.resultDetailFragment, bundle)
             }
-            link.contains("appeals", ignoreCase = true) && !appealId.isNullOrBlank() -> {
+            isAppeal && !appealId.isNullOrBlank() -> {
                 val bundle = Bundle().apply { putString("appealId", appealId) }
                 findNavController().navigate(R.id.action_notifications_to_appeal_detail, bundle)
             }
-            link.contains("appeals", ignoreCase = true) -> {
+            isAppeal -> {
                 findNavController().navigate(R.id.action_notifications_to_appeals_list)
             }
-            link.contains("grading", ignoreCase = true) || link.contains("exams", ignoreCase = true) -> {
+            isExam || link.contains("grading", ignoreCase = true) -> {
                 if (!examId.isNullOrBlank()) {
                     val bundle = Bundle().apply { putString("examId", examId) }
                     findNavController().navigate(R.id.examDetailFragment, bundle)
@@ -196,26 +220,6 @@ class NotificationsFragment : Fragment() {
             NotificationsViewModel.NotificationFilter.READ -> MENU_FILTER_READ
             NotificationsViewModel.NotificationFilter.ALL -> MENU_FILTER_ALL
         }
-    }
-
-    private fun String.extractLastId(): String? {
-        Regex("[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}")
-            .findAll(this)
-            .lastOrNull()
-            ?.value
-            ?.let { return it }
-        return split('/', '?', '#', '&', '=')
-            .asReversed()
-            .firstOrNull { it.length >= 16 && it.any(Char::isDigit) }
-    }
-
-    private fun isResultNotification(type: String, link: String, route: String): Boolean {
-        return route.equals("result_detail", ignoreCase = true) ||
-            route.equals("result", ignoreCase = true) ||
-            type.contains("GRADE") ||
-            type.contains("RESULT") ||
-            type == "EXAM_GRADED" ||
-            link.contains("/results/", ignoreCase = true)
     }
 
     private fun com.google.gson.JsonObject.stringValue(key: String): String? {

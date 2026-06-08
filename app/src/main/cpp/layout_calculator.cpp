@@ -92,9 +92,6 @@ bool LayoutCalculator::computeIdZoneLayout(
 ) {
     outCells.clear();
 
-    float effX, effY, effW, effH;
-    computeEffectiveArea(zone.bounding_box, effX, effY, effW, effH);
-
     int totalCols = 0;
     for (const auto& item : zone.items) {
         if (item.enabled) {
@@ -106,6 +103,9 @@ bool LayoutCalculator::computeIdZoneLayout(
         LOGE("ID Zone: no enabled items");
         return false;
     }
+
+    float effX, effY, effW, effH;
+    computeEffectiveArea(zone.bounding_box, effX, effY, effW, effH);
 
     float estimatedOverhead = ID_LABEL_ROW_H
         + ID_LABEL_GAP

@@ -35,11 +35,12 @@ class LockModeFragment : Fragment() {
         protectScreenFromCapture()
         enterKioskMode()
         binding.btnOpenCamera.setOnClickListener {
+            val resolvedSessionId = viewModel.currentSessionId.value.ifBlank { sessionId }
             val bundle = Bundle().apply {
                 putString("examId", examId)
-                putString("sessionId", sessionId)
+                putString("sessionId", resolvedSessionId)
                 putInt("remainingSeconds", viewModel.remainingSeconds.value)
-                putInt("questionCount", arguments?.getInt("questionCount") ?: 0)
+                putInt("questionCount", viewModel.currentQuestionCount.value)
                 putLong("timerStartedAt", System.currentTimeMillis())
             }
             findNavController().navigate(R.id.action_lock_mode_to_camera_ar, bundle)
@@ -98,10 +99,8 @@ class LockModeFragment : Fragment() {
         monitor = LockModeMonitor(
             context = requireContext().applicationContext,
             onNetworkLost = {
-                viewModel.logViolation(
-                    "network_lost",
+                viewModel.markNetworkOffline(
                     mapOf(
-                        "reason" to "network_lost",
                         "screen" to "lock_mode",
                         "violation_label" to getString(R.string.lock_violation_network_lost_label),
                         "teacher_message" to getString(R.string.lock_violation_network_lost_teacher_message)
@@ -109,7 +108,13 @@ class LockModeFragment : Fragment() {
                 )
             },
             onNetworkAvailable = {
-                viewModel.flushViolations()
+                viewModel.markNetworkRestored(
+                    mapOf(
+                        "screen" to "lock_mode",
+                        "violation_label" to getString(R.string.lock_violation_network_restored_label),
+                        "teacher_message" to getString(R.string.lock_violation_network_restored_teacher_message)
+                    )
+                )
             },
             onScreenOff = {
                 viewModel.logViolation(

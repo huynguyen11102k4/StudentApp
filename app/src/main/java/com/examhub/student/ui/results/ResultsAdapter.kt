@@ -8,9 +8,8 @@ import androidx.paging.PagingDataAdapter
 import com.examhub.student.databinding.ItemResultBinding
 import com.examhub.student.model.response.result.StudentResultSummaryResponse
 import com.examhub.student.R
-import java.text.SimpleDateFormat
+import com.examhub.student.util.extension.toLocalDisplayDateTime
 import java.util.Locale
-import java.util.TimeZone
 
 class ResultsAdapter(
     private val onClick: (StudentResultSummaryResponse) -> Unit
@@ -34,20 +33,8 @@ class ResultsAdapter(
                 result.source?.takeIf { it.isNotBlank() }
             ).joinToString(binding.root.context.getString(R.string.common_separator_dot))
             binding.tvScore.text = result.totalScore?.let { String.format(Locale.US, "%.2f", it) } ?: "--"
-            binding.tvStatus.text = formatDate(result.gradedAt ?: result.createdAt)
+            binding.tvStatus.text = (result.gradedAt ?: result.createdAt).toLocalDisplayDateTime()
             binding.root.setOnClickListener { onClick(result) }
-        }
-
-        private fun formatDate(value: String?): String {
-            if (value.isNullOrBlank()) return ""
-            val output = SimpleDateFormat("HH:mm dd/MM/yyyy", Locale.forLanguageTag("vi-VN"))
-            val parsers = listOf(
-                SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US),
-                SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US)
-            ).onEach { it.timeZone = TimeZone.getTimeZone("UTC") }
-            return parsers.firstNotNullOfOrNull { parser ->
-                runCatching { parser.parse(value)?.let(output::format) }.getOrNull()
-            } ?: value
         }
     }
 

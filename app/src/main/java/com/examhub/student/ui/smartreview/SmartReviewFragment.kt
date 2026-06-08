@@ -1,20 +1,11 @@
 package com.examhub.student.ui.smartreview
 
-import android.Manifest
-import android.content.ContentValues
-import android.content.pm.PackageManager
 import android.graphics.BitmapFactory
-import android.media.MediaScannerConnection
-import android.os.Build
 import android.os.Bundle
-import android.os.Environment
-import android.provider.MediaStore
 import android.util.Base64
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
@@ -24,6 +15,8 @@ import com.google.android.material.snackbar.Snackbar
 import com.examhub.student.MainActivity
 import com.examhub.student.R
 import com.examhub.student.databinding.FragmentSmartReviewBinding
+import com.examhub.student.repository.LockModeRepository
+import com.examhub.student.ui.lockmode.LockFlowMonitorController
 import com.examhub.student.util.extension.applySystemWindowInsets
 import com.examhub.student.util.extension.collectOnStarted
 import com.examhub.student.util.helper.protectScreenFromCapture
@@ -31,24 +24,18 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
+import org.koin.android.ext.android.inject
 import org.koin.androidx.viewmodel.ext.android.viewModel
-import java.io.File
 
 class SmartReviewFragment : Fragment() {
 
     private var _binding: FragmentSmartReviewBinding? = null
     private val binding get() = _binding!!
     private val viewModel: SmartReviewViewModel by viewModel()
+    private val lockModeRepository: LockModeRepository by inject()
     private var sessionTimeoutJob: Job? = null
+    private var lockFlowMonitor: LockFlowMonitorController? = null
     private var finishingExpiredSession = false
-    private val writeStoragePermissionLauncher =
-        registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-            if (granted) {
-                saveResultImageToGallery()
-            } else {
-                Snackbar.make(binding.root, R.string.smart_review_storage_permission_required, Snackbar.LENGTH_LONG).show()
-            }
-        }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentSmartReviewBinding.inflate(inflater, container, false)
@@ -59,13 +46,14 @@ class SmartReviewFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         protectScreenFromCapture()
+        enterKioskModeIfLocked()
+        setupLockFlowMonitor()
         binding.topBar.applySystemWindowInsets(top = true)
         binding.topBar.setNavigationOnClickListener { findNavController().navigateUp() }
         binding.btnRetake.setOnClickListener { openCameraForCurrentExam() }
         binding.btnContinueCapture.setOnClickListener {
             showSubmitConfirmDialog()
         }
-        binding.btnDownloadImage.setOnClickListener { downloadResultImage() }
 
         collectOnStarted {
             launch {
@@ -101,6 +89,28 @@ class SmartReviewFragment : Fragment() {
         startSessionTimeout()
     }
 
+    override fun onResume() {
+        super.onResume()
+        enterKioskModeIfLocked()
+    }
+
+    private fun enterKioskModeIfLocked() {
+        if (arguments?.getString("sessionId").isNullOrBlank()) return
+        (requireActivity() as? MainActivity)?.enterKioskMode()
+    }
+
+    private fun setupLockFlowMonitor() {
+        val sessionId = arguments?.getString("sessionId").orEmpty()
+        if (sessionId.isBlank()) return
+        lockFlowMonitor = LockFlowMonitorController(
+            context = requireContext(),
+            lockModeRepository = lockModeRepository,
+            scope = viewLifecycleOwner.lifecycleScope,
+            sessionIdProvider = { viewModel.reviewState.value.sessionId.ifBlank { arguments?.getString("sessionId").orEmpty() } },
+            screenName = "smart_review"
+        ).also { it.start() }
+    }
+
     private fun openCameraForCurrentExam() {
         val examId = viewModel.reviewState.value.examId.ifBlank {
             arguments?.getString("examId").orEmpty()
@@ -117,6 +127,7 @@ class SmartReviewFragment : Fragment() {
                 putString("examId", examId)
                 putString("sessionId", viewModel.reviewState.value.sessionId)
                 putInt("remainingSeconds", remainingSeconds())
+                putInt("questionCount", arguments?.getInt("questionCount") ?: 0)
                 putLong("timerStartedAt", System.currentTimeMillis())
             }
             navController.navigate(R.id.action_smart_review_to_camera_ar, bundle)
@@ -187,82 +198,8 @@ class SmartReviewFragment : Fragment() {
         binding.tvStudentCode.text = getString(R.string.smart_review_student_code_format, state.studentId.ifBlank { emptyValue })
         binding.tvClassCode.text = getString(R.string.smart_review_class_code_format, state.classCode ?: emptyValue)
         binding.tvExamCode.text = getString(R.string.smart_review_exam_code_format, state.examCode ?: emptyValue)
+        binding.omrWarningBanner.visibility = if (state.hasOmrWarning) View.VISIBLE else View.GONE
         bindDebugImage(state.debugImageBase64)
-    }
-
-    private fun downloadResultImage() {
-        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.P &&
-            ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.WRITE_EXTERNAL_STORAGE) !=
-            PackageManager.PERMISSION_GRANTED
-        ) {
-            writeStoragePermissionLauncher.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
-            return
-        }
-
-        saveResultImageToGallery()
-    }
-
-    private fun saveResultImageToGallery() {
-        val base64 = viewModel.reviewState.value.debugImageBase64
-        if (base64.isBlank()) {
-            Snackbar.make(binding.root, R.string.smart_review_missing_image, Snackbar.LENGTH_SHORT).show()
-            return
-        }
-
-        runCatching {
-            val bytes = Base64.decode(base64, Base64.DEFAULT)
-            val fileName = "omr-result-${System.currentTimeMillis()}.jpg"
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                saveScopedGalleryImage(bytes, fileName)
-            } else {
-                saveLegacyGalleryImage(bytes, fileName)
-            }
-        }.onSuccess {
-            Snackbar.make(binding.root, R.string.smart_review_download_success, Snackbar.LENGTH_SHORT).show()
-        }.onFailure {
-            Snackbar.make(binding.root, it.message ?: getString(R.string.smart_review_missing_image), Snackbar.LENGTH_LONG).show()
-        }
-    }
-
-    private fun saveScopedGalleryImage(bytes: ByteArray, fileName: String) {
-        val values = ContentValues().apply {
-            put(MediaStore.Images.Media.DISPLAY_NAME, fileName)
-            put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
-            put(MediaStore.Images.Media.DATE_ADDED, System.currentTimeMillis() / 1000)
-            put(MediaStore.Images.Media.DATE_TAKEN, System.currentTimeMillis())
-            put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/OMR")
-            put(MediaStore.Images.Media.IS_PENDING, 1)
-        }
-
-        val resolver = requireContext().contentResolver
-        val uri = resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
-            ?: error(getString(R.string.smart_review_create_image_file_failed))
-        resolver.openOutputStream(uri)?.use { output ->
-            output.write(bytes)
-        } ?: error(getString(R.string.smart_review_write_image_file_failed))
-
-        values.clear()
-        values.put(MediaStore.Images.Media.IS_PENDING, 0)
-        resolver.update(uri, values, null, null)
-    }
-
-    private fun saveLegacyGalleryImage(bytes: ByteArray, fileName: String) {
-        val picturesDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)
-        val omrDir = File(picturesDir, "OMR")
-        if (!omrDir.exists() && !omrDir.mkdirs()) {
-            error(getString(R.string.smart_review_create_gallery_dir_failed))
-        }
-
-        val file = File(omrDir, fileName)
-        file.outputStream().use { output ->
-            output.write(bytes)
-        }
-        MediaScannerConnection.scanFile(
-            requireContext(),
-            arrayOf(file.absolutePath),
-            arrayOf("image/jpeg"),
-            null
-        )
     }
 
     private fun bindDebugImage(base64: String) {
@@ -296,6 +233,8 @@ class SmartReviewFragment : Fragment() {
     override fun onDestroyView() {
         super.onDestroyView()
         sessionTimeoutJob?.cancel()
+        lockFlowMonitor?.stop()
+        lockFlowMonitor = null
         _binding = null
     }
 }

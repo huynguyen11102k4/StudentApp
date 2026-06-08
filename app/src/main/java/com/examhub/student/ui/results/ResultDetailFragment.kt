@@ -12,6 +12,7 @@ import com.google.android.material.snackbar.Snackbar
 import com.examhub.student.R
 import com.examhub.student.databinding.DialogCreateAppealBinding
 import com.examhub.student.databinding.FragmentResultDetailBinding
+import com.examhub.student.util.extension.toLocalDisplayDateTime
 import com.examhub.student.model.response.result.StudentResultDetailResponse
 import com.examhub.student.util.extension.applySystemWindowInsets
 import com.examhub.student.util.extension.collectOnStarted
@@ -146,14 +147,7 @@ class ResultDetailFragment : Fragment() {
 
     private fun formatGradedAt(value: String?): String {
         if (value.isNullOrBlank()) return getString(R.string.result_detail_ungraded)
-        val output = SimpleDateFormat("HH:mm dd/MM/yyyy", Locale.forLanguageTag("vi-VN"))
-        val parsers = listOf(
-            SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US),
-            SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US)
-        ).onEach { it.timeZone = TimeZone.getTimeZone("UTC") }
-        val formatted = parsers.firstNotNullOfOrNull { parser ->
-            runCatching { parser.parse(value)?.let(output::format) }.getOrNull()
-        } ?: value
+        val formatted = value.toLocalDisplayDateTime(value)
         return getString(R.string.result_detail_graded_at_format, formatted)
     }
 

@@ -1,9 +1,15 @@
 package com.examhub.student.service
 
 import android.content.Context
+import androidx.work.Constraints
+import androidx.work.ExistingWorkPolicy
+import androidx.work.NetworkType
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import com.examhub.student.model.request.lock.LockViolationRequest
+import com.examhub.student.worker.ViolationSyncWorker
 import java.util.UUID
 
 class ViolationQueueManager(
@@ -16,14 +22,19 @@ class ViolationQueueManager(
     @Synchronized
     fun enqueue(request: LockViolationRequest) {
         val items = readAll().toMutableList()
+        val id = request.clientEventId ?: UUID.randomUUID().toString()
         items.add(
             QueuedViolation(
-                id = UUID.randomUUID().toString(),
-                request = request,
+                id = id,
+                request = request.copy(
+                    clientEventId = id,
+                    evidenceData = request.evidenceData + mapOf("client_event_id" to id)
+                ),
                 queuedAt = System.currentTimeMillis()
             )
         )
         writeAll(items.takeLast(MAX_QUEUE_SIZE))
+        scheduleSync()
     }
 
     @Synchronized
@@ -36,6 +47,21 @@ class ViolationQueueManager(
 
     @Synchronized
     fun count(): Int = readAll().size
+
+    fun scheduleSync() {
+        val request = OneTimeWorkRequestBuilder<ViolationSyncWorker>()
+            .setConstraints(
+                Constraints.Builder()
+                    .setRequiredNetworkType(NetworkType.CONNECTED)
+                    .build()
+            )
+            .build()
+        WorkManager.getInstance(prefsContext).enqueueUniqueWork(
+            WORK_NAME,
+            ExistingWorkPolicy.KEEP,
+            request
+        )
+    }
 
     private fun readAll(): List<QueuedViolation> {
         val raw = prefs.getString(KEY_QUEUE, null).orEmpty()
@@ -51,7 +77,10 @@ class ViolationQueueManager(
         private const val PREFS_NAME = "lock_violation_queue"
         private const val KEY_QUEUE = "items"
         private const val MAX_QUEUE_SIZE = 200
+        private const val WORK_NAME = "lock_violation_sync"
     }
+
+    private val prefsContext = context.applicationContext
 }
 
 data class QueuedViolation(

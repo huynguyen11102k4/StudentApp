@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="exam_start_title">Start Exam</string>
+    <string name="exam_start_duration_format">%d minutes</string>
+    <string name="exam_start_question_count_format">%d questions</string>
+    <string name="exam_start_instruction">Make sure your battery and network are stable, and do not leave the app while taking a lock mode exam.</string>
+    <string name="exam_start_action">Start Exam</string>
+    <string name="exam_start_confirm_title">Start exam?</string>
+    <string name="exam_start_confirm_message">After you start, the exam timer will begin and this session will be tied to the current device.</string>
+    <string name="exam_start_cancel">Cancel</string>
+    <string name="exam_start_confirm">Start</string>
+    <string name="exam_start_load_failed">Unable to load exam information</string>
+    <string name="exam_start_session_failed">Unable to start exam</string>
+    <string name="exam_start_lock_invalid">Invalid exam session</string>
+    <string name="exam_start_lock_validate_failed">Unable to validate lock mode</string>
+
+    <string name="lock_mode_title">LOCK MODE</string>
+    <string name="lock_mode_timer_default">00:00</string>
+    <string name="lock_mode_timer_label">Time Remaining</string>
+    <string name="lock_mode_omr_codes_title">Codes to shade on the sheet</string>
+    <string name="lock_mode_student_code_label">Student code</string>
+    <string name="lock_mode_class_code_label">Class code</string>
+    <string name="lock_mode_code_empty">Not available</string>
+    <string name="lock_mode_student_code_mode_format">Code type: %1$s</string>
+    <string name="lock_mode_student_code_mode_unknown">Code type: UNKNOWN</string>
+    <string name="lock_mode_instruction">Do not leave the app, turn off the screen, or switch to another app during the exam.</string>
+    <string name="lock_mode_kiosk_device_owner">Kiosk mode is enabled through Device Owner.</string>
+    <string name="lock_mode_kiosk_screen_pinned">Screen pinning is enabled. If Android asks, confirm screen pinning.</string>
+    <string name="lock_mode_kiosk_unavailable">Unable to enable kiosk mode: %s</string>
+    <string name="lock_mode_kiosk_activity_unavailable">Unable to enable kiosk mode for the current activity</string>
+    <string name="lock_mode_queue_format">Waiting to sync %d violations</string>
+    <string name="lock_mode_time_expired">Exam time has ended</string>
+    <string name="lock_mode_time_expired_auto_submit">Time is up. The system is submitting your answer sheet.</string>
+    <string name="lock_mode_open_camera">Scan OMR Sheet</string>
+    <string name="lock_mode_submit">Submit</string>
+    <string name="lock_mode_submit_hint_title">Submit</string>
+    <string name="lock_mode_submit_hint_message">You need to scan the sheet and review your answers before submitting.</string>
+    <string name="lock_mode_submit_hint_close">Close</string>
+    <string name="lock_mode_submit_hint_open_camera">Open camera</string>
+    <string name="lock_mode_violation_failed">Unable to record violation</string>
+    <string name="lock_mode_violation_queued">Violation saved offline and will sync when the network is available</string>
+    <string name="lock_mode_heartbeat_failed">Unable to send heartbeat</string>
+
+    <string name="smart_review_submit_confirm_title">Submit exam?</string>
+    <string name="smart_review_submit_confirm_message">After submitting, you cannot edit answers in this session.</string>
+    <string name="smart_review_submit_confirm_review">Review</string>
+    <string name="smart_review_submit_confirm_submit">Submit</string>
+    <string name="smart_review_submitted">Submitted</string>
+    <string name="smart_review_missing_exam">Missing exam information to open the camera</string>
+
+    <string name="submission_end_title">Submitted</string>
+    <string name="submission_end_description">Your answer sheet has been submitted. The result will appear after processing is complete.</string>
+    <string name="submission_end_results">View Results</string>
+    <string name="submission_end_home">Back to Home</string>
+    <string name="submission_end_content_description">Submitted</string>
+
+    <string name="dashboard_results_action">View Results</string>
+    <string name="class_detail_student_title">Class Detail</string>
+    <string name="results_title">Results</string>
+    <string name="results_empty">No results yet</string>
+    <string name="results_subtitle">Track scores and graded submissions</string>
+    <string name="results_empty_subtitle">Results will appear here after your submission has been processed and graded.</string>
+    <string name="result_detail_title">Result Detail</string>
+    <string name="result_detail_create_appeal">Create Appeal</string>
+    <string name="result_detail_default_title">Result</string>
+    <string name="result_detail_appeal_dialog_title">Create Appeal</string>
+    <string name="result_detail_appeal_reason_hint">What should be reviewed?</string>
+    <string name="result_detail_appeal_send">Send</string>
+    <string name="results_load_failed">Unable to load results</string>
+    <string name="result_detail_load_failed">Unable to load result detail</string>
+    <string name="result_detail_create_appeal_failed">Unable to create appeal</string>
+    <string name="result_detail_missing_sheet">Missing answer sheet ID</string>
+    <string name="result_detail_reason_required">Please enter an appeal reason</string>
+    <string name="result_item_default_exam">Exam</string>
+    <string name="result_score_label">Score</string>
+    <string name="result_detail_question_count_format">%d questions</string>
+    <string name="result_detail_duration_format">%d minutes</string>
+    <string name="result_detail_graded_at_format">Graded at %s</string>
+    <string name="result_detail_ungraded">No grading time yet</string>
+
+    <string name="smart_review_detection_title">Review Recognition Result</string>
+    <string name="smart_review_student_name_format">Student name: %1$s</string>
+    <string name="smart_review_student_code_format">Student code: %1$s</string>
+    <string name="smart_review_class_code_format">Class code: %1$s</string>
+    <string name="smart_review_exam_code_format">Exam code: %1$s</string>
+    <string name="smart_review_null_value">Not available</string>
+    <string name="smart_review_image_description">OMR image with the choices detected as shaded by the system</string>
+    <string name="smart_review_no_image">No recognition image yet</string>
+    <string name="smart_review_retake">Retake</string>
+    <string name="smart_review_submit_action">Submit</string>
+</resources>

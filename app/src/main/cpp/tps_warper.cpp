@@ -137,7 +137,7 @@ cv::Mat TpsWarper::tpsWarp(
 
     // Dùng cv::remap nội suy bằng phần cứng (SIMD/Neon) siêu tốc
     cv::Mat dst;
-    cv::remap(src, dst, map_x, map_y, cv::INTER_LINEAR, cv::BORDER_CONSTANT, cv::Scalar(255, 255, 255, 255));
+    cv::remap(src, dst, map_x, map_y, cv::INTER_CUBIC, cv::BORDER_CONSTANT, cv::Scalar(255, 255, 255, 255));
 
     return dst;
 }

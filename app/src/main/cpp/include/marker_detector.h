@@ -87,6 +87,42 @@ public:
     );
 
     /**
+     * Perform full-page piecewise mesh dewarp from marker control points.
+     *
+     * Uses marker centers and marker corners as control points, then builds a
+     * Delaunay mesh on template coordinates. Each triangle is warped from the
+     * camera image into the canonical page.
+     */
+    cv::Mat dewarpPiecewiseMesh(
+        const cv::Mat& src,
+        const std::vector<DetectedMarker>& detectedMarkers,
+        const std::vector<AnchorPoint>& expectedAnchors
+    );
+
+    /**
+     * Perform full-page Thin Plate Spline dewarp from marker control points.
+     */
+    cv::Mat dewarpTps(
+        const cv::Mat& src,
+        const std::vector<DetectedMarker>& detectedMarkers,
+        const std::vector<AnchorPoint>& expectedAnchors,
+        double smoothness
+    );
+
+    /**
+     * Warp the source image into canonical page space using only markers near
+     * a target zone. Intended for second-pass answer-zone reading when global
+     * residual is high.
+     */
+    cv::Mat dewarpLocalRegion(
+        const cv::Mat& src,
+        const std::vector<DetectedMarker>& detectedMarkers,
+        const std::vector<AnchorPoint>& expectedAnchors,
+        const cv::Rect2f& targetRect,
+        std::vector<int>& usedMarkerIds
+    );
+
+    /**
      * Check image quality: returns (laplacianVariance, meanBrightness).
      */
     static void checkQuality(

@@ -165,9 +165,6 @@ class RegisterFragment : Fragment() {
             binding.etConfirmPassword
         ).forEach { editText ->
             editText.addTextChangedListener(watcher)
-            editText.setOnFocusChangeListener { _, hasFocus ->
-                if (!hasFocus) validateForm(showErrors = true)
-            }
         }
     }
 

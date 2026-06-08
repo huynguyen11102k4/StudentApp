@@ -275,6 +275,7 @@
     <style name="Student.InputField" parent="TextInputLayout_Outlined">
         <item name="boxBackgroundColor">@color/surface</item>
         <item name="boxStrokeColor">@color/outline_variant</item>
+        <item name="boxStrokeWidthFocused">1dp</item>
         <item name="boxCornerRadiusTopStart">@dimen/corner_large</item>
         <item name="boxCornerRadiusTopEnd">@dimen/corner_large</item>
         <item name="boxCornerRadiusBottomStart">@dimen/corner_large</item>
@@ -302,6 +303,7 @@
     </style>
 
     <style name="Register.EditText" parent="TextAppearance.Material3.BodyLarge">
+        <item name="android:background">@android:color/transparent</item>
         <item name="android:textColor">@color/register_text_primary</item>
         <item name="android:textColorHint">@color/register_placeholder</item>
         <item name="android:textSize">15sp</item>

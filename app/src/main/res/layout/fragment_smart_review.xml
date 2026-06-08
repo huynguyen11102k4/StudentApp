@@ -92,6 +92,41 @@
             </com.google.android.material.card.MaterialCardView>
 
             <com.google.android.material.card.MaterialCardView
+                android:id="@+id/omrWarningBanner"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/spacing_12"
+                android:visibility="gone"
+                app:cardBackgroundColor="@color/warning_container"
+                app:cardCornerRadius="@dimen/student_card_radius"
+                app:cardElevation="0dp"
+                app:strokeColor="@color/warning"
+                app:strokeWidth="1dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="@dimen/spacing_12">
+
+                    <TextView
+                        style="@style/Text_Title_Small"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/smart_review_omr_warning_title"
+                        android:textColor="@color/on_warning_container" />
+
+                    <TextView
+                        style="@style/Text_Body_Small"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/spacing_4"
+                        android:text="@string/smart_review_omr_warning_message"
+                        android:textColor="@color/on_warning_container" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="@dimen/spacing_16"
@@ -157,18 +192,6 @@
                     app:iconGravity="textStart"
                     app:iconPadding="@dimen/spacing_8" />
             </LinearLayout>
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnDownloadImage"
-                style="@style/Student.SecondaryButton"
-                android:layout_width="match_parent"
-                android:layout_height="@dimen/button_height_large"
-                android:layout_marginTop="@dimen/spacing_12"
-                android:layout_marginBottom="@dimen/spacing_16"
-                android:text="@string/smart_review_download_image"
-                app:icon="@drawable/ic_download"
-                app:iconGravity="textStart"
-                app:iconPadding="@dimen/spacing_8" />
         </LinearLayout>
     </ScrollView>
 

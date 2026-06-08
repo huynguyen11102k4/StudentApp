@@ -17,3 +17,5 @@ local.properties
 # Project exclude paths
 /opencv/build/
 /opencv/build/intermediates/javac/debug/compileDebugJavaWithJavac/classes/
+
+/docs

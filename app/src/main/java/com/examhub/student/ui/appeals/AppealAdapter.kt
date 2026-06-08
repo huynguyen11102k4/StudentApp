@@ -8,6 +8,7 @@ import androidx.paging.PagingDataAdapter
 import com.examhub.student.R
 import com.examhub.student.data.model.Appeal
 import com.examhub.student.databinding.ItemAppealBinding
+import com.examhub.student.util.extension.toLocalDisplayDateTime
 import com.examhub.student.util.extension.toFriendlyAppealStatus
 
 class AppealAdapter(
@@ -31,7 +32,7 @@ class AppealAdapter(
             binding.tvScore.text = appeal.newScore?.let {
                 context.getString(R.string.appeal_score_changed_format, appeal.oldScore, it)
             } ?: context.getString(R.string.appeal_score_format, appeal.oldScore)
-            binding.tvCreatedAt.text = appeal.createdAt.toDisplayDateTime()
+            binding.tvCreatedAt.text = appeal.createdAt.toLocalDisplayDateTime(appeal.createdAt)
             binding.chipStatus.text = appeal.status.toFriendlyAppealStatus()
             binding.root.setOnClickListener { onClick(appeal) }
         }
@@ -50,10 +51,4 @@ class AppealAdapter(
         override fun areItemsTheSame(oldItem: Appeal, newItem: Appeal) = oldItem.id == newItem.id
         override fun areContentsTheSame(oldItem: Appeal, newItem: Appeal) = oldItem == newItem
     }
-}
-
-private fun String.toDisplayDateTime(): String {
-    return replace("T", " ")
-        .removeSuffix("Z")
-        .substringBefore(".")
 }

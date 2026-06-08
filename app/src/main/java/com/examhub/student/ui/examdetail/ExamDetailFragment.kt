@@ -178,8 +178,15 @@ class ExamDetailFragment : Fragment() {
                     val bundle = Bundle().apply {
                         putString("examId", examId)
                         putString("sessionId", session.sessionId)
+                        putInt("remainingSeconds", session.remainingSeconds)
+                        putInt("questionCount", viewModel.questionCount.value)
+                        putBoolean("isLockedMode", session.isLockedMode)
                     }
-                    findNavController().navigate(R.id.action_exam_detail_to_camera_ar, bundle)
+                    if (session.isLockedMode) {
+                        findNavController().navigate(R.id.lockModeFragment, bundle)
+                    } else {
+                        findNavController().navigate(R.id.action_exam_detail_to_camera_ar, bundle)
+                    }
                 }
             }
         }

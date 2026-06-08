@@ -9,6 +9,7 @@ import androidx.navigation.fragment.findNavController
 import com.examhub.student.R
 import com.examhub.student.data.model.Appeal
 import com.examhub.student.databinding.FragmentAppealDetailBinding
+import com.examhub.student.util.extension.toLocalDisplayDateTime
 import com.examhub.student.util.extension.applySystemWindowInsets
 import com.examhub.student.util.extension.collectOnStarted
 import com.examhub.student.util.extension.toFriendlyAppealStatus
@@ -66,17 +67,14 @@ class AppealDetailFragment : Fragment() {
             getString(R.string.appeal_score_changed_format, appeal.oldScore, it)
         } ?: getString(R.string.appeal_score_format, appeal.oldScore)
         binding.tvReason.text = appeal.reason.ifBlank { getString(R.string.appeal_detail_reason_empty) }
-        binding.tvCreatedAt.text = getString(R.string.appeal_detail_created_at_format, appeal.createdAt.toDisplayDateTime())
+        binding.tvCreatedAt.text = getString(
+            R.string.appeal_detail_created_at_format,
+            appeal.createdAt.toLocalDisplayDateTime(appeal.createdAt)
+        )
         binding.tvDetectedInfo.text = appeal.teacherNote.orEmpty()
         binding.chipStatus.text = appeal.status.toFriendlyAppealStatus()
         binding.cardAppealItems.visibility = if (appeal.teacherNote.isNullOrBlank()) View.GONE else View.VISIBLE
 
-    }
-
-    private fun String.toDisplayDateTime(): String {
-        return replace("T", " ")
-            .removeSuffix("Z")
-            .substringBefore(".")
     }
 
     override fun onDestroyView() {

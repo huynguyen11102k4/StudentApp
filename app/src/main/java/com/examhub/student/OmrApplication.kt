@@ -8,9 +8,11 @@ import com.examhub.student.di.ViewModelModule
 import com.examhub.student.service.LanguagePreferenceManager
 import com.examhub.student.service.OmrFirebaseMessagingService
 import com.examhub.student.service.ThemePreferenceManager
+import com.examhub.student.service.ViolationQueueManager
 import org.opencv.android.OpenCVLoader
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.context.startKoin
+import org.koin.core.context.GlobalContext
 
 class OmrApplication : Application() {
     companion object {
@@ -33,5 +35,6 @@ class OmrApplication : Application() {
                 ViewModelModule.module
             )
         }
+        GlobalContext.get().get<ViolationQueueManager>().takeIf { it.count() > 0 }?.scheduleSync()
     }
 }
