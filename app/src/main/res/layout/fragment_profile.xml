@@ -89,6 +89,15 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="@dimen/spacing_4"
                     android:text="@string/profile_role_student" />
+
+                <TextView
+                    android:id="@+id/tvProfileStudentCodeTop"
+                    style="@style/Text_Body_Small"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/spacing_4"
+                    android:text="@string/profile_student_code_top_empty"
+                    android:textColor="@color/text_secondary" />
             </LinearLayout>
 
             <com.google.android.material.textfield.TextInputLayout
@@ -104,6 +113,7 @@
                     android:id="@+id/etFullName"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:enabled="false"
                     android:hint="@string/register_full_name_hint"
                     android:inputType="textPersonName"
                     android:textAppearance="@style/Text_Body_Large" />
@@ -147,13 +157,19 @@
                         android:layout_height="wrap_content"
                         android:text="@string/profile_account_info" />
 
-                    <TextView
-                        android:id="@+id/tvGoogleStatus"
-                        style="@style/Text_Body_Small"
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnGoogleLink"
+                        style="@style/Student.SecondaryButton"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="@dimen/spacing_12"
-                        android:text="@string/profile_google_not_linked" />
+                        android:text="@string/profile_google_not_linked_action"
+                        android:textColor="#FF3C4043"
+                        app:backgroundTint="#FFFFFFFF"
+                        app:icon="@drawable/ic_google"
+                        app:iconGravity="textStart"
+                        app:strokeColor="#FFDADCE0"
+                        app:strokeWidth="1dp" />
 
                     <TextView
                         android:id="@+id/tvStudentCode"

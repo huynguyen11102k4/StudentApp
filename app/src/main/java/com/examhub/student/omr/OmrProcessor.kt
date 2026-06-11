@@ -12,6 +12,7 @@ import com.examhub.student.omr.model.IdResult
 import com.examhub.student.omr.model.OmrEngineOptions
 import com.examhub.student.service.OfflineCacheManager
 import com.examhub.student.service.TokenManager
+import com.examhub.student.util.helper.parseUserProfileJson
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
@@ -226,7 +227,7 @@ class OmrProcessor(
 
     private fun getCachedProfile(): UserResponse? {
         return tokenManager.getCachedProfileJson()
-            ?.let { raw -> runCatching { gson.fromJson(raw, UserResponse::class.java) }.getOrNull() }
+            ?.let(gson::parseUserProfileJson)
     }
 
     private fun readStudentIdentifierMode(rawTemplateJson: String): StudentIdentifierMode {

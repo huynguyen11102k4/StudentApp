@@ -83,12 +83,18 @@ class SettingsViewModel(
     }
 
     fun changePassword(currentPassword: String, newPassword: String) {
-        if (currentPassword.isBlank() || newPassword.length < 6 || currentPassword == newPassword) {
+        val normalizedCurrent = currentPassword.trim()
+        val normalizedNew = newPassword.trim()
+        if (normalizedCurrent.isBlank() ||
+            normalizedNew.isBlank() ||
+            normalizedNew.length < 6 ||
+            normalizedCurrent == normalizedNew
+        ) {
             _errorMessage.tryEmit(resources.getString(R.string.settings_change_password_invalid))
             return
         }
         viewModelScope.launch {
-            authRepository.changePassword(ChangePasswordRequest(currentPassword, newPassword)).collect { result ->
+            authRepository.changePassword(ChangePasswordRequest(normalizedCurrent, normalizedNew)).collect { result ->
                 when (result) {
                     is ApiResult.Loading -> _isLoading.value = true
                     is ApiResult.Success -> {

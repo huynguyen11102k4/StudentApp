@@ -2,6 +2,9 @@
 <resources>
     <!-- Base application theme (Dark) -->
     <style name="Theme.ExamHub" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="fontFamily">@font/outfit</item>
+        <item name="android:fontFamily">@font/outfit</item>
+
         <item name="colorPrimary">@color/primary</item>
         <item name="colorOnPrimary">@color/on_primary</item>
         <item name="colorPrimaryContainer">@color/primary_container</item>

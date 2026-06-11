@@ -7,8 +7,10 @@ import androidx.paging.PagingConfig
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
 import androidx.paging.filter
+import com.examhub.student.model.ApiResult
 import com.examhub.student.data.model.Exam
 import com.examhub.student.repository.ExamRepository
+import com.examhub.student.repository.ResultsRepository
 import com.examhub.student.service.OfflineCacheManager
 import com.examhub.student.util.paging.PageChunk
 import com.examhub.student.util.paging.RepositoryPagingSource
@@ -20,9 +22,11 @@ import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.first
 
 class ExamListViewModel(
     private val examRepository: ExamRepository,
+    private val resultsRepository: ResultsRepository,
     private val offlineCacheManager: OfflineCacheManager
 ) : ViewModel() {
     private val search = MutableStateFlow("")
@@ -46,7 +50,10 @@ class ExamListViewModel(
                             gradingType = type.takeIf(String::isNotBlank),
                             search = query.takeIf(String::isNotBlank)
                         ).requirePage()
+                        val resultByExamId = loadResultByExamId()
                         val items = response.data.map { item ->
+                            val resultSummary = resultByExamId[item.id]
+                            val resultSheetId = item.resultId?.takeIf { it.isNotBlank() } ?: resultSummary?.id
                             offlineCacheManager.saveExamClassCode(item.id, item.classInfo?.classCode)
                             Exam(
                                 id = item.id,
@@ -60,12 +67,14 @@ class ExamListViewModel(
                                 totalStudents = 0,
                                 isOfflineReady = offlineCacheManager.getTemplate(item.id) != null,
                                 date = item.displayTime,
-                                resultSheetId = item.resultId,
-                                hasSubmitted = !item.resultId.isNullOrBlank() || item.hasSubmittedStatus(),
+                                resultSheetId = resultSheetId,
+                                hasSubmitted = !resultSheetId.isNullOrBlank() || item.hasSubmittedStatus(),
                                 gradingType = item.gradingType.orEmpty(),
                                 canStartSession = item.canStartSession == true && item.gradingType.isStudentSubmission(),
                                 canSubmit = item.canSubmit == true && item.gradingType.isStudentSubmission(),
-                                canViewResult = item.canViewResult == true && !item.resultId.isNullOrBlank(),
+                                canViewResult = item.canViewResult == true &&
+                                    !resultSheetId.isNullOrBlank() &&
+                                    resultSummary?.isPendingResult() != true,
                                 resultOnly = item.resultOnly == true || item.gradingType.isTeacherGrading()
                             )
                         }
@@ -90,6 +99,16 @@ class ExamListViewModel(
         filter.value = value
     }
 
+    private suspend fun loadResultByExamId(): Map<String, com.examhub.student.model.response.result.StudentResultSummaryResponse> {
+        return when (val result = resultsRepository.getResults(limit = "100").first { it !is ApiResult.Loading }) {
+            is ApiResult.Success -> result.data.data.mapNotNull { summary ->
+                val examId = summary.exam?.id?.takeIf { it.isNotBlank() }
+                if (examId == null) null else examId to summary
+            }.toMap()
+            else -> emptyMap()
+        }
+    }
+
     private fun com.examhub.student.model.response.exam.MobileExamSummaryResponse.hasSubmittedStatus(): Boolean {
         val normalized = listOfNotNull(status, submissionStatus).joinToString(" ").uppercase()
         return attemptsUsed?.let { it > 0 } == true ||
@@ -101,6 +120,11 @@ class ExamListViewModel(
 
     private fun String?.isTeacherGrading(): Boolean =
         equals("TEACHER_GRADING", ignoreCase = true)
+
+    private fun com.examhub.student.model.response.result.StudentResultSummaryResponse.isPendingResult(): Boolean {
+        val normalized = resultStatus.orEmpty().uppercase()
+        return normalized.contains("PENDING") || normalized.contains("PROCESSING")
+    }
 
     private fun Exam.matches(value: ExamFilter): Boolean = when (value) {
         ExamFilter.ALL -> true

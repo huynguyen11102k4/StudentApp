@@ -1,6 +1,7 @@
 package com.examhub.student.repository_impl
 
 import com.google.gson.Gson
+import com.google.gson.JsonElement
 import com.google.gson.JsonParseException
 import com.examhub.student.OmrApplication
 import com.examhub.student.R
@@ -12,6 +13,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flow
 import retrofit2.Response
+import java.lang.reflect.Type
 import java.io.IOException
 
 fun <T> safeApiFlow(
@@ -45,6 +47,36 @@ fun <T> safeEnvelopeFlow(
     }
 }.catch { throwable ->
     emit(ApiResult.Error(throwable.toApiException()))
+}
+
+fun <T> safeJsonFlow(
+    gson: Gson,
+    responseType: Type,
+    apiCall: suspend () -> Response<JsonElement>
+): Flow<ApiResult<T>> = flow {
+    emit(ApiResult.Loading)
+    val response = apiCall()
+    if (response.isSuccessful) {
+        val root = response.body()
+        val payload = root.extractPayload()
+        if (payload == null) {
+            emit(ApiResult.Error(ApiException("EMPTY_BODY", "Response body is empty", response.code())))
+        } else {
+            emit(ApiResult.Success(gson.fromJson(payload, responseType)))
+        }
+    } else {
+        emit(ApiResult.Error(parseApiException(gson, response)))
+    }
+}.catch { throwable ->
+    emit(ApiResult.Error(throwable.toApiException()))
+}
+
+private fun JsonElement?.extractPayload(): JsonElement? {
+    val root = this ?: return null
+    if (!root.isJsonObject) return root
+    val obj = root.asJsonObject
+    val data = obj.get("data")
+    return if (data != null && !data.isJsonNull) data else root
 }
 
 private fun <T> handleResponse(gson: Gson, response: Response<T>): ApiResult<T> {

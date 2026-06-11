@@ -7,6 +7,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.LinearLayout
+import android.widget.TextView
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
@@ -94,10 +95,14 @@ class SettingsFragment : Fragment() {
             launch {
                 viewModel.profile.collect { profile ->
                     profile?.let {
-                        binding.tvProfileName.text = it.fullName
-                        binding.tvProfileEmail.text = it.email
-                        binding.tvProfileRole.text = it.role
-                        binding.tvProfileInitials.text = initials(it.fullName)
+                        val fullName: String? = it.fullName
+                        val email: String? = it.email
+                        val role: String? = it.role
+                        val displayName = fullName.orEmpty().ifBlank { getString(R.string.settings_default_student_name) }
+                        binding.tvProfileName.text = displayName
+                        binding.tvProfileEmail.text = email.orEmpty()
+                        binding.tvProfileRole.text = role.orEmpty().ifBlank { getString(R.string.settings_default_student_role) }
+                        binding.tvProfileInitials.text = initials(displayName)
                         bindAvatar(it.avatarUrl)
                     }
                 }
@@ -187,9 +192,15 @@ class SettingsFragment : Fragment() {
         val currentPassword = passwordField(R.string.settings_current_password_hint)
         val newPassword = passwordField(R.string.settings_new_password_hint)
         val confirmPassword = passwordField(R.string.settings_confirm_password_hint)
+        val forgotPassword = TextView(requireContext()).apply {
+            text = getString(R.string.profile_change_password_forgot)
+            setTextColor(requireContext().getColor(R.color.primary))
+            setPadding(0, resources.getDimensionPixelSize(R.dimen.spacing_12), 0, 0)
+        }
         container.addView(currentPassword.layout)
         container.addView(newPassword.layout)
         container.addView(confirmPassword.layout)
+        container.addView(forgotPassword)
 
         val dialog = MaterialAlertDialogBuilder(requireContext())
             .setTitle(R.string.settings_change_password)
@@ -197,13 +208,17 @@ class SettingsFragment : Fragment() {
             .setPositiveButton(R.string.common_confirm, null)
             .setNegativeButton(R.string.common_cancel, null)
             .show()
+        forgotPassword.setOnClickListener {
+            dialog.dismiss()
+            findNavController().navigate(R.id.forgotPasswordFragment)
+        }
         dialog.getButton(android.content.DialogInterface.BUTTON_POSITIVE).setOnClickListener {
             val current = currentPassword.editText.text?.toString().orEmpty()
             val new = newPassword.editText.text?.toString().orEmpty()
             val confirm = confirmPassword.editText.text?.toString().orEmpty()
             val isValid = validatePasswordDialog(currentPassword, newPassword, confirmPassword, current, new, confirm)
             if (isValid) {
-                viewModel.changePassword(current, new)
+                viewModel.changePassword(current.trim(), new.trim())
                 dialog.dismiss()
             }
         }
@@ -238,14 +253,21 @@ class SettingsFragment : Fragment() {
             currentPassword.layout.error = getString(R.string.settings_current_password_required)
             valid = false
         }
-        if (new.length < 6) {
+        val normalizedCurrent = current.trim()
+        val normalizedNew = new.trim()
+        val normalizedConfirm = confirm.trim()
+
+        if (normalizedNew.isBlank()) {
+            newPassword.layout.error = getString(R.string.login_validation_password_required)
+            valid = false
+        } else if (normalizedNew.length < 6) {
             newPassword.layout.error = getString(R.string.register_validation_password_short)
             valid = false
-        } else if (new == current) {
+        } else if (normalizedNew == normalizedCurrent) {
             newPassword.layout.error = getString(R.string.settings_new_password_same)
             valid = false
         }
-        if (confirm != new) {
+        if (normalizedConfirm != normalizedNew) {
             confirmPassword.layout.error = getString(R.string.register_validation_password_mismatch)
             valid = false
         }

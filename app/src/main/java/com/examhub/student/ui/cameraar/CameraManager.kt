@@ -60,7 +60,7 @@ class CameraManager(
     private var flashMode = ImageCapture.FLASH_MODE_OFF
     private var torchEnabled = false
     private var lensFacing = CameraSelector.LENS_FACING_BACK
-    private var isTakingPicture = false
+    @Volatile private var isTakingPicture = false
     private var stableFullMarkerFrames = 0
     private var lastAnalysisAt = 0L
     private var lastFullMarkerAt = 0L
@@ -123,11 +123,11 @@ class CameraManager(
     }
 
     fun capturePhoto(): Boolean {
-        if (!hasRecentFullMarkerFrame()) return false
-        return captureHighResolutionPhoto()
+        return captureHighResolutionPhoto(requireMarkerReadiness = true)
     }
 
-    private fun captureHighResolutionPhoto(): Boolean {
+    private fun captureHighResolutionPhoto(requireMarkerReadiness: Boolean): Boolean {
+        if (requireMarkerReadiness && !hasRecentFullMarkerFrame()) return false
         val capture = imageCapture ?: return false
         if (isTakingPicture) return false
         isTakingPicture = true
@@ -226,7 +226,7 @@ class CameraManager(
                     lastAutoCaptureAt = now
                     ContextCompat.getMainExecutor(previewView.context).execute {
                         val accepted = onAutoCaptureReady()
-                        if (accepted && !captureHighResolutionPhoto()) {
+                        if (accepted && !captureHighResolutionPhoto(requireMarkerReadiness = true)) {
                             onCaptureFailed(IllegalStateException(previewView.context.getString(R.string.camera_ar_capture_read_failed)))
                         }
                     }

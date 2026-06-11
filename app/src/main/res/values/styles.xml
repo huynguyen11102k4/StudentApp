@@ -153,8 +153,10 @@
          TextInputLayout Style
          ============================================================ -->
     <style name="TextInputLayout_Outlined" parent="Widget.Material3.TextInputLayout.OutlinedBox">
+        <item name="boxBackgroundMode">outline</item>
         <item name="boxBackgroundColor">@color/surface</item>
-        <item name="boxStrokeColor">@color/outline</item>
+        <item name="boxStrokeColor">@color/text_input_stroke</item>
+        <item name="boxStrokeErrorColor">@color/error</item>
         <item name="boxStrokeWidth">1dp</item>
         <item name="boxStrokeWidthFocused">2dp</item>
         <item name="boxCornerRadiusTopStart">@dimen/corner_small</item>
@@ -274,13 +276,13 @@
 
     <style name="Student.InputField" parent="TextInputLayout_Outlined">
         <item name="boxBackgroundColor">@color/surface</item>
-        <item name="boxStrokeColor">@color/outline_variant</item>
-        <item name="boxStrokeWidthFocused">1dp</item>
+        <item name="boxStrokeColor">@color/text_input_stroke</item>
+        <item name="boxStrokeWidth">1dp</item>
+        <item name="boxStrokeWidthFocused">2dp</item>
         <item name="boxCornerRadiusTopStart">@dimen/corner_large</item>
         <item name="boxCornerRadiusTopEnd">@dimen/corner_large</item>
         <item name="boxCornerRadiusBottomStart">@dimen/corner_large</item>
         <item name="boxCornerRadiusBottomEnd">@dimen/corner_large</item>
-        <!-- Prevent background flash/flicker on focus by using NONE mode for the inner box fill -->
         <item name="boxBackgroundMode">outline</item>
     </style>
 
@@ -290,7 +292,7 @@
         <item name="boxStrokeColor">@color/register_input_stroke</item>
         <item name="boxStrokeErrorColor">@color/register_error</item>
         <item name="boxStrokeWidth">1dp</item>
-        <item name="boxStrokeWidthFocused">1dp</item>
+        <item name="boxStrokeWidthFocused">2dp</item>
         <item name="boxCornerRadiusTopStart">@dimen/register_input_radius</item>
         <item name="boxCornerRadiusTopEnd">@dimen/register_input_radius</item>
         <item name="boxCornerRadiusBottomStart">@dimen/register_input_radius</item>
@@ -300,14 +302,17 @@
         <item name="startIconTint">@color/register_text_secondary</item>
         <item name="endIconTint">@color/register_text_secondary</item>
         <item name="errorTextColor">@color/register_error</item>
+        <item name="materialThemeOverlay">@style/ThemeOverlay.TextInput.NoRipple</item>
+        <item name="startIconCheckable">false</item>
     </style>
 
-    <style name="Register.EditText" parent="TextAppearance.Material3.BodyLarge">
-        <item name="android:background">@android:color/transparent</item>
+    <style name="Register.EditText" parent="Widget.Material3.TextInputEditText.OutlinedBox">
+        <item name="android:background">@null</item>
+        <item name="android:textAppearance">@style/TextAppearance.Material3.BodyLarge</item>
         <item name="android:textColor">@color/register_text_primary</item>
         <item name="android:textColorHint">@color/register_placeholder</item>
         <item name="android:textSize">15sp</item>
-        <item name="android:fontFamily">sans</item>
+        <item name="android:fontFamily">@font/outfit</item>
         <item name="android:includeFontPadding">false</item>
     </style>
 
@@ -355,4 +360,7 @@
     <style name="Widget_ExamHub_TextInputLayout" parent="TextInputLayout_Outlined" />
     <style name="Widget_ExamHub_Chip" parent="Chip_Filter" />
     <style name="Widget_ExamHub_TabLayout" parent="TabLayout" />
+    <style name="ThemeOverlay.TextInput.NoRipple" parent="">
+        <item name="colorControlHighlight">@android:color/transparent</item>
+    </style>
 </resources>

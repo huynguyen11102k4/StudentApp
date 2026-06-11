@@ -1,11 +1,14 @@
 package com.examhub.student
 
 import android.Manifest
+import android.app.ActivityManager
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import android.view.MotionEvent
 import android.view.View
+import android.view.WindowManager
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
@@ -26,6 +29,8 @@ import com.examhub.student.service.AuthEvent
 import com.examhub.student.service.FcmTokenRegistrar
 import com.examhub.student.service.TokenManager
 import com.examhub.student.util.helper.NotificationNavigationHelper
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.koin.android.ext.android.inject
 import java.text.SimpleDateFormat
@@ -44,6 +49,8 @@ class MainActivity : AppCompatActivity() {
     private var activeLockSessionId: String = ""
     private var activeLockScreen: String = ""
     private var lockModeStopped = false
+    private var repinJob: Job? = null
+    private var screenDimJob: Job? = null
     private val notificationPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { }
@@ -72,6 +79,7 @@ class MainActivity : AppCompatActivity() {
 
     fun exitKioskMode() {
         clearActiveLockSession()
+        clearLockFlowScreenPolicy()
         kioskModeController.exit()
     }
 
@@ -81,11 +89,30 @@ class MainActivity : AppCompatActivity() {
         flushQueuedViolations()
     }
 
+    override fun onResume() {
+        super.onResume()
+        scheduleLockFlowRepin(LOCK_REPIN_DELAY_MS)
+        applyLockFlowScreenPolicy()
+    }
+
     override fun onStop() {
         if (!isChangingConfigurations && !isFinishing) {
             logLockModeBackgroundViolation()
         }
         super.onStop()
+    }
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (hasFocus) scheduleLockFlowRepin(LOCK_REPIN_DELAY_MS)
+    }
+
+    override fun dispatchTouchEvent(ev: MotionEvent?): Boolean {
+        if (activeLockSessionId.isNotBlank()) {
+            restoreLockFlowBrightness()
+            scheduleScreenDim()
+        }
+        return super.dispatchTouchEvent(ev)
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -157,6 +184,12 @@ class MainActivity : AppCompatActivity() {
             }
 
             updateActiveLockSession(destination.id, arguments)
+            if (destination.id.isLockFlowDestination()) {
+                applyLockFlowScreenPolicy()
+                scheduleLockFlowRepin(0L)
+            } else {
+                clearLockFlowScreenPolicy()
+            }
         }
     }
 
@@ -170,67 +203,48 @@ class MainActivity : AppCompatActivity() {
 
     private fun handlePushIntent(intent: Intent?) {
         if (!tokenManager.hasToken()) return
-        val extras = intent?.extras ?: return
-        val route = extras.getString("route").orEmpty()
-        val type = extras.getString("type").orEmpty()
-        val link = extras.getString("link").orEmpty()
-        val targetId = extras.getString("target_id") ?: extras.getString("targetId")
-        val entityId = extras.getString("entity_id") ?: extras.getString("entityId")
-        val isAppeal = NotificationNavigationHelper.isAppealNotification(route, type, link)
-        val isResult = NotificationNavigationHelper.isResultNotification(route, type, link)
-        val isExam = NotificationNavigationHelper.isExamNotification(route, type, link)
-        val appealId = extras.getString("appeal_id")
-            ?: extras.getString("appealId")
-            ?: NotificationNavigationHelper.extractIdFromLink(link, "appeal_id", "appealId")
-            ?: if (isAppeal) targetId ?: entityId ?: NotificationNavigationHelper.extractLastId(link) else null
-        val sheetId = extras.getString("sheet_id")
-            ?: extras.getString("sheetId")
-            ?: extras.getString("answer_sheet_id")
-            ?: extras.getString("answerSheetId")
-            ?: extras.getString("result_id")
-            ?: extras.getString("resultId")
-            ?: if (isResult) {
-                NotificationNavigationHelper.extractIdFromLink(
-                    link,
-                    "sheet_id",
-                    "sheetId",
-                    "answer_sheet_id",
-                    "answerSheetId",
-                    "result_id",
-                    "resultId"
+        when (val destination = NotificationNavigationHelper.resolveDestination(intent?.extras)) {
+            is NotificationNavigationHelper.Destination.AppealDetail -> {
+                navController.navigate(
+                    R.id.appealDetailFragment,
+                    bundleOf("appealId" to destination.appealId),
+                    navOptions { launchSingleTop = true }
                 )
-            } else {
-                null
+                intent?.replaceExtras(Bundle())
             }
-        val examId = extras.getString("exam_id")
-            ?: extras.getString("examId")
-            ?: if (isExam) {
-                targetId ?: entityId ?: NotificationNavigationHelper.extractIdFromLink(link, "exam_id", "examId")
-            } else {
-                null
+            is NotificationNavigationHelper.Destination.ResultDetail -> {
+                navController.navigate(
+                    R.id.resultDetailFragment,
+                    bundleOf("sheetId" to destination.sheetId),
+                    navOptions { launchSingleTop = true }
+                )
+                intent?.replaceExtras(Bundle())
             }
-
-        if (isAppeal && !appealId.isNullOrBlank()) {
-            navController.navigate(
-                R.id.appealDetailFragment,
-                bundleOf("appealId" to appealId),
-                navOptions { launchSingleTop = true }
-            )
-            intent.replaceExtras(Bundle())
-        } else if (isResult && !sheetId.isNullOrBlank()) {
-            navController.navigate(
-                R.id.resultDetailFragment,
-                bundleOf("sheetId" to sheetId),
-                navOptions { launchSingleTop = true }
-            )
-            intent.replaceExtras(Bundle())
-        } else if (isExam && !examId.isNullOrBlank()) {
-            navController.navigate(
-                R.id.examDetailFragment,
-                bundleOf("examId" to examId),
-                navOptions { launchSingleTop = true }
-            )
-            intent.replaceExtras(Bundle())
+            is NotificationNavigationHelper.Destination.ExamDetail -> {
+                navController.navigate(
+                    R.id.examDetailFragment,
+                    bundleOf("examId" to destination.examId),
+                    navOptions { launchSingleTop = true }
+                )
+                intent?.replaceExtras(Bundle())
+            }
+            NotificationNavigationHelper.Destination.AppealsList -> {
+                navController.navigate(R.id.appealsListFragment, null, navOptions { launchSingleTop = true })
+                intent?.replaceExtras(Bundle())
+            }
+            NotificationNavigationHelper.Destination.ResultsList -> {
+                navController.navigate(R.id.resultsListFragment, null, navOptions { launchSingleTop = true })
+                intent?.replaceExtras(Bundle())
+            }
+            NotificationNavigationHelper.Destination.ExamList -> {
+                navController.navigate(R.id.examListFragment, null, navOptions { launchSingleTop = true })
+                intent?.replaceExtras(Bundle())
+            }
+            NotificationNavigationHelper.Destination.Notifications -> {
+                navController.navigate(R.id.notificationsFragment, null, navOptions { launchSingleTop = true })
+                intent?.replaceExtras(Bundle())
+            }
+            NotificationNavigationHelper.Destination.None -> Unit
         }
     }
 
@@ -277,6 +291,68 @@ class MainActivity : AppCompatActivity() {
         activeLockSessionId = ""
         activeLockScreen = ""
         lockModeStopped = false
+        repinJob?.cancel()
+        repinJob = null
+    }
+
+    private fun Int.isLockFlowDestination(): Boolean {
+        return this == R.id.lockModeFragment ||
+            this == R.id.cameraARFragment ||
+            this == R.id.smartReviewFragment ||
+            this == R.id.manualCropFragment
+    }
+
+    private fun scheduleLockFlowRepin(delayMillis: Long) {
+        if (activeLockSessionId.isBlank()) return
+        if (navController.currentDestination?.id?.isLockFlowDestination() != true) return
+        if (kioskModeController.currentLockTaskMode() != ActivityManager.LOCK_TASK_MODE_NONE) return
+
+        repinJob?.cancel()
+        repinJob = lifecycleScope.launch {
+            delay(delayMillis)
+            if (
+                activeLockSessionId.isNotBlank() &&
+                navController.currentDestination?.id?.isLockFlowDestination() == true &&
+                kioskModeController.currentLockTaskMode() == ActivityManager.LOCK_TASK_MODE_NONE
+            ) {
+                enterKioskMode()
+            }
+        }
+    }
+
+    private fun applyLockFlowScreenPolicy() {
+        if (activeLockSessionId.isBlank()) return
+        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        restoreLockFlowBrightness()
+        scheduleScreenDim()
+    }
+
+    private fun scheduleScreenDim() {
+        if (activeLockSessionId.isBlank()) return
+        screenDimJob?.cancel()
+        screenDimJob = lifecycleScope.launch {
+            delay(LOCK_SCREEN_DIM_DELAY_MS)
+            if (activeLockSessionId.isNotBlank()) {
+                val attrs = window.attributes
+                attrs.screenBrightness = LOCK_DIM_BRIGHTNESS
+                window.attributes = attrs
+            }
+        }
+    }
+
+    private fun restoreLockFlowBrightness() {
+        val attrs = window.attributes
+        if (attrs.screenBrightness != WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE) {
+            attrs.screenBrightness = WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE
+            window.attributes = attrs
+        }
+    }
+
+    private fun clearLockFlowScreenPolicy() {
+        screenDimJob?.cancel()
+        screenDimJob = null
+        window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        restoreLockFlowBrightness()
     }
 
     private fun logLockModeBackgroundViolation() {
@@ -324,5 +400,8 @@ class MainActivity : AppCompatActivity() {
 
     companion object {
         const val ACTION_OPEN_NOTIFICATION = "com.examhub.student.OPEN_NOTIFICATION"
+        private const val LOCK_REPIN_DELAY_MS = 3_000L
+        private const val LOCK_SCREEN_DIM_DELAY_MS = 60_000L
+        private const val LOCK_DIM_BRIGHTNESS = 0.08f
     }
 }

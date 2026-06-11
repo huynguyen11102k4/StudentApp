@@ -99,16 +99,17 @@ class DashboardViewModel(
                     is ApiResult.Success -> {
                         _isLoading.value = false
                         val resultSummaries = loadResultSummaries()
-                        val resultSheetByExamId = resultSummaries.mapNotNull { summary ->
+                        val resultByExamId = resultSummaries.mapNotNull { summary ->
                             val examId = summary.exam?.id?.takeIf { it.isNotBlank() }
-                            if (examId == null) null else examId to summary.id
+                            if (examId == null) null else examId to summary
                         }.toMap()
                         result.data.data.forEach { exam ->
                             offlineCacheManager.saveExamClassCode(exam.id, exam.classInfo?.classCode)
                         }
                         val exams = result.data.data.map { exam ->
+                            val resultSummary = resultByExamId[exam.id]
                             val resultSheetId = exam.resultId?.takeIf { it.isNotBlank() }
-                                ?: resultSheetByExamId[exam.id]
+                                ?: resultSummary?.id
                             Exam(
                                 id = exam.id,
                                 name = exam.name,
@@ -126,7 +127,9 @@ class DashboardViewModel(
                                 gradingType = exam.gradingType.orEmpty(),
                                 canStartSession = exam.canStartSession == true && exam.gradingType.isStudentSubmission(),
                                 canSubmit = exam.canSubmit == true && exam.gradingType.isStudentSubmission(),
-                                canViewResult = exam.canViewResult == true && resultSheetId != null,
+                                canViewResult = exam.canViewResult == true &&
+                                    resultSheetId != null &&
+                                    resultSummary?.isPendingResult() != true,
                                 resultOnly = exam.resultOnly == true || exam.gradingType.isTeacherGrading()
                             )
                         }
@@ -183,7 +186,7 @@ class DashboardViewModel(
             date = gradedAt ?: createdAt.orEmpty(),
             resultSheetId = id,
             hasSubmitted = true,
-            canViewResult = true,
+            canViewResult = !isPendingResult(),
             resultOnly = true
         )
     }
@@ -194,6 +197,11 @@ class DashboardViewModel(
             .uppercase()
         return attemptsUsed?.let { it > 0 } == true ||
             listOf("SUBMITTED", "PROCESSING", "GRADED", "COMPLETED", "DONE").any { normalized.contains(it) }
+    }
+
+    private fun com.examhub.student.model.response.result.StudentResultSummaryResponse.isPendingResult(): Boolean {
+        val normalized = resultStatus.orEmpty().uppercase()
+        return normalized.contains("PENDING") || normalized.contains("PROCESSING")
     }
 
     private fun String?.isStudentSubmission(): Boolean =

@@ -94,10 +94,10 @@ class ClassDetailViewModel(
                 when (result) {
                     is ApiResult.Loading -> Unit
                     is ApiResult.Success -> {
-                        val resultSheetByExamId = loadResultSheetByExamId()
+                        val resultByExamId = loadResultByExamId()
                         allClassExams = result.data.data
                             .filter { it.belongsToClass(classDetail) }
-                            .map { it.toExam(resultSheetByExamId) }
+                            .map { it.toExam(resultByExamId) }
                             .sortedByDescending { it.date }
                         applyExamSearch()
                     }
@@ -126,11 +126,11 @@ class ClassDetailViewModel(
         }
     }
 
-    private suspend fun loadResultSheetByExamId(): Map<String, String> {
+    private suspend fun loadResultByExamId(): Map<String, com.examhub.student.model.response.result.StudentResultSummaryResponse> {
         return when (val result = resultsRepository.getResults(limit = "100").first { it !is ApiResult.Loading }) {
             is ApiResult.Success -> result.data.data.mapNotNull { summary ->
                 val examId = summary.exam?.id?.takeIf { it.isNotBlank() }
-                if (examId == null) null else examId to summary.id
+                if (examId == null) null else examId to summary
             }.toMap()
             else -> emptyMap()
         }
@@ -152,8 +152,11 @@ class ClassDetailViewModel(
             classNames.any { it.equals(classInfo?.className, ignoreCase = true) }
     }
 
-    private fun MobileExamSummaryResponse.toExam(resultSheetByExamId: Map<String, String>): Exam {
-        val resultSheetId = resultId?.takeIf { it.isNotBlank() } ?: resultSheetByExamId[id]
+    private fun MobileExamSummaryResponse.toExam(
+        resultByExamId: Map<String, com.examhub.student.model.response.result.StudentResultSummaryResponse>
+    ): Exam {
+        val resultSummary = resultByExamId[id]
+        val resultSheetId = resultId?.takeIf { it.isNotBlank() } ?: resultSummary?.id
         return Exam(
             id = id,
             name = name,
@@ -171,7 +174,7 @@ class ClassDetailViewModel(
             gradingType = gradingType.orEmpty(),
             canStartSession = canStartSession == true && gradingType.isStudentSubmission(),
             canSubmit = canSubmit == true && gradingType.isStudentSubmission(),
-            canViewResult = canViewResult == true && resultSheetId != null,
+            canViewResult = canViewResult == true && resultSheetId != null && resultSummary?.isPendingResult() != true,
             resultOnly = resultOnly == true || gradingType.isTeacherGrading()
         )
     }
@@ -182,6 +185,11 @@ class ClassDetailViewModel(
             .uppercase()
         return attemptsUsed?.let { it > 0 } == true ||
             listOf("SUBMITTED", "PROCESSING", "GRADED", "COMPLETED", "DONE").any { normalized.contains(it) }
+    }
+
+    private fun com.examhub.student.model.response.result.StudentResultSummaryResponse.isPendingResult(): Boolean {
+        val normalized = resultStatus.orEmpty().uppercase()
+        return normalized.contains("PENDING") || normalized.contains("PROCESSING")
     }
 
     private fun String?.isStudentSubmission(): Boolean =

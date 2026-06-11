@@ -4,13 +4,17 @@ import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import com.examhub.student.model.ApiResult
 import com.examhub.student.model.request.auth.ChangePasswordRequest
+import com.examhub.student.model.request.auth.ForgotPasswordRequest
+import com.examhub.student.model.request.auth.GoogleLinkRequest
 import com.examhub.student.model.request.auth.GoogleLoginRequest
 import com.examhub.student.model.request.auth.LoginRequest
 import com.examhub.student.model.request.auth.OtpRequest
 import com.examhub.student.model.request.auth.OtpVerifyRequest
+import com.examhub.student.model.request.auth.ResetPasswordRequest
 import com.examhub.student.model.request.auth.StudentRegisterRequest
 import com.examhub.student.model.request.profile.UpdateProfileRequest
 import com.examhub.student.model.response.auth.AuthTokenResponse
+import com.examhub.student.model.response.auth.GoogleLinkResponse
 import com.examhub.student.model.response.common.MessageResponse
 import com.examhub.student.model.response.profile.MobileSessionResponse
 import com.examhub.student.model.response.auth.OtpVerifyResponse
@@ -20,6 +24,8 @@ import com.examhub.student.repository.AuthRepository
 import com.examhub.student.service.AuthApiService
 import com.examhub.student.service.OfflineCacheManager
 import com.examhub.student.service.TokenManager
+import com.examhub.student.util.helper.parseUserProfileJson
+import com.examhub.student.util.helper.sanitizedStudentProfile
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flow
@@ -43,8 +49,9 @@ class AuthRepositoryImpl(
                         clearUserScopedCacheIfNeeded(result.data.user)
                         tokenManager.saveTokens(accessToken, refreshToken)
                         result.data.user?.let { user ->
-                            tokenManager.saveCachedAvatarUrl(user.avatarUrl)
-                            tokenManager.saveCachedProfileJson(gson.toJson(user))
+                            val safeUser = user.sanitizedStudentProfile()
+                            tokenManager.saveCachedAvatarUrl(safeUser.avatarUrl)
+                            tokenManager.saveCachedProfileJson(gson.toJson(safeUser))
                         }
                     }
                 }
@@ -60,10 +67,14 @@ class AuthRepositoryImpl(
         safeApiFlow(gson) { apiService.login(request.copy(deviceId = request.deviceId ?: tokenManager.getDeviceId())) }
             .onEach { result ->
                 if (result is ApiResult.Success) {
-                    clearUserScopedCacheIfNeeded(result.data.user)
+                    val rawUser: UserResponse? = result.data.user
+                    val safeUser = rawUser?.sanitizedStudentProfile()
+                    clearUserScopedCacheIfNeeded(safeUser)
                     tokenManager.saveTokens(result.data.accessToken, result.data.refreshToken)
-                    tokenManager.saveCachedAvatarUrl(result.data.user.avatarUrl)
-                    tokenManager.saveCachedProfileJson(gson.toJson(result.data.user))
+                    safeUser?.let { user ->
+                        tokenManager.saveCachedAvatarUrl(user.avatarUrl)
+                        tokenManager.saveCachedProfileJson(gson.toJson(user))
+                    }
                 }
             }
 
@@ -71,10 +82,14 @@ class AuthRepositoryImpl(
         safeApiFlow(gson) { apiService.loginWithGoogle(request.copy(deviceId = request.deviceId ?: tokenManager.getDeviceId())) }
             .onEach { result ->
                 if (result is ApiResult.Success) {
-                    clearUserScopedCacheIfNeeded(result.data.user)
+                    val rawUser: UserResponse? = result.data.user
+                    val safeUser = rawUser?.sanitizedStudentProfile()
+                    clearUserScopedCacheIfNeeded(safeUser)
                     tokenManager.saveTokens(result.data.accessToken, result.data.refreshToken)
-                    tokenManager.saveCachedAvatarUrl(result.data.user.avatarUrl)
-                    tokenManager.saveCachedProfileJson(gson.toJson(result.data.user))
+                    safeUser?.let { user ->
+                        tokenManager.saveCachedAvatarUrl(user.avatarUrl)
+                        tokenManager.saveCachedProfileJson(gson.toJson(user))
+                    }
                 }
             }
 
@@ -85,25 +100,44 @@ class AuthRepositoryImpl(
     override fun changePassword(request: ChangePasswordRequest): Flow<ApiResult<MessageResponse>> =
         safeApiFlow(gson) { apiService.changePassword(request) }
 
+    override fun requestForgotPassword(request: ForgotPasswordRequest): Flow<ApiResult<MessageResponse>> =
+        safeJsonFlow(gson, MessageResponse::class.java) { apiService.requestForgotPassword(request) }
+
+    override fun resetPassword(request: ResetPasswordRequest): Flow<ApiResult<MessageResponse>> =
+        safeJsonFlow(gson, MessageResponse::class.java) { apiService.resetPassword(request) }
+
+    override fun linkGoogle(request: GoogleLinkRequest): Flow<ApiResult<GoogleLinkResponse>> =
+        safeJsonFlow<GoogleLinkResponse>(gson, GoogleLinkResponse::class.java) { apiService.linkGoogle(request) }
+            .onEach { result ->
+                if (result is ApiResult.Success) {
+                    updateCachedGoogleState(result.data.googleLinked, result.data.googleId)
+                }
+            }
+
+    override fun unlinkGoogle(): Flow<ApiResult<GoogleLinkResponse>> =
+        safeJsonFlow<GoogleLinkResponse>(gson, GoogleLinkResponse::class.java) { apiService.unlinkGoogle() }
+            .onEach { result ->
+                if (result is ApiResult.Success) {
+                    updateCachedGoogleState(result.data.googleLinked, null)
+                }
+            }
+
     override fun getMe(): Flow<ApiResult<UserResponse>> = flow {
         // Emit cached profile immediately for fast first render (stale-while-revalidate)
-        val cachedProfile = tokenManager.getCachedProfileJson()
-            ?.let { json -> runCatching { gson.fromJson(json, UserResponse::class.java) }.getOrNull() }
+        val cachedProfile = tokenManager.getCachedProfileJson()?.let(gson::parseUserProfileJson)
         if (cachedProfile != null) {
             emit(ApiResult.Success(cachedProfile))
+            tokenManager.saveCachedProfileJson(gson.toJson(cachedProfile))
         }
 
         // Always fetch fresh data from network to get latest fields (e.g. student.studentCode)
-        emitAll(safeApiFlow(gson) { apiService.getMe() }
+        emitAll(safeJsonFlow<UserResponse>(gson, UserResponse::class.java) { apiService.getMe() }
             .map { result ->
                 if (result is ApiResult.Success) {
                     val cachedAvatar = tokenManager.getCachedAvatarUrl()
-                    val avatarUrl = result.data.avatarUrl?.takeIf { it.isNotBlank() } ?: cachedAvatar
-                    if (avatarUrl != null && avatarUrl != result.data.avatarUrl) {
-                        ApiResult.Success(result.data.copy(avatarUrl = avatarUrl))
-                    } else {
-                        result
-                    }
+                    val safeProfile = result.data.sanitizedStudentProfile()
+                    val avatarUrl = safeProfile.avatarUrl?.takeIf { it.isNotBlank() } ?: cachedAvatar
+                    ApiResult.Success(safeProfile.copy(avatarUrl = avatarUrl))
                 } else {
                     result
                 }
@@ -117,7 +151,10 @@ class AuthRepositoryImpl(
     }
 
     override fun updateProfile(request: UpdateProfileRequest): Flow<ApiResult<UserResponse>> =
-        safeApiFlow(gson) { apiService.updateProfile(request) }
+        safeJsonFlow<UserResponse>(gson, UserResponse::class.java) { apiService.updateProfile(request) }
+            .map { result ->
+                if (result is ApiResult.Success) ApiResult.Success(result.data.sanitizedStudentProfile()) else result
+            }
             .onEach { result ->
                 if (result is ApiResult.Success) {
                     tokenManager.saveCachedAvatarUrl(result.data.avatarUrl)
@@ -126,7 +163,10 @@ class AuthRepositoryImpl(
             }
 
     override fun uploadAvatar(file: MultipartBody.Part): Flow<ApiResult<UserResponse>> =
-        safeApiFlow(gson) { apiService.uploadAvatar(file) }
+        safeJsonFlow<UserResponse>(gson, UserResponse::class.java) { apiService.uploadAvatar(file) }
+            .map { result ->
+                if (result is ApiResult.Success) ApiResult.Success(result.data.sanitizedStudentProfile()) else result
+            }
             .onEach { result ->
                 if (result is ApiResult.Success) {
                     tokenManager.saveCachedAvatarUrl(result.data.avatarUrl)
@@ -158,12 +198,23 @@ class AuthRepositoryImpl(
         safeApiFlow(gson) { apiService.revokeSession(sessionId) }
 
     private fun clearUserScopedCacheIfNeeded(newUser: UserResponse?) {
-        val newUserId = newUser?.id?.takeIf { it.isNotBlank() } ?: return
+        val newUserId = newUser?.let { user ->
+            val rawId: String? = user.id
+            rawId?.takeIf { it.isNotBlank() }
+        } ?: return
         val cachedUserId = tokenManager.getCachedProfileJson()
-            ?.let { raw -> runCatching { gson.fromJson(raw, UserResponse::class.java).id }.getOrNull() }
+            ?.let { raw -> gson.parseUserProfileJson(raw)?.id }
         if (cachedUserId != newUserId) {
             offlineCacheManager.clearUserScopedLists()
         }
     }
 
+    private fun updateCachedGoogleState(googleLinked: Boolean, googleId: String?) {
+        val cached = tokenManager.getCachedProfileJson()?.let(gson::parseUserProfileJson) ?: return
+        val updated = cached.copy(
+            googleLinked = googleLinked,
+            googleId = if (googleLinked) googleId ?: cached.googleId else null
+        ).sanitizedStudentProfile()
+        tokenManager.saveCachedProfileJson(gson.toJson(updated))
+    }
 }

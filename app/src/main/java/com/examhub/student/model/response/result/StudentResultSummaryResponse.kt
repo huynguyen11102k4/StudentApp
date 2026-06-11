@@ -5,6 +5,8 @@ import java.io.Serializable
 
 data class StudentResultSummaryResponse(
     val id: String,
+    @SerializedName(value = "result_status", alternate = ["resultStatus", "status"])
+    val resultStatus: String? = null,
     @SerializedName(value = "total_score", alternate = ["totalScore"])
     val totalScore: Double? = null,
     val source: String? = null,

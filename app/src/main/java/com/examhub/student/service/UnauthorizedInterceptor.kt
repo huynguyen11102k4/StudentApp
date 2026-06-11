@@ -18,6 +18,7 @@ class UnauthorizedInterceptor(
     private fun shouldExpireSession(path: String): Boolean {
         return !path.endsWith("/student/auth/login") &&
             !path.endsWith("/student/auth/register") &&
-            !path.contains("/student/auth/otp")
+            !path.contains("/student/auth/otp") &&
+            !path.contains("/student/auth/forgot-password")
     }
 }

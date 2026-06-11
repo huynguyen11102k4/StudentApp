@@ -112,11 +112,15 @@ class NotificationsViewModel(
         route = notif.route
             ?: notif.metadata.stringValue("route")
             ?: notif.data.stringValue("route"),
-        appealId = notif.appealId ?: notif.targetId ?: notif.entityId
+        appealId = notif.appealId
             ?: notif.metadata.stringValue("appealId") ?: notif.metadata.stringValue("appeal_id")
             ?: notif.data.stringValue("appealId") ?: notif.data.stringValue("appeal_id"),
-        targetId = notif.targetId,
-        entityId = notif.entityId,
+        targetId = notif.targetId
+            ?: notif.metadata.stringValue("targetId") ?: notif.metadata.stringValue("target_id")
+            ?: notif.data.stringValue("targetId") ?: notif.data.stringValue("target_id"),
+        entityId = notif.entityId
+            ?: notif.metadata.stringValue("entityId") ?: notif.metadata.stringValue("entity_id")
+            ?: notif.data.stringValue("entityId") ?: notif.data.stringValue("entity_id"),
         metadata = notif.metadata,
         data = notif.data,
         isRead = notif.isRead == true,

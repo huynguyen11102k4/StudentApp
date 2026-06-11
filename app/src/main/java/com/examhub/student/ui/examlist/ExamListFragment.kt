@@ -61,6 +61,8 @@ class ExamListFragment : Fragment() {
                         putString("examStatus", exam.status)
                     }
                 )
+            } else if (exam.hasSubmitted || exam.resultOnly) {
+                findNavController().navigate(R.id.resultsListFragment)
             } else {
                 val bundle = Bundle().apply { putString("examId", exam.id) }
                 findNavController().navigate(R.id.action_exam_list_to_exam_detail, bundle)

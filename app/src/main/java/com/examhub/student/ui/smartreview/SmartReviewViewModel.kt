@@ -43,6 +43,8 @@ class SmartReviewViewModel(
 
     private val _savedSuccess = MutableSharedFlow<StudentSubmitResponse>(extraBufferCapacity = 1)
     val savedSuccess: SharedFlow<StudentSubmitResponse> = _savedSuccess.asSharedFlow()
+    private val _blankSubmissionFinished = MutableSharedFlow<StudentSubmitResponse?>(extraBufferCapacity = 1)
+    val blankSubmissionFinished: SharedFlow<StudentSubmitResponse?> = _blankSubmissionFinished.asSharedFlow()
 
     private val _errorMessage = MutableSharedFlow<String>(extraBufferCapacity = 1)
     val errorMessage: SharedFlow<String> = _errorMessage.asSharedFlow()
@@ -306,6 +308,56 @@ class SmartReviewViewModel(
             hasOmrResult = allAnswers.isNotEmpty(),
             hasOmrWarning = currentWarnings.isNotEmpty()
         )
+    }
+
+    fun submitBlankOnTimeout(examId: String, questionCount: Int) {
+        val sessionId = currentSessionId.ifBlank { _reviewState.value.sessionId }
+        if (sessionId.isBlank()) {
+            _blankSubmissionFinished.tryEmit(null)
+            return
+        }
+        val resolvedExamId = currentExamId.ifBlank { examId }
+        viewModelScope.launch {
+            _isLoading.value = true
+            val submit = studentSubmissionRepository.submit(
+                sessionId,
+                StudentSubmitRequest(
+                    rawImageUrl = null,
+                    dewarpedImageUrl = null,
+                    processedImageUrl = null,
+                    scannedStudentId = null,
+                    scannedClassCode = null,
+                    scannedExamCode = null,
+                    idResult = IdZoneResultRequest(
+                        studentId = null,
+                        classCode = null,
+                        examCode = null,
+                        idOk = false,
+                        idError = "time_expired_no_scan"
+                    ),
+                    studentAnswers = (1..questionCount.coerceAtLeast(0)).map { questionNo ->
+                        StudentAnswerRequest(questionNumber = questionNo, answer = null)
+                    },
+                    capturedAt = nowIso(),
+                    imageQualityScore = 0,
+                    qualityFeedback = mapOf(
+                        "auto_submitted" to "true",
+                        "reason" to "time_expired_no_scan",
+                        "exam_id" to resolvedExamId
+                    )
+                )
+            ).first { it !is ApiResult.Loading }
+
+            _isLoading.value = false
+            val submission = if (submit is ApiResult.Success) {
+                activeSessionStore.clear(resolvedExamId)
+                activeSessionStore.clearBySessionId(sessionId)
+                submit.data
+            } else {
+                null
+            }
+            _blankSubmissionFinished.tryEmit(submission)
+        }
     }
 
     private fun nowIso(): String {

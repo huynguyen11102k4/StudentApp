@@ -53,7 +53,7 @@ class OmrFirebaseMessagingService : FirebaseMessagingService() {
             ?: data["body"]
             ?: data["content"]
             ?: data["message"]
-            ?: data["exam_name"]?.let { getString(R.string.notifications_exam_opened_default_title) + ": " + it }
+            ?: data["exam_name"]?.let { defaultTitleFor(type) + ": " + it }
             ?: defaultBodyFor(type)
         val notificationId = data["notification_id"]?.hashCode() ?: System.currentTimeMillis().toInt()
 
@@ -84,19 +84,25 @@ class OmrFirebaseMessagingService : FirebaseMessagingService() {
     }
 
     private fun defaultTitleFor(type: String): String {
-        return if (type.equals("exam_opened", ignoreCase = true)) {
-            getString(R.string.notifications_exam_opened_default_title)
-        } else {
-            getString(R.string.notifications_title)
+        return when (type.normalizedNotificationType()) {
+            "exam_opened" -> getString(R.string.notifications_exam_opened_default_title)
+            "exam_closed" -> getString(R.string.notifications_exam_closed_default_title)
+            "submission_pending" -> getString(R.string.notifications_submission_pending_default_title)
+            else -> getString(R.string.notifications_title)
         }
     }
 
     private fun defaultBodyFor(type: String): String {
-        return if (type.equals("exam_opened", ignoreCase = true)) {
-            getString(R.string.notifications_exam_opened_default_body)
-        } else {
-            getString(R.string.notifications_subtitle)
+        return when (type.normalizedNotificationType()) {
+            "exam_opened" -> getString(R.string.notifications_exam_opened_default_body)
+            "exam_closed" -> getString(R.string.notifications_exam_closed_default_body)
+            "submission_pending" -> getString(R.string.notifications_submission_pending_default_body)
+            else -> getString(R.string.notifications_subtitle)
         }
+    }
+
+    private fun String.normalizedNotificationType(): String {
+        return trim().lowercase().replace('-', '_')
     }
 
     companion object {

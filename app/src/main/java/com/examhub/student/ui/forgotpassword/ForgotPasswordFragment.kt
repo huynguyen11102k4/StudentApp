@@ -16,7 +16,6 @@ import com.google.android.material.snackbar.Snackbar
 import com.examhub.student.R
 import com.examhub.student.databinding.FragmentForgotPasswordBinding
 import com.examhub.student.util.extension.collectOnStarted
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 
 class ForgotPasswordFragment : Fragment() {
@@ -60,7 +59,10 @@ class ForgotPasswordFragment : Fragment() {
     }
 
     private fun setupClickListeners() {
-        binding.btnBack.setOnClickListener { findNavController().navigateUp() }
+        binding.btnBack.setOnClickListener {
+            viewModel.resetFlow()
+            findNavController().navigateUp()
+        }
 
         binding.btnSendOTP.setOnClickListener {
             viewModel.sendOTP(binding.etEmail.text.toString())
@@ -108,7 +110,21 @@ class ForgotPasswordFragment : Fragment() {
                 }
             }
             launch {
+                viewModel.isLoading.collect { loading ->
+                    binding.progressBar.isVisible = loading
+                    binding.btnSendOTP.isEnabled = !loading
+                    binding.btnVerifyOTP.isEnabled = !loading
+                    binding.btnResetPassword.isEnabled = !loading
+                    binding.btnBack.isEnabled = !loading
+                    binding.etEmail.isEnabled = !loading
+                    binding.etNewPassword.isEnabled = !loading
+                    binding.etConfirmPassword.isEnabled = !loading
+                    otpEditTexts.forEach { it.isEnabled = !loading }
+                }
+            }
+            launch {
                 viewModel.passwordResetSuccess.collect {
+                    viewModel.resetFlow()
                     findNavController().navigate(R.id.action_forgot_password_to_login)
                 }
             }
@@ -119,6 +135,7 @@ class ForgotPasswordFragment : Fragment() {
 
     override fun onDestroyView() {
         super.onDestroyView()
+        viewModel.resetFlow()
         _binding = null
     }
 }

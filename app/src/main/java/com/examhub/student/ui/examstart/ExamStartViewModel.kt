@@ -17,6 +17,7 @@ import com.examhub.student.service.ActiveExamSession
 import com.examhub.student.service.ActiveExamSessionStore
 import com.examhub.student.service.OfflineCacheManager
 import com.examhub.student.service.TokenManager
+import com.examhub.student.util.helper.parseUserProfileJson
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -214,7 +215,7 @@ class ExamStartViewModel(
         val mode = StudentIdentifierMode.from(session.studentCodeType)
             ?: readStudentIdentifierModeFromCache()
         val profile = tokenManager.getCachedProfileJson()
-            ?.let { raw -> runCatching { gson.fromJson(raw, UserResponse::class.java) }.getOrNull() }
+            ?.let(gson::parseUserProfileJson)
         val studentCode = when (mode) {
             StudentIdentifierMode.INTERNAL -> listOfNotNull(
                 session.studentIdentifierCode,

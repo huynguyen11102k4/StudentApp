@@ -123,6 +123,10 @@ class ClassDetailFragment : Fragment() {
             )
             return
         }
+        if (exam.hasSubmitted || exam.resultOnly) {
+            findNavController().navigate(R.id.resultsListFragment)
+            return
+        }
         findNavController().navigate(
             R.id.examDetailFragment,
             Bundle().apply { putString("examId", exam.id) }

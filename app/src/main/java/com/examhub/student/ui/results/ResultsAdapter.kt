@@ -8,6 +8,7 @@ import androidx.paging.PagingDataAdapter
 import com.examhub.student.databinding.ItemResultBinding
 import com.examhub.student.model.response.result.StudentResultSummaryResponse
 import com.examhub.student.R
+import com.examhub.student.util.extension.replaceTechnicalLabels
 import com.examhub.student.util.extension.toLocalDisplayDateTime
 import java.util.Locale
 
@@ -33,7 +34,14 @@ class ResultsAdapter(
                 result.source?.takeIf { it.isNotBlank() }
             ).joinToString(binding.root.context.getString(R.string.common_separator_dot))
             binding.tvScore.text = result.totalScore?.let { String.format(Locale.US, "%.2f", it) } ?: "--"
-            binding.tvStatus.text = (result.gradedAt ?: result.createdAt).toLocalDisplayDateTime()
+            val displayTime = (result.gradedAt ?: result.createdAt).toLocalDisplayDateTime()
+            val displayStatus = result.resultStatus
+                ?.takeIf { it.isNotBlank() }
+                ?.replaceTechnicalLabels()
+                .orEmpty()
+            binding.tvStatus.text = listOf(displayStatus, displayTime)
+                .filter { it.isNotBlank() }
+                .joinToString(binding.root.context.getString(R.string.common_separator_dot))
             binding.root.setOnClickListener { onClick(result) }
         }
     }

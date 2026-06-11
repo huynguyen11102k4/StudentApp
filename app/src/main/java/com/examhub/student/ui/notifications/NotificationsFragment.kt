@@ -99,90 +99,30 @@ class NotificationsFragment : Fragment() {
     }
 
     private fun handleNotificationClick(notification: AppNotification) {
-        val type = notification.type
-        val route = notification.route.orEmpty()
-        val link = notification.link.orEmpty()
-        val isAppeal = NotificationNavigationHelper.isAppealNotification(route, type, link)
-        val isResult = NotificationNavigationHelper.isResultNotification(route, type, link)
-        val isExam = NotificationNavigationHelper.isExamNotification(route, type, link)
-        val sheetId = notification.data?.stringValue("sheet_id")
-            ?: notification.data?.stringValue("sheetId")
-            ?: notification.data?.stringValue("answer_sheet_id")
-            ?: notification.data?.stringValue("answerSheetId")
-            ?: notification.metadata?.stringValue("sheet_id")
-            ?: notification.metadata?.stringValue("sheetId")
-            ?: notification.metadata?.stringValue("answer_sheet_id")
-            ?: notification.metadata?.stringValue("answerSheetId")
-            ?: notification.data?.stringValue("result_id")
-            ?: notification.data?.stringValue("resultId")
-            ?: notification.metadata?.stringValue("result_id")
-            ?: notification.metadata?.stringValue("resultId")
-            ?: if (isResult) {
-                NotificationNavigationHelper.extractIdFromLink(
-                    link,
-                    "sheet_id",
-                    "sheetId",
-                    "answer_sheet_id",
-                    "answerSheetId",
-                    "result_id",
-                    "resultId"
-                )
-            } else {
-                null
-            }
-        val appealId = notification.appealId?.takeIf { it.isNotBlank() }
-            ?: notification.data?.stringValue("appeal_id")
-            ?: notification.data?.stringValue("appealId")
-            ?: notification.metadata?.stringValue("appeal_id")
-            ?: notification.metadata?.stringValue("appealId")
-            ?: NotificationNavigationHelper.extractIdFromLink(link, "appeal_id", "appealId")
-            ?: if (isAppeal) notification.targetId ?: notification.entityId ?: NotificationNavigationHelper.extractLastId(link) else null
-        val examId = notification.data?.stringValue("exam_id")
-            ?: notification.data?.stringValue("examId")
-            ?: notification.metadata?.stringValue("exam_id")
-            ?: notification.metadata?.stringValue("examId")
-            ?: if (isExam) {
-                notification.targetId ?: notification.entityId ?: NotificationNavigationHelper.extractIdFromLink(link, "exam_id", "examId")
-            } else {
-                null
-            }
-        if (isAppeal && !appealId.isNullOrBlank()) {
-            val bundle = Bundle().apply { putString("appealId", appealId) }
-            findNavController().navigate(R.id.action_notifications_to_appeal_detail, bundle)
-            return
-        }
-        if (isResult && !sheetId.isNullOrBlank()) {
-            val bundle = Bundle().apply { putString("sheetId", sheetId) }
-            findNavController().navigate(R.id.resultDetailFragment, bundle)
-            return
-        }
-        if (isExam && !examId.isNullOrBlank()) {
-            val bundle = Bundle().apply { putString("examId", examId) }
-            findNavController().navigate(R.id.examDetailFragment, bundle)
-            return
-        }
-
-        when {
-            isResult && !sheetId.isNullOrBlank() -> {
-                val bundle = Bundle().apply { putString("sheetId", sheetId) }
-                findNavController().navigate(R.id.resultDetailFragment, bundle)
-            }
-            isAppeal && !appealId.isNullOrBlank() -> {
-                val bundle = Bundle().apply { putString("appealId", appealId) }
+        when (val destination = NotificationNavigationHelper.resolveDestination(notification)) {
+            is NotificationNavigationHelper.Destination.AppealDetail -> {
+                val bundle = Bundle().apply { putString("appealId", destination.appealId) }
                 findNavController().navigate(R.id.action_notifications_to_appeal_detail, bundle)
             }
-            isAppeal -> {
+            is NotificationNavigationHelper.Destination.ResultDetail -> {
+                val bundle = Bundle().apply { putString("sheetId", destination.sheetId) }
+                findNavController().navigate(R.id.resultDetailFragment, bundle)
+            }
+            is NotificationNavigationHelper.Destination.ExamDetail -> {
+                val bundle = Bundle().apply { putString("examId", destination.examId) }
+                findNavController().navigate(R.id.examDetailFragment, bundle)
+            }
+            NotificationNavigationHelper.Destination.AppealsList -> {
                 findNavController().navigate(R.id.action_notifications_to_appeals_list)
             }
-            isExam || link.contains("grading", ignoreCase = true) -> {
-                if (!examId.isNullOrBlank()) {
-                    val bundle = Bundle().apply { putString("examId", examId) }
-                    findNavController().navigate(R.id.examDetailFragment, bundle)
-                } else {
-                    findNavController().navigate(R.id.examListFragment)
-                }
+            NotificationNavigationHelper.Destination.ResultsList -> {
+                findNavController().navigate(R.id.resultsListFragment)
             }
-            else -> Unit
+            NotificationNavigationHelper.Destination.ExamList -> {
+                findNavController().navigate(R.id.examListFragment)
+            }
+            NotificationNavigationHelper.Destination.Notifications,
+            NotificationNavigationHelper.Destination.None -> Unit
         }
     }
 
@@ -220,10 +160,6 @@ class NotificationsFragment : Fragment() {
             NotificationsViewModel.NotificationFilter.READ -> MENU_FILTER_READ
             NotificationsViewModel.NotificationFilter.ALL -> MENU_FILTER_ALL
         }
-    }
-
-    private fun com.google.gson.JsonObject.stringValue(key: String): String? {
-        return get(key)?.takeIf { it.isJsonPrimitive }?.asString?.takeIf { it.isNotBlank() }
     }
 
     override fun onDestroyView() {

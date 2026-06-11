@@ -2,13 +2,17 @@ package com.examhub.student.repository
 
 import com.examhub.student.model.ApiResult
 import com.examhub.student.model.request.auth.ChangePasswordRequest
+import com.examhub.student.model.request.auth.ForgotPasswordRequest
+import com.examhub.student.model.request.auth.GoogleLinkRequest
 import com.examhub.student.model.request.auth.GoogleLoginRequest
 import com.examhub.student.model.request.auth.LoginRequest
 import com.examhub.student.model.request.auth.OtpRequest
 import com.examhub.student.model.request.auth.OtpVerifyRequest
+import com.examhub.student.model.request.auth.ResetPasswordRequest
 import com.examhub.student.model.request.auth.StudentRegisterRequest
 import com.examhub.student.model.request.profile.UpdateProfileRequest
 import com.examhub.student.model.response.auth.AuthTokenResponse
+import com.examhub.student.model.response.auth.GoogleLinkResponse
 import com.examhub.student.model.response.common.MessageResponse
 import com.examhub.student.model.response.profile.MobileSessionResponse
 import com.examhub.student.model.response.auth.OtpVerifyResponse
@@ -25,6 +29,10 @@ interface AuthRepository {
     fun loginWithGoogle(request: GoogleLoginRequest): Flow<ApiResult<AuthTokenResponse>>
     fun logout(): Flow<ApiResult<MessageResponse>>
     fun changePassword(request: ChangePasswordRequest): Flow<ApiResult<MessageResponse>>
+    fun requestForgotPassword(request: ForgotPasswordRequest): Flow<ApiResult<MessageResponse>>
+    fun resetPassword(request: ResetPasswordRequest): Flow<ApiResult<MessageResponse>>
+    fun linkGoogle(request: GoogleLinkRequest): Flow<ApiResult<GoogleLinkResponse>>
+    fun unlinkGoogle(): Flow<ApiResult<GoogleLinkResponse>>
     fun getMe(): Flow<ApiResult<UserResponse>>
     fun updateProfile(request: UpdateProfileRequest): Flow<ApiResult<UserResponse>>
     fun uploadAvatar(file: MultipartBody.Part): Flow<ApiResult<UserResponse>>

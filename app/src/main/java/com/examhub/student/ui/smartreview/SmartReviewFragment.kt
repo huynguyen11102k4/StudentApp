@@ -77,6 +77,11 @@ class SmartReviewFragment : Fragment() {
                 }
             }
             launch {
+                viewModel.blankSubmissionFinished.collect { submission ->
+                    navigateToSubmissionEnd(submission?.resultId)
+                }
+            }
+            launch {
                 viewModel.errorMessage.collect { message ->
                     Snackbar.make(binding.root, message, Snackbar.LENGTH_LONG).show()
                     if (finishingExpiredSession) finishExpiredSession()
@@ -164,18 +169,27 @@ class SmartReviewFragment : Fragment() {
             Snackbar.make(binding.root, R.string.lock_mode_time_expired_auto_submit, Snackbar.LENGTH_LONG).show()
             viewModel.saveResults(state.score ?: 0.0, state.examId, state.studentId)
         } else {
-            finishExpiredSession()
+            viewModel.submitBlankOnTimeout(
+                examId = state.examId.ifBlank { arguments?.getString("examId").orEmpty() },
+                questionCount = arguments?.getInt("questionCount") ?: 0
+            )
         }
     }
 
     private fun finishExpiredSession() {
         if (_binding == null) return
         (requireActivity() as? MainActivity)?.exitKioskMode()
+        navigateToSubmissionEnd(null)
+    }
+
+    private fun navigateToSubmissionEnd(resultId: String?) {
+        if (_binding == null) return
+        (requireActivity() as? MainActivity)?.exitKioskMode()
         findNavController().navigate(
             R.id.submissionEndFragment,
             Bundle().apply {
                 putString("examId", viewModel.reviewState.value.examId.ifBlank { arguments?.getString("examId").orEmpty() })
-                putString("sheetId", "")
+                putString("sheetId", resultId.orEmpty())
             },
             navOptions {
                 popUpTo(R.id.lockModeFragment) { inclusive = true }

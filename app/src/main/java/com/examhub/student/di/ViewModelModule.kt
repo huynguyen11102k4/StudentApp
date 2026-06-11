@@ -39,7 +39,7 @@ object ViewModelModule {
 
         // Exams
         viewModel { ExamDetailViewModel(get(), get(), get(), get(), get(), get(), get(), get()) }
-        viewModel { ExamListViewModel(get(), get()) }
+        viewModel { ExamListViewModel(get(), get(), get()) }
         viewModel { ExamStartViewModel(get(), get(), get(), get(), get(), get(), get()) }
         viewModel { LockModeViewModel(get(), get(), get(), get(), get(), get(), get()) }
         viewModel { ResultsListViewModel(get()) }

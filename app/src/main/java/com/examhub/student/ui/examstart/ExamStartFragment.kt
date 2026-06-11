@@ -6,6 +6,7 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
+import androidx.navigation.navOptions
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
 import com.examhub.student.R
@@ -57,7 +58,13 @@ class ExamStartFragment : Fragment() {
                     putString("studentCode", event.omrCodes.studentCode)
                     putString("studentCodeMode", event.omrCodes.studentCodeMode)
                 }
-                findNavController().navigate(R.id.action_exam_start_to_lock_mode, bundle)
+                findNavController().navigate(
+                    R.id.action_exam_start_to_lock_mode,
+                    bundle,
+                    navOptions {
+                        popUpTo(R.id.examDetailFragment) { inclusive = true }
+                    }
+                )
             } }
             launch { viewModel.sessionResume.collect { event ->
                 Snackbar.make(binding.root, R.string.exam_start_resume_local_session, Snackbar.LENGTH_SHORT).show()
@@ -71,7 +78,13 @@ class ExamStartFragment : Fragment() {
                     putString("studentCode", event.omrCodes.studentCode)
                     putString("studentCodeMode", event.omrCodes.studentCodeMode)
                 }
-                findNavController().navigate(R.id.action_exam_start_to_lock_mode, bundle)
+                findNavController().navigate(
+                    R.id.action_exam_start_to_lock_mode,
+                    bundle,
+                    navOptions {
+                        popUpTo(R.id.examDetailFragment) { inclusive = true }
+                    }
+                )
             } }
         }
 

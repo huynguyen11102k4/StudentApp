@@ -4,7 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.examhub.student.R
 import com.examhub.student.model.ApiResult
-import com.examhub.student.model.request.profile.UpdateProfileRequest
+import com.examhub.student.model.request.auth.GoogleLinkRequest
 import com.examhub.student.model.response.profile.UserResponse
 import com.examhub.student.repository.AuthRepository
 import com.examhub.student.util.helper.ResourceProvider
@@ -35,8 +35,14 @@ class ProfileViewModel(
     private val _errorMessage = MutableSharedFlow<String>(extraBufferCapacity = 1)
     val errorMessage: SharedFlow<String> = _errorMessage.asSharedFlow()
 
+    private val _successMessage = MutableSharedFlow<String>(extraBufferCapacity = 1)
+    val successMessage: SharedFlow<String> = _successMessage.asSharedFlow()
+
     private val _userProfile = MutableStateFlow<UserResponse?>(null)
     val userProfile: StateFlow<UserResponse?> = _userProfile.asStateFlow()
+
+    private val _hasPendingAvatar = MutableStateFlow(false)
+    val hasPendingAvatar: StateFlow<Boolean> = _hasPendingAvatar.asStateFlow()
 
     fun loadProfile() {
         viewModelScope.launch {
@@ -58,53 +64,99 @@ class ProfileViewModel(
         }
     }
 
-    fun saveProfile(fullName: String, email: String, avatarFile: MultipartBody.Part?) {
-        val currentProfile = _userProfile.value
-        val currentEmail = currentProfile?.email.orEmpty()
-        val normalizedName = fullName.trim()
+    fun setAvatarPending(pending: Boolean) {
+        _hasPendingAvatar.value = pending
+    }
 
-        if (normalizedName.isBlank()) {
-            _errorMessage.tryEmit(resources.getString(R.string.profile_name_required))
-            return
-        }
-        if (email.trim() != currentEmail) {
-            _errorMessage.tryEmit(resources.getString(R.string.profile_email_readonly))
-            return
-        }
-
+    fun saveProfile(avatarFile: MultipartBody.Part?) {
+        if (avatarFile == null) return
         viewModelScope.launch {
             _isSaving.value = true
 
-            var latestProfile = currentProfile
-            if (normalizedName != currentProfile?.fullName) {
-                when (val result = authRepository.updateProfile(UpdateProfileRequest(normalizedName))
-                    .first { it !is ApiResult.Loading }) {
-                    is ApiResult.Success -> latestProfile = result.data
-                    is ApiResult.Error -> {
-                        _isSaving.value = false
-                        _errorMessage.tryEmit(result.exception.message ?: resources.getString(R.string.profile_update_failed))
-                        return@launch
-                    }
-                    else -> Unit
+            val latestProfile = when (val result = authRepository.uploadAvatar(avatarFile)
+                .first { it !is ApiResult.Loading }) {
+                is ApiResult.Success -> result.data
+                is ApiResult.Error -> {
+                    _isSaving.value = false
+                    _errorMessage.tryEmit(result.exception.message ?: resources.getString(R.string.profile_avatar_update_failed))
+                    return@launch
                 }
-            }
-
-            if (avatarFile != null) {
-                when (val result = authRepository.uploadAvatar(avatarFile)
-                    .first { it !is ApiResult.Loading }) {
-                    is ApiResult.Success -> latestProfile = result.data
-                    is ApiResult.Error -> {
-                        _isSaving.value = false
-                        _errorMessage.tryEmit(result.exception.message ?: resources.getString(R.string.profile_avatar_update_failed))
-                        return@launch
-                    }
-                    else -> Unit
-                }
+                else -> null
             }
 
             _isSaving.value = false
+            _hasPendingAvatar.value = false
             latestProfile?.let { _userProfile.value = it }
             _saveSuccess.tryEmit(Unit)
+        }
+    }
+
+    fun linkGoogle(idToken: String) {
+        if (idToken.isBlank()) {
+            _errorMessage.tryEmit(resources.getString(R.string.login_error_google_token))
+            return
+        }
+        viewModelScope.launch {
+            authRepository.linkGoogle(GoogleLinkRequest(idToken)).collect { result ->
+                when (result) {
+                    is ApiResult.Loading -> _isSaving.value = true
+                    is ApiResult.Success -> {
+                        _isSaving.value = false
+                        _userProfile.value = _userProfile.value?.copy(
+                            googleLinked = result.data.googleLinked,
+                            googleId = if (result.data.googleLinked) {
+                                result.data.googleId ?: _userProfile.value?.googleId
+                            } else {
+                                null
+                            }
+                        )
+                        _successMessage.tryEmit(
+                            if (result.data.updated == false) {
+                                resources.getString(R.string.profile_google_linked_noop)
+                            } else {
+                                resources.getString(R.string.profile_google_linked_success)
+                            }
+                        )
+                    }
+                    is ApiResult.Error -> {
+                        _isSaving.value = false
+                        _errorMessage.tryEmit(result.exception.message ?: resources.getString(R.string.profile_google_link_failed))
+                    }
+                }
+            }
+        }
+    }
+
+    fun unlinkGoogle() {
+        viewModelScope.launch {
+            authRepository.unlinkGoogle().collect { result ->
+                when (result) {
+                    is ApiResult.Loading -> _isSaving.value = true
+                    is ApiResult.Success -> {
+                        _isSaving.value = false
+                        _userProfile.value = _userProfile.value?.copy(
+                            googleLinked = result.data.googleLinked,
+                            googleId = null
+                        )
+                        _successMessage.tryEmit(
+                            if (result.data.updated == false) {
+                                resources.getString(R.string.profile_google_unlinked_noop)
+                            } else {
+                                resources.getString(R.string.profile_google_unlinked_success)
+                            }
+                        )
+                    }
+                    is ApiResult.Error -> {
+                        _isSaving.value = false
+                        val fallback = if (result.exception.code == "PASSWORD_REQUIRED_BEFORE_UNLINK") {
+                            resources.getString(R.string.profile_google_unlink_password_required)
+                        } else {
+                            resources.getString(R.string.profile_google_unlink_failed)
+                        }
+                        _errorMessage.tryEmit(result.exception.message ?: fallback)
+                    }
+                }
+            }
         }
     }
 }

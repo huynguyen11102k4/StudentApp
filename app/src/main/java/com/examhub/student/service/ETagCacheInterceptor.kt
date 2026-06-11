@@ -56,6 +56,7 @@ class ETagCacheInterceptor(
 
     private fun shouldBypassConditionalCache(path: String): Boolean {
         return path.endsWith("/auth/me") ||
+            path.endsWith("/student/auth/profile") ||
             path.endsWith("/auth/sessions") ||
             path.contains("/student/results") ||
             path.contains("/student/appeals")

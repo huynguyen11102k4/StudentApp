@@ -282,7 +282,6 @@
     <string name="forgot_password_verify_otp">Xác nhận</string>
     <string name="forgot_password_reset_button">Đổi mật khẩu</string>
     <string name="forgot_password_validation_otp_required">Vui lòng nhập đầy đủ mã OTP</string>
-    <string name="forgot_password_student_unsupported">Chức năng quên mật khẩu học sinh chưa được backend hỗ trợ</string>
     <string name="dashboard_subtitle_classes">Bạn đã tham gia %d lớp học</string>
     <string name="dashboard_subtitle_default">Theo dõi lớp học và kỳ thi đang mở của bạn</string>
     <string name="dashboard_camera_title">Quét phiếu OMR</string>

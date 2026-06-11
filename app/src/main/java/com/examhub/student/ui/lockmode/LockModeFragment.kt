@@ -4,6 +4,7 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.activity.OnBackPressedCallback
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.navOptions
@@ -34,6 +35,12 @@ class LockModeFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         protectScreenFromCapture()
         enterKioskMode()
+        requireActivity().onBackPressedDispatcher.addCallback(
+            viewLifecycleOwner,
+            object : OnBackPressedCallback(true) {
+                override fun handleOnBackPressed() = Unit
+            }
+        )
         binding.btnOpenCamera.setOnClickListener {
             val resolvedSessionId = viewModel.currentSessionId.value.ifBlank { sessionId }
             val bundle = Bundle().apply {

@@ -66,6 +66,8 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="@dimen/spacing_48"
                 app:hintEnabled="false"
+                app:startIconDrawable="@drawable/ic_email"
+                app:startIconTint="@color/text_secondary"
                 app:layout_constraintTop_toBottomOf="@id/tvSubtitle"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintEnd_toEndOf="parent">
@@ -74,10 +76,9 @@
                     android:id="@+id/etEmail"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:background="@android:color/transparent"
+                    android:paddingVertical="@dimen/spacing_16"
                     android:hint="@string/login_email_hint"
                     android:inputType="textEmailAddress"
-                    android:paddingVertical="@dimen/spacing_16"
                     android:textAppearance="@style/Text_Body_Large" />
             </com.google.android.material.textfield.TextInputLayout>
 
@@ -91,6 +92,8 @@
                 app:hintEnabled="false"
                 app:endIconMode="password_toggle"
                 app:endIconTint="@color/text_secondary"
+                app:startIconDrawable="@drawable/ic_lock"
+                app:startIconTint="@color/text_secondary"
                 app:layout_constraintTop_toBottomOf="@id/tilEmail"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintEnd_toEndOf="parent">
@@ -99,10 +102,9 @@
                     android:id="@+id/etPassword"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:background="@android:color/transparent"
+                    android:paddingVertical="@dimen/spacing_16"
                     android:hint="@string/login_password_hint"
                     android:inputType="textPassword"
-                    android:paddingVertical="@dimen/spacing_16"
                     android:textAppearance="@style/Text_Body_Large" />
             </com.google.android.material.textfield.TextInputLayout>
 

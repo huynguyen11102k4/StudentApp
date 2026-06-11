@@ -20,6 +20,7 @@ import com.examhub.student.service.ActiveExamSessionStore
 import com.examhub.student.service.NetworkStatusProvider
 import com.examhub.student.service.OfflineCacheManager
 import com.examhub.student.service.TokenManager
+import com.examhub.student.util.helper.parseUserProfileJson
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -279,7 +280,7 @@ class LockModeViewModel(
         val activeSession = activeSessionStore.get(examId)
         val mode = readStudentIdentifierMode(examId)
         val profile = tokenManager.getCachedProfileJson()
-            ?.let { raw -> runCatching { gson.fromJson(raw, UserResponse::class.java) }.getOrNull() }
+            ?.let(gson::parseUserProfileJson)
         val cachedStudentCode = when (mode) {
             StudentIdentifierMode.INTERNAL -> listOfNotNull(
                 profile?.student?.internalId

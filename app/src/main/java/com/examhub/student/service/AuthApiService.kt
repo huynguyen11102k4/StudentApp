@@ -1,11 +1,14 @@
 package com.examhub.student.service
 
 import com.examhub.student.model.request.auth.ChangePasswordRequest
+import com.examhub.student.model.request.auth.ForgotPasswordRequest
+import com.examhub.student.model.request.auth.GoogleLinkRequest
 import com.examhub.student.model.request.auth.GoogleLoginRequest
 import com.examhub.student.model.request.auth.LoginRequest
 import com.examhub.student.model.request.auth.OtpRequest
 import com.examhub.student.model.request.auth.OtpVerifyRequest
 import com.examhub.student.model.request.auth.RefreshTokenRequest
+import com.examhub.student.model.request.auth.ResetPasswordRequest
 import com.examhub.student.model.request.auth.StudentRegisterRequest
 import com.examhub.student.model.request.profile.UpdateProfileRequest
 import com.examhub.student.model.response.auth.AuthTokenResponse
@@ -14,7 +17,7 @@ import com.examhub.student.model.response.profile.MobileSessionResponse
 import com.examhub.student.model.response.auth.OtpVerifyResponse
 import com.examhub.student.model.response.auth.RefreshTokenResponse
 import com.examhub.student.model.response.auth.StudentRegisterResponse
-import com.examhub.student.model.response.profile.UserResponse
+import com.google.gson.JsonElement
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.DELETE
@@ -51,15 +54,27 @@ interface AuthApiService {
     @POST("student/auth/change-password")
     suspend fun changePassword(@Body request: ChangePasswordRequest): Response<MessageResponse>
 
-    @GET("auth/me")
-    suspend fun getMe(): Response<UserResponse>
+    @POST("student/auth/forgot-password/request")
+    suspend fun requestForgotPassword(@Body request: ForgotPasswordRequest): Response<JsonElement>
 
-    @PATCH("auth/me")
-    suspend fun updateProfile(@Body request: UpdateProfileRequest): Response<UserResponse>
+    @POST("student/auth/forgot-password/confirm")
+    suspend fun resetPassword(@Body request: ResetPasswordRequest): Response<JsonElement>
+
+    @POST("student/auth/profile/google-link")
+    suspend fun linkGoogle(@Body request: GoogleLinkRequest): Response<JsonElement>
+
+    @DELETE("student/auth/profile/google-link")
+    suspend fun unlinkGoogle(): Response<JsonElement>
+
+    @GET("student/auth/profile")
+    suspend fun getMe(): Response<JsonElement>
+
+    @PATCH("student/auth/profile")
+    suspend fun updateProfile(@Body request: UpdateProfileRequest): Response<JsonElement>
 
     @Multipart
-    @POST("auth/me/avatar")
-    suspend fun uploadAvatar(@Part file: MultipartBody.Part): Response<UserResponse>
+    @POST("student/auth/profile/avatar")
+    suspend fun uploadAvatar(@Part file: MultipartBody.Part): Response<JsonElement>
 
     @GET("auth/sessions")
     suspend fun getSessions(): Response<List<MobileSessionResponse>>

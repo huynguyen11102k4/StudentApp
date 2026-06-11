@@ -56,6 +56,8 @@ class DashboardFragment : Fragment() {
         recentExamsAdapter = RecentExamAdapter { exam ->
             if (exam.canViewResult && !exam.resultSheetId.isNullOrBlank()) {
                 openSubmittedExam(exam)
+            } else if (exam.hasSubmitted || exam.resultOnly) {
+                findNavController().navigate(R.id.action_dashboard_to_results)
             } else {
                 val bundle = Bundle().apply { putString("examId", exam.id) }
                 findNavController().navigate(R.id.action_dashboard_to_exam_detail, bundle)
@@ -154,11 +156,13 @@ class DashboardFragment : Fragment() {
     }
 
     private fun bindProfile(profile: UserResponse) {
-        binding.tvStudentName.text = profile.fullName
+        val fullName: String? = profile.fullName
+        val displayName = fullName.orEmpty()
+        binding.tvStudentName.text = displayName
             .takeIf { it.isNotBlank() }
             ?.let { getString(R.string.dashboard_title_student_name, it) }
             ?: getString(R.string.dashboard_title_student)
-        binding.tvStudentInitials.text = initials(profile.fullName)
+        binding.tvStudentInitials.text = initials(displayName)
 
         val avatarUrl = profile.avatarUrl?.takeIf { it.isNotBlank() }?.let(::resolveAvatarUrl)
         if (avatarUrl == null) {
