@@ -19,6 +19,8 @@ class KioskModeController(private val activity: Activity) {
 
     fun enter(): KioskModeState {
         enableImmersive(activity.window)
+        currentKioskState()?.let { return it }
+
         if (isDeviceOwner) {
             runCatching {
                 devicePolicyManager?.setLockTaskPackages(adminComponent, arrayOf(activity.packageName))
@@ -44,6 +46,14 @@ class KioskModeController(private val activity: Activity) {
     fun currentLockTaskMode(): Int {
         return activity.getSystemService<ActivityManager>()?.lockTaskModeState
             ?: ActivityManager.LOCK_TASK_MODE_NONE
+    }
+
+    private fun currentKioskState(): KioskModeState? {
+        return when (currentLockTaskMode()) {
+            ActivityManager.LOCK_TASK_MODE_LOCKED -> KioskModeState.DeviceOwnerLocked
+            ActivityManager.LOCK_TASK_MODE_PINNED -> KioskModeState.ScreenPinned
+            else -> null
+        }
     }
 
     private fun enableImmersive(window: Window) {

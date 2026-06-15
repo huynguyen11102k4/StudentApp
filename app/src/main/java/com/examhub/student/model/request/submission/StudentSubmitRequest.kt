@@ -3,6 +3,10 @@ package com.examhub.student.model.request.submission
 import com.google.gson.annotations.SerializedName
 
 data class StudentSubmitRequest(
+    @SerializedName("client_submission_id")
+    val clientSubmissionId: String,
+    @SerializedName("offline_permit")
+    val offlinePermit: String? = null,
     @SerializedName("raw_image_url")
     val rawImageUrl: String? = null,
     @SerializedName("dewarped_image_url")

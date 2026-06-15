@@ -84,7 +84,12 @@ class LockModeFragment : Fragment() {
             }
             launch {
                 viewModel.blankSubmissionFinished.collect { submission ->
-                    navigateToSubmissionEnd(submission?.resultId)
+                    navigateToSubmissionEnd(submission?.resultId, submission?.submissionId)
+                }
+            }
+            launch {
+                viewModel.blankSubmissionFrozen.collect { clientSubmissionId ->
+                    navigateToSubmissionEnd(null, null, clientSubmissionId)
                 }
             }
         }
@@ -144,13 +149,19 @@ class LockModeFragment : Fragment() {
         Snackbar.make(binding.root, R.string.lock_mode_time_expired, Snackbar.LENGTH_SHORT).show()
     }
 
-    private fun navigateToSubmissionEnd(resultId: String?) {
+    private fun navigateToSubmissionEnd(
+        resultId: String?,
+        submissionId: String? = null,
+        clientSubmissionId: String = ""
+    ) {
         if (_binding == null) return
         findNavController().navigate(
             R.id.submissionEndFragment,
             Bundle().apply {
                 putString("examId", examId)
                 putString("sheetId", resultId.orEmpty())
+                putString("submissionId", submissionId.orEmpty())
+                putString("clientSubmissionId", clientSubmissionId)
             },
             navOptions {
                 popUpTo(R.id.lockModeFragment) { inclusive = true }

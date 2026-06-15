@@ -10,6 +10,8 @@ data class StartExamSessionResponse(
     @SerializedName("online_config")
     private val onlineConfig: StartedOnlineConfigResponse? = null,
     val upload: StartedUploadResponse? = null,
+    @SerializedName(value = "offline_submission", alternate = ["offlineSubmission"])
+    val offlineSubmission: OfflineSubmissionPermitResponse? = null,
     @SerializedName("server_time")
     val serverTime: String? = null,
     @SerializedName("session_id")

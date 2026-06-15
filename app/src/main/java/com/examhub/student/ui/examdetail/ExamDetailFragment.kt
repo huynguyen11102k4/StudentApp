@@ -174,13 +174,17 @@ class ExamDetailFragment : Fragment() {
                 }
             }
             launch {
-                viewModel.sessionStarted.collect { session ->
+                viewModel.sessionStarted.collect { event ->
+                    val session = event.session
                     val bundle = Bundle().apply {
                         putString("examId", examId)
                         putString("sessionId", session.sessionId)
-                        putInt("remainingSeconds", session.remainingSeconds)
-                        putInt("questionCount", viewModel.questionCount.value)
+                        putInt("remainingSeconds", event.remainingSeconds)
+                        putInt("questionCount", event.questionCount)
                         putBoolean("isLockedMode", session.isLockedMode)
+                        putString("classCode", event.omrCodes.classCode)
+                        putString("studentCode", event.omrCodes.studentCode)
+                        putString("studentCodeMode", event.omrCodes.studentCodeMode)
                     }
                     if (session.isLockedMode) {
                         findNavController().navigate(R.id.lockModeFragment, bundle)

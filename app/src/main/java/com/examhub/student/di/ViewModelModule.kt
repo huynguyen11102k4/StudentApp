@@ -20,6 +20,7 @@ import com.examhub.student.ui.results.ResultsListViewModel
 import com.examhub.student.ui.settings.SettingsViewModel
 import com.examhub.student.ui.smartreview.SmartReviewViewModel
 import com.examhub.student.ui.splash.SplashViewModel
+import com.examhub.student.ui.submissionend.SubmissionEndViewModel
 import org.koin.androidx.viewmodel.dsl.viewModel
 import org.koin.dsl.module
 
@@ -38,12 +39,13 @@ object ViewModelModule {
         viewModel { DashboardViewModel(get(), get(), get(), get(), get(), get()) }
 
         // Exams
-        viewModel { ExamDetailViewModel(get(), get(), get(), get(), get(), get(), get(), get()) }
+        viewModel { ExamDetailViewModel(get(), get(), get(), get(), get(), get(), get(), get(), get()) }
         viewModel { ExamListViewModel(get(), get(), get()) }
-        viewModel { ExamStartViewModel(get(), get(), get(), get(), get(), get(), get()) }
+        viewModel { ExamStartViewModel(get(), get(), get(), get(), get(), get(), get(), get()) }
         viewModel { LockModeViewModel(get(), get(), get(), get(), get(), get(), get()) }
         viewModel { ResultsListViewModel(get()) }
         viewModel { ResultDetailViewModel(get(), get(), get(), get()) }
+        viewModel { SubmissionEndViewModel(get(), get(), get()) }
 
         // Classes
         viewModel { ClassListViewModel(get(), get(), get(), get()) }

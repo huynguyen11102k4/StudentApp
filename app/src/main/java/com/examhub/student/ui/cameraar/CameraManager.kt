@@ -40,7 +40,8 @@ class CameraManager(
     private val onImageCaptured: (Bitmap) -> Unit,
     private val onCaptureFailed: (Throwable) -> Unit = {},
     private val onMarkersDetected: (detected: Int, expected: Int) -> Unit = { _, _ -> },
-    private val onAutoCaptureReady: () -> Boolean = { true }
+    private val onAutoCaptureReady: () -> Boolean = { true },
+    private val onCameraBound: (flashAvailable: Boolean) -> Unit = {}
 ) {
     companion object {
         private const val TAG = "CameraManager"
@@ -66,10 +67,13 @@ class CameraManager(
     private var lastFullMarkerAt = 0L
     private var lastAutoCaptureAt = 0L
     private var arucoDetector: ArucoDetector? = null
+    @Volatile private var isShutdown = false
 
     fun startCamera() {
+        isShutdown = false
         val cameraProviderFuture = ProcessCameraProvider.getInstance(previewView.context)
         cameraProviderFuture.addListener({
+            if (isShutdown) return@addListener
             val cameraProvider = cameraProviderFuture.get()
             bindCameraUseCases(cameraProvider)
         }, ContextCompat.getMainExecutor(previewView.context))
@@ -116,6 +120,7 @@ class CameraManager(
             if (isFlashAvailable()) {
                 cameraControl?.enableTorch(torchEnabled)
             }
+            onCameraBound(isFlashAvailable())
         } catch (e: Exception) {
             Log.e(TAG, "Failed to bind camera use cases", e)
             onCaptureFailed(e)
@@ -185,6 +190,7 @@ class CameraManager(
     }
 
     fun shutdown() {
+        isShutdown = true
         cameraProvider?.unbindAll()
         cameraExecutor.shutdown()
     }
@@ -303,11 +309,21 @@ class CameraManager(
         val mat = Mat(height, width, CvType.CV_8UC1)
 
         return try {
-            val row = ByteArray(rowStride)
+            val row = ByteArray(width)
             for (y in 0 until height) {
-                buffer.position(y * rowStride)
-                buffer.get(row, 0, rowStride)
-                mat.put(y, 0, row.copyOf(width))
+                val rowStart = y * rowStride
+                if (rowStart >= buffer.limit()) {
+                    mat.release()
+                    return null
+                }
+                buffer.position(rowStart)
+                val bytesToRead = minOf(width, buffer.remaining())
+                if (bytesToRead < width) {
+                    mat.release()
+                    return null
+                }
+                buffer.get(row, 0, width)
+                mat.put(y, 0, row)
             }
             mat
         } catch (e: Exception) {
@@ -337,6 +353,9 @@ class CameraManager(
                 val matrix = Matrix()
                 matrix.postRotate(image.imageInfo.rotationDegrees.toFloat())
                 Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
+                    .also { rotated ->
+                        if (rotated !== bitmap) bitmap.recycle()
+                    }
             } else {
                 bitmap
             }

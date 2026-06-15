@@ -23,6 +23,12 @@
     <string name="login_google_failed_format">Đăng nhập Google thất bại (%d)</string>
     <string name="login_google_not_configured">Google Sign-In chưa được cấu hình</string>
     <string name="login_google_developer_error">Google Sign-In chưa đúng cấu hình SHA-1/package cho bản cài hiện tại</string>
+    <string name="auth_error_invalid_google_token">Phiên xác thực Google không hợp lệ. Vui lòng thử đăng nhập lại.</string>
+    <string name="auth_error_google_email_mismatch">Email Google không trùng với email của tài khoản học sinh.</string>
+    <string name="auth_error_google_already_linked">Tài khoản Google này đã được liên kết với một người dùng khác.</string>
+    <string name="auth_error_google_account_mismatch">Hãy đăng nhập bằng đúng tài khoản Google đã liên kết trước đó.</string>
+    <string name="auth_error_account_inactive">Tài khoản học sinh chưa được kích hoạt.</string>
+    <string name="auth_error_invalid_credentials">Email hoặc mật khẩu không chính xác.</string>
 
     <!-- Register Screen -->
     <string name="register_title">Đăng ký tài khoản</string>
@@ -320,14 +326,17 @@
     <string name="appeals_list_empty">Chưa có khiếu nại nào</string>
     <string name="appeals_list_count">%d khiếu nại</string>
     <string name="appeals_list_empty_subtitle">Các khiếu nại bạn gửi cho bài làm sẽ xuất hiện tại đây.</string>
-    <string name="appeal_score_format">Điểm: %1$.1fđ</string>
-    <string name="appeal_score_changed_format">Điểm: %1$.1fđ → %2$.1fđ</string>
+    <string name="appeal_score_format">Điểm: %1$.2fđ</string>
+    <string name="appeal_score_changed_format">Điểm: %1$.2fđ → %2$.2fđ</string>
     <string name="result_detail_has_appeal_notice">Bạn có khiếu nại đã được gửi cho bài làm này. Nhấn để xem danh sách.</string>
     <string name="result_detail_has_appeals_notice">%d khiếu nại đã được gửi cho bài làm này. Nhấn để xem danh sách.</string>
     <string name="result_detail_appeal_dialog_message">Ví dụ: Em muốn thầy/cô xem lại bài làm giúp em.</string>
     <string name="result_detail_pending_message">Bài đang chờ chấm</string>
     <string name="result_detail_appeal_closed_exam">Chỉ có thể tạo khiếu nại khi kỳ thi đã hết giờ làm bài</string>
     <string name="result_detail_appeal_pending_exists">Bạn đang có khiếu nại chờ xử lý cho bài này</string>
+    <string name="result_detail_appeals_title">Khiếu nại đã gửi</string>
+    <string name="result_detail_appeals_count">Khiếu nại đã gửi (%d)</string>
+    <string name="result_detail_appeals_empty">Bạn chưa gửi khiếu nại nào cho bài làm này.</string>
     <string name="result_detail_student_code_format">Mã HS: %1$s</string>
 
     <!-- Appeal Detail Screen -->
@@ -435,6 +444,7 @@
     <string name="profile_student_code_format">Mã số học sinh: %1$s</string>
     <string name="profile_student_code_top_empty">Chưa có mã học sinh</string>
     <string name="profile_password_ok">Mật khẩu: Đang hoạt động</string>
+    <string name="profile_password_not_set">Mật khẩu: Chưa thiết lập</string>
     <string name="profile_password_must_change">Mật khẩu: Cần đổi mật khẩu</string>
     <string name="profile_created_at_empty">Ngày tạo: Chưa cập nhật</string>
     <string name="profile_created_at_format">Ngày tạo: %1$s</string>
@@ -560,4 +570,6 @@
         <item quantity="other">Dữ liệu bài làm của %d kỳ thi</item>
     </plurals>
 
+    <string name="omr_error_not_enough_markers">Không nhận diện đủ marker. Chỉ tìm thấy %1$d/%2$d marker cần thiết</string>
+    <string name="omr_error_missing_corner_markers">Thiếu marker góc bắt buộc: %1$s</string>
 </resources>

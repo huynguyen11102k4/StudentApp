@@ -4,8 +4,10 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.examhub.student.R
+import com.examhub.student.data.model.Appeal
 import com.examhub.student.model.ApiResult
 import com.examhub.student.model.request.appeal.StudentAppealRequest
+import com.examhub.student.model.response.appeal.AppealSummaryResponse
 import com.examhub.student.model.response.result.StudentResultDetailResponse
 import com.examhub.student.model.response.result.StudentResultExamResponse
 import com.examhub.student.repository.AppealsRepository
@@ -36,6 +38,10 @@ class ResultDetailViewModel(
     val appealCreated: SharedFlow<String> = _appealCreated.asSharedFlow()
     private val _appealCount = MutableStateFlow(0)
     val appealCount: StateFlow<Int> = _appealCount.asStateFlow()
+    private val _appeals = MutableStateFlow<List<Appeal>>(emptyList())
+    val appeals: StateFlow<List<Appeal>> = _appeals.asStateFlow()
+    private val _appealsLoaded = MutableStateFlow(false)
+    val appealsLoaded: StateFlow<Boolean> = _appealsLoaded.asStateFlow()
     private val _isResultPending = MutableStateFlow(false)
     val isResultPending: StateFlow<Boolean> = _isResultPending.asStateFlow()
     private val _resultUnavailable = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
@@ -60,7 +66,7 @@ class ResultDetailViewModel(
                         _result.value = resolvedResult
                         _isResultPending.value = resolvedResult.isPending()
                         if (!resolvedResult.isPending()) {
-                            loadAppealCount(resolvedResult)
+                            loadAppeals(resolvedResult)
                         }
                     }
                     is ApiResult.Error -> {
@@ -119,6 +125,7 @@ class ResultDetailViewModel(
                     is ApiResult.Success -> {
                         _isLoading.value = false
                         _appealCount.value = (_appealCount.value + 1).coerceAtLeast(1)
+                        _result.value?.let(::loadAppeals)
                         _appealCreated.tryEmit(result.data.appealId)
                     }
                     is ApiResult.Error -> {
@@ -130,14 +137,30 @@ class ResultDetailViewModel(
         }
     }
 
-    private fun loadAppealCount(result: StudentResultDetailResponse) {
+    private fun loadAppeals(result: StudentResultDetailResponse) {
         val sheetId = result.id.orEmpty()
         if (sheetId.isBlank()) {
             _appealCount.value = 0
+            _appeals.value = emptyList()
+            _appealsLoaded.value = true
             return
         }
         viewModelScope.launch {
-            _appealCount.value = countPendingAppealsForResult(result)
+            _appealsLoaded.value = false
+            val response = appealsRepository.getAppeals(
+                examId = result.exam?.id,
+                page = "1",
+                limit = "100"
+            ).first { it !is ApiResult.Loading }
+            if (response is ApiResult.Success) {
+                val items = response.data.data
+                    .filter { it.sheet?.id == sheetId }
+                    .map { it.toUiModel(result) }
+                    .sortedByDescending(Appeal::createdAt)
+                _appeals.value = items
+                _appealCount.value = items.count { it.status.equals("PENDING", ignoreCase = true) }
+            }
+            _appealsLoaded.value = true
         }
     }
 
@@ -175,5 +198,26 @@ class ResultDetailViewModel(
 
     private fun String?.isAppealOpenStatus(): Boolean {
         return equals("END", ignoreCase = true)
+    }
+
+    private fun AppealSummaryResponse.toUiModel(result: StudentResultDetailResponse): Appeal {
+        val resolvedExam = exam ?: sheet?.exam
+        val resolvedStudent = student ?: sheet?.student
+        return Appeal(
+            id = id,
+            studentId = resolvedStudent?.id.orEmpty(),
+            studentName = resolvedStudent?.name.orEmpty().ifBlank { result.displayStudentName().orEmpty() },
+            studentCode = resolvedStudent?.code.orEmpty().ifBlank { result.displayStudentCode().orEmpty() },
+            examId = resolvedExam?.id.orEmpty().ifBlank { result.exam?.id.orEmpty() },
+            examName = resolvedExam?.name.orEmpty().ifBlank { result.exam?.name.orEmpty() },
+            subject = resolvedExam?.subject.orEmpty().ifBlank { result.exam?.subject.orEmpty() },
+            sheetId = sheet?.id.orEmpty(),
+            oldScore = oldScore ?: sheet?.totalScore ?: result.totalScore ?: 0.0,
+            newScore = newScore,
+            reason = reason.orEmpty(),
+            status = status,
+            createdAt = createdAt,
+            teacherNote = teacherNote
+        )
     }
 }

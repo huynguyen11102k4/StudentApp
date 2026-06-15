@@ -3,67 +3,77 @@ package com.examhub.student.service
 import android.content.Context
 import android.provider.Settings
 import android.util.Base64
+import com.examhub.student.data.local.StudentAppDatabase
+import com.examhub.student.data.local.entity.CacheMetadataEntity
+import com.examhub.student.data.local.entity.JsonCacheEntity
+import com.examhub.student.security.KeystoreCrypto
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.util.UUID
 
-class TokenManager(context: Context) {
+class TokenManager(
+    context: Context,
+    private val crypto: KeystoreCrypto,
+    private val database: StudentAppDatabase
+) {
     private val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
     private val appContext = context.applicationContext
+    private val cacheDao = database.studentCacheDao()
     private val _authEvents = MutableSharedFlow<AuthEvent>(extraBufferCapacity = 1)
     val authEvents: SharedFlow<AuthEvent> = _authEvents.asSharedFlow()
 
-    fun getAccessToken(): String? = prefs.getString(KEY_ACCESS_TOKEN, null)
+    init {
+        importLegacyCacheOnce()
+    }
 
-    fun getRefreshToken(): String? = prefs.getString(KEY_REFRESH_TOKEN, null)
+    fun getAccessToken(): String? = getSecureString(KEY_ACCESS_TOKEN)
+
+    fun getRefreshToken(): String? = getSecureString(KEY_REFRESH_TOKEN)
 
     fun getExpiresAt(): Long = prefs.getLong(KEY_EXPIRES_AT, 0L)
 
     fun saveTokens(accessToken: String, refreshToken: String) {
         val expiresAt = decodeJwtExpiry(accessToken)
         prefs.edit()
-            .putString(KEY_ACCESS_TOKEN, accessToken)
-            .putString(KEY_REFRESH_TOKEN, refreshToken)
+            .putString(KEY_ACCESS_TOKEN, encryptValue(accessToken))
+            .putString(KEY_REFRESH_TOKEN, encryptValue(refreshToken))
             .putLong(KEY_EXPIRES_AT, expiresAt)
             .apply()
     }
 
-    fun getCachedAvatarUrl(): String? = prefs.getString(KEY_AVATAR_URL, null)
+    fun getCachedAvatarUrl(): String? = getCache(KEY_AVATAR_URL)
 
     fun saveCachedAvatarUrl(avatarUrl: String?) {
-        val editor = prefs.edit()
         if (avatarUrl.isNullOrBlank()) {
-            editor.remove(KEY_AVATAR_URL)
+            removeCache(KEY_AVATAR_URL)
         } else {
-            editor.putString(KEY_AVATAR_URL, avatarUrl)
+            putCache(KEY_AVATAR_URL, avatarUrl)
         }
-        editor.apply()
     }
 
-    fun getCachedProfileJson(): String? = prefs.getString(KEY_PROFILE_JSON, null)
+    fun getCachedProfileJson(): String? = getCache(KEY_PROFILE_JSON)
 
     fun saveCachedProfileJson(profileJson: String?) {
-        val editor = prefs.edit()
         if (profileJson.isNullOrBlank()) {
-            editor.remove(KEY_PROFILE_JSON)
+            removeCache(KEY_PROFILE_JSON)
         } else {
-            editor.putString(KEY_PROFILE_JSON, profileJson)
+            putCache(KEY_PROFILE_JSON, profileJson)
         }
-        editor.apply()
     }
 
-    fun getCachedSessionsJson(): String? = prefs.getString(KEY_SESSIONS_JSON, null)
+    fun getCachedSessionsJson(): String? = getCache(KEY_SESSIONS_JSON)
 
     fun saveCachedSessionsJson(sessionsJson: String?) {
-        val editor = prefs.edit()
         if (sessionsJson.isNullOrBlank()) {
-            editor.remove(KEY_SESSIONS_JSON)
+            removeCache(KEY_SESSIONS_JSON)
         } else {
-            editor.putString(KEY_SESSIONS_JSON, sessionsJson)
+            putCache(KEY_SESSIONS_JSON, sessionsJson)
         }
-        editor.apply()
     }
 
     fun saveFcmToken(token: String?) {
@@ -71,23 +81,21 @@ class TokenManager(context: Context) {
         if (token.isNullOrBlank()) {
             editor.remove(KEY_FCM_TOKEN)
         } else {
-            editor.putString(KEY_FCM_TOKEN, token)
+            editor.putString(KEY_FCM_TOKEN, encryptValue(token))
         }
         editor.apply()
     }
 
-    fun getFcmToken(): String? = prefs.getString(KEY_FCM_TOKEN, null)
+    fun getFcmToken(): String? = getSecureString(KEY_FCM_TOKEN)
 
     fun clearTokens(notifySessionExpired: Boolean = false) {
         prefs.edit()
             .remove(KEY_ACCESS_TOKEN)
             .remove(KEY_REFRESH_TOKEN)
             .remove(KEY_EXPIRES_AT)
-            .remove(KEY_AVATAR_URL)
-            .remove(KEY_PROFILE_JSON)
-            .remove(KEY_SESSIONS_JSON)
             .remove(KEY_FCM_TOKEN)
             .apply()
+        dbCall { cacheDao.deleteJsonNamespace(NAMESPACE_AUTH_CACHE) }
         if (notifySessionExpired) {
             _authEvents.tryEmit(AuthEvent.SessionExpired)
         }
@@ -128,6 +136,70 @@ class TokenManager(context: Context) {
         }
     }
 
+    private fun getSecureString(key: String): String? {
+        val stored = prefs.getString(key, null) ?: return null
+        if (stored.startsWith(ENCRYPTED_PREFIX)) {
+            return runCatching { crypto.decryptString(stored.removePrefix(ENCRYPTED_PREFIX)) }.getOrNull()
+        }
+        // One-time migration from the previous plaintext storage.
+        prefs.edit().putString(key, encryptValue(stored)).apply()
+        return stored
+    }
+
+    private fun encryptValue(value: String): String = ENCRYPTED_PREFIX + crypto.encryptString(value)
+
+    private fun getCache(key: String): String? =
+        dbCall { cacheDao.getJson(NAMESPACE_AUTH_CACHE, key)?.json }
+
+    private fun putCache(key: String, value: String) {
+        dbCall {
+            cacheDao.upsertJson(
+                JsonCacheEntity(
+                    namespace = NAMESPACE_AUTH_CACHE,
+                    recordKey = key,
+                    json = value,
+                    sortOrder = 0,
+                    updatedAt = System.currentTimeMillis()
+                )
+            )
+        }
+    }
+
+    private fun removeCache(key: String) {
+        dbCall { cacheDao.deleteJson(NAMESPACE_AUTH_CACHE, key) }
+    }
+
+    private fun importLegacyCacheOnce() {
+        dbCall {
+            if (cacheDao.getMetadata(KEY_LEGACY_CACHE_IMPORT_COMPLETE) == "1") return@dbCall
+            database.runInTransaction {
+                listOf(KEY_AVATAR_URL, KEY_PROFILE_JSON, KEY_SESSIONS_JSON).forEach { key ->
+                    prefs.getString(key, null)?.let { value ->
+                        cacheDao.upsertJson(
+                            JsonCacheEntity(
+                                namespace = NAMESPACE_AUTH_CACHE,
+                                recordKey = key,
+                                json = value,
+                                sortOrder = 0,
+                                updatedAt = System.currentTimeMillis()
+                            )
+                        )
+                    }
+                }
+                cacheDao.upsertMetadata(
+                    CacheMetadataEntity(
+                        KEY_LEGACY_CACHE_IMPORT_COMPLETE,
+                        "1",
+                        System.currentTimeMillis()
+                    )
+                )
+            }
+        }
+    }
+
+    private fun <T> dbCall(block: () -> T): T =
+        runBlocking { withContext(Dispatchers.IO) { block() } }
+
     private companion object {
         const val PREFS_NAME = "student_auth"
         const val KEY_ACCESS_TOKEN = "access_token"
@@ -138,6 +210,9 @@ class TokenManager(context: Context) {
         const val KEY_PROFILE_JSON = "profile_json"
         const val KEY_SESSIONS_JSON = "sessions_json"
         const val KEY_FCM_TOKEN = "fcm_token"
+        const val ENCRYPTED_PREFIX = "enc:v1:"
+        const val NAMESPACE_AUTH_CACHE = "auth_cache"
+        const val KEY_LEGACY_CACHE_IMPORT_COMPLETE = "legacy_auth_cache_import_complete"
     }
 }
 

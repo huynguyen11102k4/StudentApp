@@ -17,7 +17,7 @@
         android:layout_height="0dp"
         android:layout_margin="@dimen/scan_overlay_margin"
         android:background="@drawable/bg_scan_overlay"
-        android:visibility="gone"
+        android:visibility="visible"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
@@ -32,7 +32,7 @@
         android:contentDescription="@string/camera_ar_close"
         android:padding="@dimen/spacing_12"
         android:src="@drawable/ic_close"
-        android:tint="@color/white"
+        app:tint="@color/white"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
@@ -60,6 +60,7 @@
             android:paddingVertical="@dimen/spacing_8"
             android:text="@string/camera_ar_marker_hint"
             android:textColor="@color/status_processing_text"
+            android:fontFamily="@font/outfit"
             android:textStyle="bold" />
 
         <TextView
@@ -73,6 +74,7 @@
             android:paddingHorizontal="@dimen/spacing_16"
             android:paddingVertical="@dimen/spacing_8"
             android:text="@string/camera_ar_instruction"
+            android:fontFamily="@font/outfit"
             android:textColor="@color/white" />
     </LinearLayout>
 
@@ -81,7 +83,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginBottom="@dimen/spacing_32"
-        app:cardBackgroundColor="@color/inverse_surface"
+        app:cardBackgroundColor="@color/camera_controls_bg"
         app:cardCornerRadius="@dimen/student_card_radius_xlarge"
         app:cardElevation="@dimen/elevation_level3"
         app:contentPadding="@dimen/spacing_12"
@@ -105,17 +107,19 @@
                 android:contentDescription="@string/camera_ar_gallery"
                 android:padding="@dimen/spacing_12"
                 android:src="@drawable/ic_assignment"
-                android:tint="@color/tertiary" />
+                app:tint="@color/tertiary" />
 
             <com.google.android.material.floatingactionbutton.FloatingActionButton
                 android:id="@+id/fabCapture"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
+                style="@style/Widget.Material3.FloatingActionButton.Large.Primary"
+                android:layout_width="@dimen/camera_capture_button_size"
+                android:layout_height="@dimen/camera_capture_button_size"
                 android:layout_marginHorizontal="@dimen/spacing_24"
                 android:contentDescription="@string/camera_ar_capture"
                 android:src="@drawable/ic_camera"
                 app:backgroundTint="@color/primary"
-                app:fabSize="normal"
+                app:fabCustomSize="@dimen/camera_capture_button_size"
+                app:maxImageSize="@dimen/camera_capture_icon_size"
                 app:tint="@color/on_primary" />
 
             <ImageButton
@@ -126,7 +130,7 @@
                 android:contentDescription="@string/camera_ar_flash_off"
                 android:padding="@dimen/spacing_12"
                 android:src="@drawable/ic_flash_off"
-                android:tint="@color/primary" />
+                app:tint="@color/primary" />
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
 

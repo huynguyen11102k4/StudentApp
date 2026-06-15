@@ -2,10 +2,10 @@
 <shape xmlns:android="http://schemas.android.com/apk/res/android"
     android:shape="rectangle">
     <stroke
-        android:width="2dp"
-        android:color="#66FFFFFF"
-        android:dashWidth="10dp"
-        android:dashGap="6dp" />
-    <corners android:radius="12dp" />
+        android:width="@dimen/camera_scan_overlay_stroke"
+        android:color="@color/camera_overlay_idle"
+        android:dashWidth="@dimen/camera_scan_overlay_dash_width"
+        android:dashGap="@dimen/camera_scan_overlay_dash_gap" />
+    <corners android:radius="@dimen/corner_card" />
     <solid android:color="#00000000" />
 </shape>

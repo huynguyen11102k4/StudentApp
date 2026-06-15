@@ -66,6 +66,11 @@
     <dimen name="corner_xxlarge">28dp</dimen>
     <dimen name="corner_full">50dp</dimen>
 
+    <!-- Semantic Educational Design Tokens -->
+    <dimen name="corner_input_field">12dp</dimen>
+    <dimen name="corner_card">16dp</dimen>
+    <dimen name="corner_button_pill">50dp</dimen>
+
     <!-- ============================================================
          Elevation
          ============================================================ -->
@@ -100,6 +105,12 @@
     <dimen name="dashboard_quick_card_min_height">156dp</dimen>
     <dimen name="screen_bottom_content_padding">120dp</dimen>
     <dimen name="scan_overlay_margin">40dp</dimen>
+    <dimen name="camera_scan_overlay_stroke">2dp</dimen>
+    <dimen name="camera_scan_overlay_dash_width">10dp</dimen>
+    <dimen name="camera_scan_overlay_dash_gap">6dp</dimen>
+    <dimen name="camera_capture_button_size">72dp</dimen>
+    <dimen name="camera_capture_icon_size">32dp</dimen>
+    <dimen name="camera_chip_radius">24dp</dimen>
 
     <!-- ============================================================
          FAB

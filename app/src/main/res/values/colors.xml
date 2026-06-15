@@ -43,10 +43,10 @@
     <color name="surface_variant">#FFE1E4D7</color>
     <color name="on_surface_variant">#FF43473C</color>
     <color name="surface_container_lowest">#FFEEF0E8</color>
-    <color name="surface_container_low">#FFEBEDE5</color>
-    <color name="surface_container">#FFE4E6DE</color>
-    <color name="surface_container_high">#FFDEE0D8</color>
-    <color name="surface_container_highest">#FFD7D9D1</color>
+    <color name="surface_container_low">#FFE8EAE1</color>
+    <color name="surface_container">#FFDFE2D8</color>
+    <color name="surface_container_high">#FFD6D9CF</color>
+    <color name="surface_container_highest">#FFCED1C5</color>
     <color name="surface_dim">#FFEDEFE7</color>
     <color name="inverse_surface">#FF2F3129</color>
     <color name="inverse_on_surface">#FFF2F3EA</color>
@@ -109,6 +109,11 @@
     <color name="lock_mode_panel_stroke">#FFFFC77D</color>
     <color name="lock_mode_chip_bg">#FFD2EEF4</color>
     <color name="lock_mode_chip_text">#FF0B5864</color>
+    <color name="camera_overlay_idle">#99FFFFFF</color>
+    <color name="camera_overlay_ready">#FF7EE081</color>
+    <color name="camera_glass_bg">#66000000</color>
+    <color name="camera_glass_stroke">#33FFFFFF</color>
+    <color name="camera_controls_bg">#F22F3129</color>
 
     <!-- Utility -->
     <color name="black">#FF000000</color>

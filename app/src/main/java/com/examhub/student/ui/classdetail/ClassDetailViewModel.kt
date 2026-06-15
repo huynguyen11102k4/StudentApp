@@ -167,7 +167,7 @@ class ClassDetailViewModel(
             status = status.orEmpty(),
             gradedCount = count?.answerSheets ?: 0,
             totalStudents = 0,
-            isOfflineReady = offlineCacheManager.getTemplate(id) != null,
+            isOfflineReady = offlineCacheManager.isOfflineReady(id),
             date = displayTime,
             resultSheetId = resultSheetId,
             hasSubmitted = resultSheetId != null || hasSubmittedStatus(),

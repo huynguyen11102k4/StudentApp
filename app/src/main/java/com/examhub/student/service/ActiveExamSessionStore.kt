@@ -1,64 +1,47 @@
 package com.examhub.student.service
 
 import android.content.Context
+import com.examhub.student.data.local.StudentAppDatabase
+import com.examhub.student.data.local.entity.ActiveExamSessionEntity
+import com.examhub.student.data.local.entity.CacheMetadataEntity
+import com.examhub.student.data.local.model.ActiveExamSession
+import com.examhub.student.security.KeystoreCrypto
 import com.google.gson.Gson
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.TimeZone
 
-data class ActiveExamSession(
-    val examId: String,
-    val sessionId: String,
-    val endTime: String,
-    val remainingSeconds: Int,
-    val savedAtMillis: Long,
-    val isLockedMode: Boolean,
-    val classCode: String = "",
-    val studentCode: String = "",
-    val studentCodeMode: String = "UNKNOWN",
-    val questionCount: Int = 0
+class ActiveExamSessionStore(
+    context: Context,
+    private val database: StudentAppDatabase,
+    private val gson: Gson,
+    private val crypto: KeystoreCrypto
 ) {
-    fun currentRemainingSeconds(): Int {
-        val endMillis = parseTimeMillis(endTime)
-        if (endMillis != null) {
-            return ((endMillis - System.currentTimeMillis()) / 1_000L).toInt().coerceAtLeast(0)
-        }
-        val elapsed = ((System.currentTimeMillis() - savedAtMillis) / 1_000L).toInt().coerceAtLeast(0)
-        return (remainingSeconds - elapsed).coerceAtLeast(0)
+    private val appContext = context.applicationContext
+    private val dao = database.studentCacheDao()
+
+    init {
+        importLegacyPreferencesOnce()
     }
-
-    fun isStillActive(): Boolean = sessionId.isNotBlank() && currentRemainingSeconds() > 0
-
-    private fun parseTimeMillis(value: String?): Long? {
-        if (value.isNullOrBlank()) return null
-        val patterns = listOf(
-            "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",
-            "yyyy-MM-dd'T'HH:mm:ss'Z'",
-            "yyyy-MM-dd'T'HH:mm:ss.SSSXXX",
-            "yyyy-MM-dd'T'HH:mm:ssXXX"
-        )
-        return patterns.firstNotNullOfOrNull { pattern ->
-            runCatching {
-                SimpleDateFormat(pattern, Locale.US).apply {
-                    timeZone = TimeZone.getTimeZone("UTC")
-                }.parse(value)?.time
-            }.getOrNull()
-        }
-    }
-}
-
-class ActiveExamSessionStore(context: Context) {
-    private val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-    private val gson = Gson()
 
     fun save(session: ActiveExamSession) {
-        prefs.edit().putString(key(session.examId), gson.toJson(session)).apply()
+        dbCall {
+            dao.upsertActiveSession(
+                ActiveExamSessionEntity(
+                    examId = session.examId,
+                    sessionId = session.sessionId,
+                    encryptedJson = crypto.encryptString(gson.toJson(session)),
+                    updatedAt = System.currentTimeMillis()
+                )
+            )
+        }
     }
 
     fun get(examId: String): ActiveExamSession? {
-        if (examId.isBlank()) return null
-        val raw = prefs.getString(key(examId), null) ?: return null
-        val session = runCatching { gson.fromJson(raw, ActiveExamSession::class.java) }.getOrNull()
+        val session = getIncludingExpired(examId)
         if (session == null || !session.isStillActive()) {
             clear(examId)
             return null
@@ -66,27 +49,65 @@ class ActiveExamSessionStore(context: Context) {
         return session
     }
 
+    fun getIncludingExpired(examId: String): ActiveExamSession? {
+        if (examId.isBlank()) return null
+        val encrypted = dbCall { dao.getActiveSession(examId)?.encryptedJson } ?: return null
+        return decode(encrypted)
+    }
+
     fun clear(examId: String) {
         if (examId.isBlank()) return
-        prefs.edit().remove(key(examId)).apply()
+        dbCall { dao.deleteActiveSession(examId) }
     }
 
     fun clearBySessionId(sessionId: String) {
         if (sessionId.isBlank()) return
-        prefs.all.entries
-            .filter { it.key.startsWith(KEY_PREFIX) && it.value is String }
-            .firstOrNull { (_, value) ->
-                runCatching { gson.fromJson(value as String, ActiveExamSession::class.java).sessionId == sessionId }
-                    .getOrDefault(false)
-            }
-            ?.key
-            ?.let { prefs.edit().remove(it).apply() }
+        dbCall { dao.deleteActiveSessionBySessionId(sessionId) }
     }
 
-    private fun key(examId: String) = "$KEY_PREFIX$examId"
+    private fun importLegacyPreferencesOnce() {
+        dbCall {
+            if (dao.getMetadata(KEY_LEGACY_IMPORT_COMPLETE) == "1") return@dbCall
+            val all = appContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).all
+            database.runInTransaction {
+                all.entries
+                    .filter { it.key.startsWith(KEY_PREFIX) && it.value is String }
+                    .forEach { (_, value) ->
+                        val raw = value as String
+                        val session = runCatching {
+                            gson.fromJson(raw, ActiveExamSession::class.java)
+                        }.getOrNull() ?: return@forEach
+                        dao.upsertActiveSession(
+                            ActiveExamSessionEntity(
+                                examId = session.examId,
+                                sessionId = session.sessionId,
+                                encryptedJson = crypto.encryptString(raw),
+                                updatedAt = System.currentTimeMillis()
+                            )
+                        )
+                    }
+                dao.upsertMetadata(
+                    CacheMetadataEntity(
+                        KEY_LEGACY_IMPORT_COMPLETE,
+                        "1",
+                        System.currentTimeMillis()
+                    )
+                )
+            }
+        }
+    }
+
+    private fun decode(encrypted: String): ActiveExamSession? =
+        runCatching {
+            gson.fromJson(crypto.decryptString(encrypted), ActiveExamSession::class.java)
+        }.getOrNull()
+
+    private fun <T> dbCall(block: () -> T): T =
+        runBlocking { withContext(Dispatchers.IO) { block() } }
 
     private companion object {
         const val PREFS_NAME = "active_exam_sessions"
         const val KEY_PREFIX = "active_session_"
+        const val KEY_LEGACY_IMPORT_COMPLETE = "legacy_active_sessions_import_complete"
     }
 }

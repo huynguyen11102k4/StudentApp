@@ -120,7 +120,7 @@ class DashboardViewModel(
                                 status = exam.status.orEmpty(),
                                 gradedCount = exam.count?.answerSheets ?: 0,
                                 totalStudents = 0,
-                                isOfflineReady = offlineCacheManager.getTemplate(exam.id) != null,
+                                isOfflineReady = offlineCacheManager.isOfflineReady(exam.id),
                                 date = exam.displayTime,
                                 resultSheetId = resultSheetId,
                                 hasSubmitted = resultSheetId != null || exam.hasSubmittedStatus(),

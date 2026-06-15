@@ -64,6 +64,8 @@ class SmartReviewFragment : Fragment() {
             launch {
                 viewModel.isLoading.collect { loading ->
                     binding.progressBar.visibility = if (loading) View.VISIBLE else View.GONE
+                    binding.btnRetake.isEnabled = !loading
+                    binding.btnContinueCapture.isEnabled = !loading
                 }
             }
             launch {
@@ -72,6 +74,7 @@ class SmartReviewFragment : Fragment() {
                     val bundle = Bundle().apply {
                         putString("examId", viewModel.reviewState.value.examId)
                         putString("sheetId", submission.resultId.orEmpty())
+                        putString("submissionId", submission.submissionId)
                     }
                     findNavController().navigate(R.id.action_smart_review_to_submission_end, bundle)
                 }
@@ -79,6 +82,14 @@ class SmartReviewFragment : Fragment() {
             launch {
                 viewModel.blankSubmissionFinished.collect { submission ->
                     navigateToSubmissionEnd(submission?.resultId)
+                }
+            }
+            launch {
+                viewModel.submissionFrozen.collect { frozen ->
+                    navigateToSubmissionEnd(
+                        resultId = null,
+                        clientSubmissionId = frozen.clientSubmissionId
+                    )
                 }
             }
             launch {
@@ -182,7 +193,7 @@ class SmartReviewFragment : Fragment() {
         navigateToSubmissionEnd(null)
     }
 
-    private fun navigateToSubmissionEnd(resultId: String?) {
+    private fun navigateToSubmissionEnd(resultId: String?, clientSubmissionId: String = "") {
         if (_binding == null) return
         (requireActivity() as? MainActivity)?.exitKioskMode()
         findNavController().navigate(
@@ -190,6 +201,8 @@ class SmartReviewFragment : Fragment() {
             Bundle().apply {
                 putString("examId", viewModel.reviewState.value.examId.ifBlank { arguments?.getString("examId").orEmpty() })
                 putString("sheetId", resultId.orEmpty())
+                putString("submissionId", arguments?.getString("submissionId").orEmpty())
+                putString("clientSubmissionId", clientSubmissionId)
             },
             navOptions {
                 popUpTo(R.id.lockModeFragment) { inclusive = true }

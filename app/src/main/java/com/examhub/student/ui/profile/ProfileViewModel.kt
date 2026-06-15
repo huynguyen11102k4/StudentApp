@@ -8,6 +8,7 @@ import com.examhub.student.model.request.auth.GoogleLinkRequest
 import com.examhub.student.model.response.profile.UserResponse
 import com.examhub.student.repository.AuthRepository
 import com.examhub.student.util.helper.ResourceProvider
+import com.examhub.student.util.helper.sanitizedStudentProfile
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -101,15 +102,14 @@ class ProfileViewModel(
                 when (result) {
                     is ApiResult.Loading -> _isSaving.value = true
                     is ApiResult.Success -> {
-                        _isSaving.value = false
                         _userProfile.value = _userProfile.value?.copy(
                             googleLinked = result.data.googleLinked,
-                            googleId = if (result.data.googleLinked) {
-                                result.data.googleId ?: _userProfile.value?.googleId
-                            } else {
-                                null
-                            }
-                        )
+                            hasPassword = result.data.hasPassword ?: _userProfile.value?.hasPassword,
+                            authMethods = result.data.authMethods
+                                ?: _userProfile.value?.authMethods?.copy(google = result.data.googleLinked)
+                        )?.sanitizedStudentProfile()
+                        refreshProfileAfterGoogleChange()
+                        _isSaving.value = false
                         _successMessage.tryEmit(
                             if (result.data.updated == false) {
                                 resources.getString(R.string.profile_google_linked_noop)
@@ -120,7 +120,9 @@ class ProfileViewModel(
                     }
                     is ApiResult.Error -> {
                         _isSaving.value = false
-                        _errorMessage.tryEmit(result.exception.message ?: resources.getString(R.string.profile_google_link_failed))
+                        _errorMessage.tryEmit(
+                            result.exception.googleErrorMessage(R.string.profile_google_link_failed)
+                        )
                     }
                 }
             }
@@ -133,11 +135,14 @@ class ProfileViewModel(
                 when (result) {
                     is ApiResult.Loading -> _isSaving.value = true
                     is ApiResult.Success -> {
-                        _isSaving.value = false
                         _userProfile.value = _userProfile.value?.copy(
                             googleLinked = result.data.googleLinked,
-                            googleId = null
-                        )
+                            hasPassword = result.data.hasPassword ?: _userProfile.value?.hasPassword,
+                            authMethods = result.data.authMethods
+                                ?: _userProfile.value?.authMethods?.copy(google = result.data.googleLinked)
+                        )?.sanitizedStudentProfile()
+                        refreshProfileAfterGoogleChange()
+                        _isSaving.value = false
                         _successMessage.tryEmit(
                             if (result.data.updated == false) {
                                 resources.getString(R.string.profile_google_unlinked_noop)
@@ -148,15 +153,37 @@ class ProfileViewModel(
                     }
                     is ApiResult.Error -> {
                         _isSaving.value = false
-                        val fallback = if (result.exception.code == "PASSWORD_REQUIRED_BEFORE_UNLINK") {
-                            resources.getString(R.string.profile_google_unlink_password_required)
-                        } else {
-                            resources.getString(R.string.profile_google_unlink_failed)
-                        }
-                        _errorMessage.tryEmit(result.exception.message ?: fallback)
+                        _errorMessage.tryEmit(
+                            result.exception.googleErrorMessage(R.string.profile_google_unlink_failed)
+                        )
                     }
                 }
             }
         }
+    }
+
+    private suspend fun refreshProfileAfterGoogleChange() {
+        authRepository.getMe().collect { refreshed ->
+            if (refreshed is ApiResult.Success) {
+                _userProfile.value = refreshed.data
+            }
+        }
+    }
+
+    private fun com.examhub.student.model.ApiException.googleErrorMessage(
+        fallbackRes: Int
+    ): String {
+        val resource = when (code.uppercase()) {
+            "INVALID_GOOGLE_TOKEN" -> R.string.auth_error_invalid_google_token
+            "GOOGLE_EMAIL_MISMATCH" -> R.string.auth_error_google_email_mismatch
+            "GOOGLE_ACCOUNT_ALREADY_LINKED" -> R.string.auth_error_google_already_linked
+            "GOOGLE_ACCOUNT_MISMATCH" -> R.string.auth_error_google_account_mismatch
+            "PASSWORD_REQUIRED_BEFORE_UNLINK" -> R.string.profile_google_unlink_password_required
+            "ACCOUNT_INACTIVE" -> R.string.auth_error_account_inactive
+            else -> null
+        }
+        return resource?.let(resources::getString)
+            ?: message.takeIf(String::isNotBlank)
+            ?: resources.getString(fallbackRes)
     }
 }

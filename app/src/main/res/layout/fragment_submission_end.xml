@@ -42,6 +42,16 @@
             android:text="@string/submission_end_description"
             android:textColor="@color/text_secondary" />
 
+        <TextView
+            android:id="@+id/tvSyncStatus"
+            style="@style/Text_Label_Large"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/spacing_16"
+            android:gravity="center"
+            android:textColor="@color/primary"
+            android:visibility="gone" />
+
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnResults"
             style="@style/Student.PrimaryButton"

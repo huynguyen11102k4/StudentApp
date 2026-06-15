@@ -34,7 +34,6 @@
         <item name="android:textColor">@color/on_primary_container</item>
         <item name="cornerRadius">@dimen/corner_medium</item>
         <item name="android:minHeight">@dimen/button_height</item>
-        <item name="android:stateListAnimator">@animator/button_3d_lift</item>
     </style>
 
     <!-- M3 Elevated Button: surface_container_low background for contrast against background -->
@@ -44,7 +43,6 @@
         <item name="cornerRadius">@dimen/corner_medium</item>
         <item name="android:minHeight">@dimen/button_height</item>
         <item name="android:elevation">@dimen/elevation_level2</item>
-        <item name="android:stateListAnimator">@animator/button_3d_lift</item>
         <item name="rippleColor">@color/primary_container</item>
     </style>
 
@@ -56,6 +54,8 @@
         <item name="android:layout_width">wrap_content</item>
         <item name="android:layout_height">wrap_content</item>
         <item name="android:textColor">@color/text_primary</item>
+        <item name="android:fontFamily">@font/outfit</item>
+        <item name="fontFamily">@font/outfit</item>
     </style>
     <style name="Text_Headline_Medium" parent="TextAppearance.Material3.HeadlineMedium">
         <item name="android:layout_width">wrap_content</item>
@@ -66,6 +66,8 @@
         <item name="android:layout_width">wrap_content</item>
         <item name="android:layout_height">wrap_content</item>
         <item name="android:textColor">@color/text_primary</item>
+        <item name="android:fontFamily">@font/outfit</item>
+        <item name="fontFamily">@font/outfit</item>
     </style>
     <style name="Text_Toolbar_Title_Bold" parent="TextAppearance.Material3.TitleLarge">
         <item name="android:textColor">@color/text_primary</item>
@@ -159,11 +161,11 @@
         <item name="boxStrokeErrorColor">@color/error</item>
         <item name="boxStrokeWidth">1dp</item>
         <item name="boxStrokeWidthFocused">2dp</item>
-        <item name="boxCornerRadiusTopStart">@dimen/corner_small</item>
-        <item name="boxCornerRadiusTopEnd">@dimen/corner_small</item>
-        <item name="boxCornerRadiusBottomStart">@dimen/corner_small</item>
-        <item name="boxCornerRadiusBottomEnd">@dimen/corner_small</item>
-        <item name="hintTextColor">@color/text_hint</item>
+        <item name="boxCornerRadiusTopStart">@dimen/corner_input_field</item>
+        <item name="boxCornerRadiusTopEnd">@dimen/corner_input_field</item>
+        <item name="boxCornerRadiusBottomStart">@dimen/corner_input_field</item>
+        <item name="boxCornerRadiusBottomEnd">@dimen/corner_input_field</item>
+        <item name="hintTextColor">@color/text_secondary</item>
     </style>
 
     <!-- ============================================================
@@ -226,23 +228,22 @@
          Student App design system aliases
          ============================================================ -->
     <style name="Student.PrimaryButton" parent="Button_Primary">
-        <item name="cornerRadius">@dimen/corner_large</item>
+        <item name="cornerRadius">@dimen/corner_button_pill</item>
         <item name="android:minHeight">@dimen/button_height_large</item>
         <item name="android:textStyle">bold</item>
-        <item name="android:stateListAnimator">@animator/button_3d_lift</item>
     </style>
 
     <style name="Student.SecondaryButton" parent="Button_FilledTonal">
         <item name="backgroundTint">@color/army_green_soft</item>
         <item name="android:textColor">@color/primary</item>
-        <item name="cornerRadius">@dimen/corner_large</item>
+        <item name="cornerRadius">@dimen/corner_input_field</item>
         <item name="android:textStyle">bold</item>
     </style>
 
     <style name="Student.OutlineButton" parent="Button_Secondary">
         <item name="android:textColor">@color/student_accent</item>
         <item name="strokeColor">@color/student_accent</item>
-        <item name="cornerRadius">@dimen/corner_large</item>
+        <item name="cornerRadius">@dimen/corner_input_field</item>
         <item name="android:textStyle">bold</item>
     </style>
 
@@ -258,7 +259,8 @@
         <item name="cardBackgroundColor">@color/surface_container_low</item>
         <item name="cardCornerRadius">@dimen/student_card_radius_large</item>
         <item name="cardElevation">@dimen/elevation_level1</item>
-        <item name="strokeWidth">0dp</item>
+        <item name="strokeWidth">1dp</item>
+        <item name="strokeColor">@color/outline_variant</item>
         <item name="android:stateListAnimator">@animator/card_3d_lift</item>
         <item name="rippleColor">@color/primary_container</item>
     </style>
@@ -266,6 +268,7 @@
     <style name="Student.DashboardActionCard" parent="Student.DashboardCard">
         <item name="cardCornerRadius">@dimen/student_card_radius_large</item>
         <item name="cardElevation">@dimen/elevation_level2</item>
+        <item name="android:foreground">?attr/selectableItemBackground</item>
     </style>
 
     <style name="Student.BottomNavigation" parent="Widget.Material3.BottomNavigationView">
@@ -275,14 +278,8 @@
     </style>
 
     <style name="Student.InputField" parent="TextInputLayout_Outlined">
-        <item name="boxBackgroundColor">@color/surface</item>
+        <item name="boxBackgroundColor">@color/surface_container_low</item>
         <item name="boxStrokeColor">@color/text_input_stroke</item>
-        <item name="boxStrokeWidth">1dp</item>
-        <item name="boxStrokeWidthFocused">2dp</item>
-        <item name="boxCornerRadiusTopStart">@dimen/corner_large</item>
-        <item name="boxCornerRadiusTopEnd">@dimen/corner_large</item>
-        <item name="boxCornerRadiusBottomStart">@dimen/corner_large</item>
-        <item name="boxCornerRadiusBottomEnd">@dimen/corner_large</item>
         <item name="boxBackgroundMode">outline</item>
     </style>
 
@@ -319,7 +316,7 @@
     <style name="Register.PrimaryButton" parent="Widget.Material3.Button">
         <item name="backgroundTint">@color/register_button_tint</item>
         <item name="android:textColor">@color/white</item>
-        <item name="cornerRadius">@dimen/register_input_radius</item>
+        <item name="cornerRadius">@dimen/corner_button_pill</item>
         <item name="android:textSize">17sp</item>
         <item name="android:textStyle">bold</item>
         <item name="android:minHeight">@dimen/register_button_height</item>

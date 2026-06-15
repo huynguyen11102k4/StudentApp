@@ -190,9 +190,42 @@
                 android:layout_width="match_parent"
                 android:layout_height="@dimen/button_height_large"
                 android:layout_marginTop="@dimen/spacing_20"
-                android:layout_marginBottom="@dimen/screen_bottom_content_padding"
                 android:text="@string/result_detail_create_appeal"
                 app:icon="@drawable/ic_appeal" />
+
+            <TextView
+                android:id="@+id/tvAppealsTitle"
+                style="@style/Text_Title_Medium"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/spacing_24"
+                android:text="@string/result_detail_appeals_title"
+                android:textColor="@color/text_primary"
+                android:textStyle="bold"
+                android:visibility="gone" />
+
+            <TextView
+                android:id="@+id/tvAppealsEmpty"
+                style="@style/Text_Body_Medium"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/spacing_12"
+                android:gravity="center"
+                android:padding="@dimen/spacing_20"
+                android:text="@string/result_detail_appeals_empty"
+                android:textColor="@color/text_secondary"
+                android:visibility="gone" />
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/rvAppeals"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/spacing_12"
+                android:clipToPadding="false"
+                android:nestedScrollingEnabled="false"
+                android:paddingBottom="@dimen/screen_bottom_content_padding"
+                android:visibility="gone"
+                app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager" />
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
 

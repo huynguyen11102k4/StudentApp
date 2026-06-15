@@ -27,8 +27,11 @@ class MarkerDetector {
         val numMarkers = corners.size
         Log.d("MarkerDetector", "Found $numMarkers Aruco Markers")
 
-        if(numMarkers < 4){
-            throw RuntimeException("Not enough markers found, Only found: $numMarkers")
+        if (numMarkers < MINIMUM_MARKERS) {
+            throw MarkerDetectionException.NotEnoughMarkers(
+                found = numMarkers,
+                required = MINIMUM_MARKERS
+            )
         }
 
         val markerDict = HashMap<Int, MarkerInfo>()
@@ -58,7 +61,7 @@ class MarkerDetector {
 
         val missingIds = requiredIds.filter { !markerDict.containsKey(it) }
         if (missingIds.isNotEmpty()) {
-            throw RuntimeException("Missing required corner markers: $missingIds")
+            throw MarkerDetectionException.MissingRequiredMarkers(missingIds)
         }
 
         val tl = markerDict[1]!!.center  // Top-Left
@@ -98,6 +101,21 @@ class MarkerDetector {
 
         return imgVis
     }
+
+    private companion object {
+        const val MINIMUM_MARKERS = 4
+    }
+}
+
+sealed class MarkerDetectionException : RuntimeException() {
+    data class NotEnoughMarkers(
+        val found: Int,
+        val required: Int
+    ) : MarkerDetectionException()
+
+    data class MissingRequiredMarkers(
+        val markerIds: List<Int>
+    ) : MarkerDetectionException()
 }
 
 private class MatOfPoint : Mat() {

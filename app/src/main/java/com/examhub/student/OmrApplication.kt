@@ -9,6 +9,8 @@ import com.examhub.student.service.LanguagePreferenceManager
 import com.examhub.student.service.OmrFirebaseMessagingService
 import com.examhub.student.service.ThemePreferenceManager
 import com.examhub.student.service.ViolationQueueManager
+import com.examhub.student.service.OfflineSubmissionManager
+import com.examhub.student.data.local.LegacySubmissionQueueImporter
 import org.opencv.android.OpenCVLoader
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.context.startKoin
@@ -35,6 +37,8 @@ class OmrApplication : Application() {
                 ViewModelModule.module
             )
         }
+        GlobalContext.get().get<LegacySubmissionQueueImporter>().importOnce()
         GlobalContext.get().get<ViolationQueueManager>().takeIf { it.count() > 0 }?.scheduleSync()
+        GlobalContext.get().get<OfflineSubmissionManager>().schedulePendingSync()
     }
 }

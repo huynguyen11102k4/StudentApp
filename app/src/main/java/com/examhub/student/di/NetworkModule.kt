@@ -23,6 +23,13 @@ import com.examhub.student.service.UnauthorizedInterceptor
 import com.examhub.student.service.OfflineCacheManager
 import com.examhub.student.service.ActiveExamSessionStore
 import com.examhub.student.service.ViolationQueueManager
+import com.examhub.student.security.EncryptedSubmissionFileStore
+import com.examhub.student.security.KeystoreCrypto
+import com.examhub.student.security.SecurePermitStore
+import com.examhub.student.data.local.StudentAppDatabase
+import com.examhub.student.data.local.LegacySubmissionQueueImporter
+import com.examhub.student.service.OfflineSubmissionManager
+import androidx.room.Room
 import com.examhub.student.util.helper.ResourceProvider
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
@@ -38,22 +45,40 @@ object NetworkModule {
     val module = module {
         single { GsonBuilder().create() }
         single { ResourceProvider(androidContext()) }
-        single { TokenManager(androidContext()) }
+        single { KeystoreCrypto() }
+        single {
+            Room.databaseBuilder(
+                androidContext(),
+                StudentAppDatabase::class.java,
+                "student_app.db"
+            ).build()
+        }
+        single { get<StudentAppDatabase>().studentCacheDao() }
+        single { get<StudentAppDatabase>().queuedSubmissionDao() }
+        single { LegacySubmissionQueueImporter(androidContext(), get()) }
+        single { TokenManager(androidContext(), get(), get()) }
+        single { SecurePermitStore(androidContext(), get(), get()) }
+        single { EncryptedSubmissionFileStore(androidContext(), get()) }
         single { NotificationPreferenceManager(androidContext()) }
         single { FcmTokenRegistrar(get(), get(), get(), androidContext()) }
-        single { ETagCacheManager(androidContext()) }
-        single { OfflineCacheManager(androidContext()) }
-        single { ActiveExamSessionStore(androidContext()) }
-        single { ViolationQueueManager(androidContext(), get()) }
+        single { ETagCacheManager(androidContext(), get()) }
+        single { OfflineCacheManager(androidContext(), get(), get()) }
+        single { ActiveExamSessionStore(androidContext(), get(), get(), get()) }
+        single { ViolationQueueManager(androidContext(), get(), get(), get()) }
         single { AuthInterceptor(get()) }
         single { UnauthorizedInterceptor(get()) }
         single { ETagCacheInterceptor(get()) }
         single(named("deviceIdInterceptor")) {
             val tokenManager: TokenManager = get()
             Interceptor { chain ->
-                val request = chain.request().newBuilder()
-                    .header("X-Device-Id", tokenManager.getDeviceId())
-                    .build()
+                val original = chain.request()
+                val request = if (original.header("X-Device-Id").isNullOrBlank()) {
+                    original.newBuilder()
+                        .header("X-Device-Id", tokenManager.getDeviceId())
+                        .build()
+                } else {
+                    original
+                }
                 chain.proceed(request)
             }
         }
@@ -61,7 +86,7 @@ object NetworkModule {
         single {
             HttpLoggingInterceptor().apply {
                 level = if (BuildConfig.DEBUG) {
-                    HttpLoggingInterceptor.Level.BODY
+                    HttpLoggingInterceptor.Level.BASIC
                 } else {
                     HttpLoggingInterceptor.Level.NONE
                 }
@@ -131,5 +156,18 @@ object NetworkModule {
         single<StudentSubmissionApiService> { get<Retrofit>().create(StudentSubmissionApiService::class.java) }
         single<LockModeApiService> { get<Retrofit>().create(LockModeApiService::class.java) }
         single<ResultsApiService> { get<Retrofit>().create(ResultsApiService::class.java) }
+        single {
+            OfflineSubmissionManager(
+                androidContext(),
+                get(),
+                get(),
+                get(),
+                get(),
+                get(),
+                get(),
+                get(),
+                get()
+            )
+        }
     }
 }

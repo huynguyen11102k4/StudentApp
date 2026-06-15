@@ -17,6 +17,7 @@ import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
+import java.io.IOException
 
 class StudentSubmissionRepositoryImpl(
     private val apiService: StudentSubmissionApiService,
@@ -25,30 +26,50 @@ class StudentSubmissionRepositoryImpl(
 ) : StudentSubmissionRepository {
     override fun presignImage(
         sessionId: String,
-        request: PresignSubmissionImageRequest
+        request: PresignSubmissionImageRequest,
+        deviceId: String
     ): Flow<ApiResult<PresignSubmissionImageResponse>> =
-        safeEnvelopeFlow(gson) { apiService.presignImage(sessionId, request) }
+        safeEnvelopeFlow(gson) { apiService.presignImage(sessionId, request, deviceId) }
 
     override fun uploadImage(uploadUrl: String, bytes: ByteArray, fileType: String): Flow<ApiResult<Unit>> = flow {
         emit(ApiResult.Loading)
-        runCatching {
+        try {
             val request = Request.Builder()
                 .url(uploadUrl)
                 .put(bytes.toRequestBody(fileType.toMediaTypeOrNull()))
                 .build()
             okHttpClient.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) error("Upload anh that bai (${response.code})")
+                if (response.isSuccessful) {
+                    emit(ApiResult.Success(Unit))
+                } else {
+                    emit(
+                        ApiResult.Error(
+                            ApiException(
+                                code = "UPLOAD_FAILED",
+                                message = "Upload image failed (${response.code})",
+                                httpCode = response.code
+                            )
+                        )
+                    )
+                }
             }
-        }.onSuccess {
-            emit(ApiResult.Success(Unit))
-        }.onFailure { error ->
-            emit(ApiResult.Error(ApiException(code = "UPLOAD_FAILED", message = error.message ?: "Upload anh that bai")))
+        } catch (error: IOException) {
+            emit(
+                ApiResult.Error(
+                    ApiException(
+                        code = "NETWORK_ERROR",
+                        message = error.message ?: "Network error while uploading image",
+                        causeThrowable = error
+                    )
+                )
+            )
         }
     }.flowOn(Dispatchers.IO)
 
     override fun submit(
         sessionId: String,
-        request: StudentSubmitRequest
+        request: StudentSubmitRequest,
+        deviceId: String
     ): Flow<ApiResult<StudentSubmitResponse>> =
-        safeEnvelopeFlow(gson) { apiService.submit(sessionId, request) }
+        safeEnvelopeFlow(gson) { apiService.submit(sessionId, request, deviceId) }
 }

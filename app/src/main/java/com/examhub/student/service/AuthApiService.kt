@@ -11,12 +11,10 @@ import com.examhub.student.model.request.auth.RefreshTokenRequest
 import com.examhub.student.model.request.auth.ResetPasswordRequest
 import com.examhub.student.model.request.auth.StudentRegisterRequest
 import com.examhub.student.model.request.profile.UpdateProfileRequest
-import com.examhub.student.model.response.auth.AuthTokenResponse
 import com.examhub.student.model.response.common.MessageResponse
 import com.examhub.student.model.response.profile.MobileSessionResponse
 import com.examhub.student.model.response.auth.OtpVerifyResponse
 import com.examhub.student.model.response.auth.RefreshTokenResponse
-import com.examhub.student.model.response.auth.StudentRegisterResponse
 import com.google.gson.JsonElement
 import retrofit2.Response
 import retrofit2.http.Body
@@ -31,7 +29,7 @@ import okhttp3.MultipartBody
 
 interface AuthApiService {
     @POST("student/auth/register")
-    suspend fun registerStudent(@Body request: StudentRegisterRequest): Response<StudentRegisterResponse>
+    suspend fun registerStudent(@Body request: StudentRegisterRequest): Response<JsonElement>
 
     @POST("student/auth/otp/request")
     suspend fun requestStudentOtp(@Body request: OtpRequest): Response<MessageResponse>
@@ -40,10 +38,10 @@ interface AuthApiService {
     suspend fun verifyStudentOtp(@Body request: OtpVerifyRequest): Response<OtpVerifyResponse>
 
     @POST("student/auth/login")
-    suspend fun login(@Body request: LoginRequest): Response<AuthTokenResponse>
+    suspend fun login(@Body request: LoginRequest): Response<JsonElement>
 
     @POST("student/auth/login")
-    suspend fun loginWithGoogle(@Body request: GoogleLoginRequest): Response<AuthTokenResponse>
+    suspend fun loginWithGoogle(@Body request: GoogleLoginRequest): Response<JsonElement>
 
     @POST("student/auth/refresh")
     suspend fun refreshToken(@Body request: RefreshTokenRequest): Response<RefreshTokenResponse>

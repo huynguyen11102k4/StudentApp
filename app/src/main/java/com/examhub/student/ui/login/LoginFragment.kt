@@ -163,6 +163,12 @@ class LoginFragment : Fragment() {
                         "google_token_missing" -> getString(R.string.login_error_google_token)
                         "login_failed" -> getString(R.string.login_error_failed)
                         "google_login_failed" -> getString(R.string.login_error_google_failed)
+                        "INVALID_GOOGLE_TOKEN" -> getString(R.string.auth_error_invalid_google_token)
+                        "GOOGLE_EMAIL_MISMATCH" -> getString(R.string.auth_error_google_email_mismatch)
+                        "GOOGLE_ACCOUNT_ALREADY_LINKED" -> getString(R.string.auth_error_google_already_linked)
+                        "GOOGLE_ACCOUNT_MISMATCH" -> getString(R.string.auth_error_google_account_mismatch)
+                        "ACCOUNT_INACTIVE" -> getString(R.string.auth_error_account_inactive)
+                        "INVALID_CREDENTIALS" -> getString(R.string.auth_error_invalid_credentials)
                         else -> code // raw API error message
                     }
                     Snackbar.make(binding.root, message, Snackbar.LENGTH_SHORT).show()

@@ -64,7 +64,7 @@ class SettingsViewModel(
 
     fun clearOfflineDownloads() {
         val removed = offlineCacheManager.clearOfflineDownloads()
-        _offlineExamCount.value = 0
+        _offlineExamCount.value = offlineCacheManager.getOfflineExamIds().size
         _errorMessage.tryEmit(
             if (removed > 0) resources.getString(R.string.settings_storage_cleared_format, removed)
             else resources.getString(R.string.settings_storage_nothing_to_clear)

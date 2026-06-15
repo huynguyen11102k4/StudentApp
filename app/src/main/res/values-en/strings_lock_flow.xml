@@ -53,6 +53,18 @@
     <string name="submission_end_results">View Results</string>
     <string name="submission_end_home">Back to Home</string>
     <string name="submission_end_content_description">Submitted</string>
+    <string name="submission_status_saved">Submission saved on this device</string>
+    <string name="submission_status_waiting_network">Waiting for a network connection</string>
+    <string name="submission_status_uploading">Uploading images</string>
+    <string name="submission_status_syncing">Syncing submission</string>
+    <string name="submission_status_synced">Submitted successfully</string>
+    <string name="submission_status_after_deadline">Cannot sync because the submission was saved after the deadline</string>
+    <string name="submission_status_failed">Unable to sync the submission</string>
+    <string name="submission_status_invalid_permit">Cannot sync because the offline submission permit is invalid or expired</string>
+    <string name="submission_status_permit_mismatch">The offline permit does not match the student, exam session, or device</string>
+    <string name="submission_status_device_mismatch">The submission cannot be synced from a different device</string>
+    <string name="submission_status_missing_client_id">The submission is missing its deduplication ID; contact support</string>
+    <string name="submission_status_client_id_conflict">This submission ID is already associated with another exam session</string>
 
     <string name="dashboard_results_action">View Results</string>
     <string name="class_detail_student_title">Class Detail</string>

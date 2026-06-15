@@ -13,10 +13,11 @@ import com.examhub.student.model.response.common.StartExamSessionResponse
 import com.examhub.student.model.response.profile.UserResponse
 import com.examhub.student.repository.ExamRepository
 import com.examhub.student.repository.LockModeRepository
-import com.examhub.student.service.ActiveExamSession
+import com.examhub.student.data.local.model.ActiveExamSession
 import com.examhub.student.service.ActiveExamSessionStore
 import com.examhub.student.service.OfflineCacheManager
 import com.examhub.student.service.TokenManager
+import com.examhub.student.security.SecurePermitStore
 import com.examhub.student.util.helper.parseUserProfileJson
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -36,7 +37,8 @@ class ExamStartViewModel(
     private val offlineCacheManager: OfflineCacheManager,
     private val activeSessionStore: ActiveExamSessionStore,
     private val gson: Gson,
-    private val context: Context
+    private val context: Context,
+    private val securePermitStore: SecurePermitStore
 ) : ViewModel() {
     private val _exam = MutableStateFlow<MobileExamDetailResponse?>(null)
     val exam: StateFlow<MobileExamDetailResponse?> = _exam.asStateFlow()
@@ -195,6 +197,9 @@ class ExamStartViewModel(
         omrCodes: LockModeOmrCodes,
         remainingSeconds: Int
     ) {
+        session.offlineSubmission?.permit
+            ?.takeIf { it.isNotBlank() }
+            ?.let { securePermitStore.save(session.sessionId, it) }
         activeSessionStore.save(
             ActiveExamSession(
                 examId = currentExamId,
@@ -206,7 +211,11 @@ class ExamStartViewModel(
                 classCode = omrCodes.classCode,
                 studentCode = omrCodes.studentCode,
                 studentCodeMode = omrCodes.studentCodeMode,
-                questionCount = _exam.value?.totalQuestions ?: 0
+                questionCount = _exam.value?.totalQuestions ?: 0,
+                deviceId = tokenManager.getDeviceId(),
+                offlineDeadlineAt = session.offlineSubmission?.deadlineAt,
+                offlineSyncDeadlineAt = session.offlineSubmission?.syncDeadlineAt,
+                requiresClientSubmissionId = session.offlineSubmission?.requiresClientSubmissionId == true
             )
         )
     }
@@ -270,7 +279,7 @@ class ExamStartViewModel(
     private fun refreshCanStartExam() {
         _canStartExam.value = currentGradingType.equals("STUDENT_SUBMISSION", ignoreCase = true) &&
             serverCanStartSession &&
-            offlineCacheManager.getTemplate(currentExamId) != null &&
+            offlineCacheManager.isOfflineReady(currentExamId) &&
             isWithinExamWindow(currentStartTime, currentEndTime)
     }
 

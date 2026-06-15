@@ -7,6 +7,7 @@ import com.examhub.student.model.response.submission.PresignSubmissionImageRespo
 import com.examhub.student.model.response.submission.StudentSubmitResponse
 import retrofit2.Response
 import retrofit2.http.Body
+import retrofit2.http.Header
 import retrofit2.http.POST
 import retrofit2.http.Path
 
@@ -14,12 +15,14 @@ interface StudentSubmissionApiService {
     @POST("student/sessions/{sessionId}/submissions/presign")
     suspend fun presignImage(
         @Path("sessionId") sessionId: String,
-        @Body request: PresignSubmissionImageRequest
+        @Body request: PresignSubmissionImageRequest,
+        @Header("X-Device-Id") deviceId: String
     ): Response<ApiEnvelope<PresignSubmissionImageResponse>>
 
     @POST("student/sessions/{sessionId}/submit")
     suspend fun submit(
         @Path("sessionId") sessionId: String,
-        @Body request: StudentSubmitRequest
+        @Body request: StudentSubmitRequest,
+        @Header("X-Device-Id") deviceId: String
     ): Response<ApiEnvelope<StudentSubmitResponse>>
 }

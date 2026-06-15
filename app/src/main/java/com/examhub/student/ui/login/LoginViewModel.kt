@@ -62,7 +62,7 @@ class LoginViewModel(
                         if (result.exception.isAccountInactive()) {
                             _activationRequired.tryEmit(email.trim())
                         } else {
-                            _errorMessage.tryEmit(result.exception.message ?: "login_failed")
+                            _errorMessage.tryEmit(result.exception.displayCode("login_failed"))
                         }
                     }
                 }
@@ -87,17 +87,20 @@ class LoginViewModel(
                     }
                     is ApiResult.Error -> {
                         _isLoading.value = false
-                        if (result.exception.requiresGoogleRegistration()) {
+                        val normalizedEmail = email.orEmpty().trim()
+                        if (result.exception.isAccountInactive() && normalizedEmail.isNotBlank()) {
+                            _activationRequired.tryEmit(normalizedEmail)
+                        } else if (result.exception.requiresGoogleRegistration()) {
                             _googleRegistrationRequired.tryEmit(
                                 GoogleRegisterPrefill(
-                                    email = email.orEmpty(),
+                                    email = normalizedEmail,
                                     fullName = fullName.orEmpty(),
                                     googleIdToken = idToken,
                                     startActivation = false
                                 )
                             )
                         } else {
-                            _errorMessage.tryEmit(result.exception.message ?: "google_login_failed")
+                            _errorMessage.tryEmit(result.exception.displayCode("google_login_failed"))
                         }
                     }
                 }
@@ -133,24 +136,14 @@ class LoginViewModel(
         val normalizedCode = code.lowercase()
         val normalizedMessage = message.lowercase()
         val searchableMessage = message.toSearchableText()
-        val invalidToken = normalizedCode.contains("invalid_token") ||
-            normalizedMessage.contains("invalid token") ||
-            searchableMessage.contains("token khong hop le")
-
-        return !invalidToken && (
-            normalizedCode.contains("google") ||
-                normalizedCode.contains("registration_required") ||
+        return normalizedCode.contains("registration_required") ||
                 normalizedCode.contains("register_required") ||
                 normalizedCode.contains("account_required") ||
                 normalizedCode.contains("not_linked") ||
-                normalizedMessage.contains("google") ||
                 normalizedMessage.contains("not linked") ||
                 searchableMessage.contains("chua lien ket") ||
                 searchableMessage.contains("can dang ky") ||
-                searchableMessage.contains("vui long dang ky") ||
-                httpCode == 401 ||
-                httpCode == 403
-            )
+                searchableMessage.contains("vui long dang ky")
     }
 
     private fun ApiException.isAccountInactive(): Boolean {
@@ -164,10 +157,27 @@ class LoginViewModel(
             searchableMessage.contains("xac thuc otp")
     }
 
+    private fun ApiException.displayCode(fallback: String): String {
+        return code.uppercase().takeIf { it in AUTH_ERROR_CODES }
+            ?: message.takeIf(String::isNotBlank)
+            ?: fallback
+    }
+
     private fun String.toSearchableText(): String {
         return Normalizer.normalize(lowercase(), Normalizer.Form.NFD)
             .replace("\\p{Mn}+".toRegex(), "")
             .replace('đ', 'd')
+    }
+
+    private companion object {
+        val AUTH_ERROR_CODES = setOf(
+            "INVALID_GOOGLE_TOKEN",
+            "GOOGLE_EMAIL_MISMATCH",
+            "GOOGLE_ACCOUNT_ALREADY_LINKED",
+            "GOOGLE_ACCOUNT_MISMATCH",
+            "ACCOUNT_INACTIVE",
+            "INVALID_CREDENTIALS"
+        )
     }
 }
 

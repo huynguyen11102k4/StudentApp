@@ -8,7 +8,15 @@ import com.examhub.student.model.response.submission.StudentSubmitResponse
 import kotlinx.coroutines.flow.Flow
 
 interface StudentSubmissionRepository {
-    fun presignImage(sessionId: String, request: PresignSubmissionImageRequest): Flow<ApiResult<PresignSubmissionImageResponse>>
+    fun presignImage(
+        sessionId: String,
+        request: PresignSubmissionImageRequest,
+        deviceId: String
+    ): Flow<ApiResult<PresignSubmissionImageResponse>>
     fun uploadImage(uploadUrl: String, bytes: ByteArray, fileType: String): Flow<ApiResult<Unit>>
-    fun submit(sessionId: String, request: StudentSubmitRequest): Flow<ApiResult<StudentSubmitResponse>>
+    fun submit(
+        sessionId: String,
+        request: StudentSubmitRequest,
+        deviceId: String
+    ): Flow<ApiResult<StudentSubmitResponse>>
 }

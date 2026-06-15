@@ -16,10 +16,12 @@ import com.examhub.student.model.request.submission.StudentSubmitRequest
 import com.examhub.student.model.response.submission.StudentSubmitResponse
 import com.examhub.student.omr.OmrProcessor
 import com.examhub.student.omr.OmrReviewStore
+import com.examhub.student.omr.core.MarkerDetectionException
 import com.examhub.student.repository.LockModeRepository
-import com.examhub.student.repository.StudentSubmissionRepository
 import com.examhub.student.service.ActiveExamSessionStore
+import com.examhub.student.data.local.model.FreezeResult
 import com.examhub.student.service.NetworkStatusProvider
+import com.examhub.student.service.OfflineSubmissionManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -29,6 +31,8 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
@@ -43,13 +47,13 @@ class CameraARViewModel(
     private val lockModeRepository: LockModeRepository,
     private val context: Context,
     private val activeSessionStore: ActiveExamSessionStore,
-    private val studentSubmissionRepository: StudentSubmissionRepository
+    private val offlineSubmissionManager: OfflineSubmissionManager
 ) : ViewModel() {
 
     private val _flashMode = MutableStateFlow("off")
     val flashMode: StateFlow<String> = _flashMode.asStateFlow()
 
-    private val _flashAvailable = MutableStateFlow(true)
+    private val _flashAvailable = MutableStateFlow(false)
     val flashAvailable: StateFlow<Boolean> = _flashAvailable.asStateFlow()
 
     private val _detectedMarkers = MutableStateFlow(0)
@@ -70,10 +74,12 @@ class CameraARViewModel(
     private val _capturedImage = MutableSharedFlow<Bitmap>(extraBufferCapacity = 1)
     val capturedImage: SharedFlow<Bitmap> = _capturedImage.asSharedFlow()
 
-    private val _navigateToReview = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
-    val navigateToReview: SharedFlow<Unit> = _navigateToReview.asSharedFlow()
+    private val _navigateToReview = Channel<Unit>(Channel.BUFFERED)
+    val navigateToReview = _navigateToReview.receiveAsFlow()
     private val _blankSubmissionFinished = MutableSharedFlow<StudentSubmitResponse?>(extraBufferCapacity = 1)
     val blankSubmissionFinished: SharedFlow<StudentSubmitResponse?> = _blankSubmissionFinished.asSharedFlow()
+    private val _blankSubmissionFrozen = MutableSharedFlow<String>(extraBufferCapacity = 1)
+    val blankSubmissionFrozen: SharedFlow<String> = _blankSubmissionFrozen.asSharedFlow()
 
     private val _toastMessage = MutableSharedFlow<String>(extraBufferCapacity = 1)
     val toastMessage: SharedFlow<String> = _toastMessage.asSharedFlow()
@@ -130,37 +136,46 @@ class CameraARViewModel(
     }
 
     fun onImageCaptured(bitmap: Bitmap) {
-        if (_isProcessing.value) return
+        if (_isProcessing.value) {
+            bitmap.recycle()
+            return
+        }
         _isProcessing.value = true
         _markerStatusText.value = context.getString(R.string.camera_ar_status_processing_omr)
 
         if (currentExamId.isBlank()) {
             onProcessingError(context.getString(R.string.camera_ar_missing_exam_template))
+            bitmap.recycle()
             return
         }
 
         viewModelScope.launch {
-            runCatching {
-                withContext(Dispatchers.Default) {
-                    omrProcessor.process(bitmap, currentExamId)
-                }
-            }.onSuccess { result ->
-                val rawImageBase64 = encodeJpegBase64(bitmap)
-                omrReviewStore.save(
-                    result.copy(
-                        sessionId = currentSessionId,
-                        rawImageBase64 = rawImageBase64
+            try {
+                runCatching {
+                    withContext(Dispatchers.Default) {
+                        omrProcessor.process(bitmap, currentExamId)
+                    }
+                }.onSuccess { result ->
+                    val rawImageBase64 = encodeJpegBase64(bitmap)
+                    omrReviewStore.save(
+                        result.copy(
+                            sessionId = currentSessionId,
+                            rawImageBase64 = rawImageBase64
+                        )
                     )
-                )
-                _isProcessing.value = false
-                _navigateToReview.tryEmit(Unit)
-            }.onFailure { error ->
-                onProcessingError(error.message ?: context.getString(R.string.camera_ar_processing_failed))
+                    _isProcessing.value = false
+                    _navigateToReview.trySend(Unit)
+                }.onFailure { error ->
+                    onProcessingError(localizedProcessingError(error))
+                }
+            } finally {
+                bitmap.recycle()
             }
         }
     }
 
     fun resetProcessingState() {
+        if (_isProcessing.value) return
         _isProcessing.value = false
         _markerStatusText.value = context.getString(R.string.camera_ar_status_align_markers)
     }
@@ -173,6 +188,21 @@ class CameraARViewModel(
         _isProcessing.value = false
         _toastMessage.tryEmit(error)
         _markerStatusText.value = context.getString(R.string.camera_ar_status_error_format, error)
+    }
+
+    private fun localizedProcessingError(error: Throwable): String = when (error) {
+        is MarkerDetectionException.NotEnoughMarkers ->
+            context.getString(
+                R.string.omr_error_not_enough_markers,
+                error.found,
+                error.required
+            )
+        is MarkerDetectionException.MissingRequiredMarkers ->
+            context.getString(
+                R.string.omr_error_missing_corner_markers,
+                error.markerIds.joinToString(", ")
+            )
+        else -> error.message ?: context.getString(R.string.camera_ar_processing_failed)
     }
 
     fun logViolation(type: String, evidence: Map<String, Any?> = emptyMap()) {
@@ -236,9 +266,12 @@ class CameraARViewModel(
         val sessionId = currentSessionId.takeIf { it.isNotBlank() } ?: return
         val examId = currentExamId
         viewModelScope.launch {
-            studentSubmissionRepository.submit(
-                sessionId,
-                StudentSubmitRequest(
+            val result = offlineSubmissionManager.freezeAndSync(
+                sessionId = sessionId,
+                examId = examId,
+                requestFactory = { clientSubmissionId, capturedAt ->
+                    StudentSubmitRequest(
+                    clientSubmissionId = clientSubmissionId,
                     rawImageUrl = null,
                     dewarpedImageUrl = null,
                     processedImageUrl = null,
@@ -255,7 +288,7 @@ class CameraARViewModel(
                     studentAnswers = (1..questionCount.coerceAtLeast(0)).map { questionNo ->
                         StudentAnswerRequest(questionNumber = questionNo, answer = null)
                     },
-                    capturedAt = nowIso(),
+                    capturedAt = capturedAt,
                     imageQualityScore = 0,
                     qualityFeedback = mapOf(
                         "auto_submitted" to "true",
@@ -263,15 +296,14 @@ class CameraARViewModel(
                         "exam_id" to examId
                     )
                 )
-            ).collect { result ->
-                if (result !is ApiResult.Loading) {
-                    val submission = if (result is ApiResult.Success) {
-                        activeSessionStore.clear(examId)
-                        activeSessionStore.clearBySessionId(sessionId)
-                        result.data
-                    } else null
-                    _blankSubmissionFinished.tryEmit(submission)
                 }
+            )
+            activeSessionStore.clear(examId)
+            activeSessionStore.clearBySessionId(sessionId)
+            when (result) {
+                is FreezeResult.Synced -> _blankSubmissionFinished.tryEmit(result.response)
+                is FreezeResult.Pending -> _blankSubmissionFrozen.tryEmit(result.clientSubmissionId)
+                is FreezeResult.TerminalFailure -> _blankSubmissionFrozen.tryEmit(result.clientSubmissionId)
             }
         }
     }

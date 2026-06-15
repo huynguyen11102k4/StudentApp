@@ -15,9 +15,10 @@ import com.examhub.student.model.request.submission.StudentSubmitRequest
 import com.examhub.student.model.response.profile.UserResponse
 import com.examhub.student.model.response.submission.StudentSubmitResponse
 import com.examhub.student.repository.LockModeRepository
-import com.examhub.student.repository.StudentSubmissionRepository
 import com.examhub.student.service.ActiveExamSessionStore
+import com.examhub.student.data.local.model.FreezeResult
 import com.examhub.student.service.NetworkStatusProvider
+import com.examhub.student.service.OfflineSubmissionManager
 import com.examhub.student.service.OfflineCacheManager
 import com.examhub.student.service.TokenManager
 import com.examhub.student.util.helper.parseUserProfileJson
@@ -37,7 +38,7 @@ import java.util.TimeZone
 
 class LockModeViewModel(
     private val lockModeRepository: LockModeRepository,
-    private val studentSubmissionRepository: StudentSubmissionRepository,
+    private val offlineSubmissionManager: OfflineSubmissionManager,
     private val context: Context,
     private val offlineCacheManager: OfflineCacheManager,
     private val activeSessionStore: ActiveExamSessionStore,
@@ -50,6 +51,8 @@ class LockModeViewModel(
     val timeExpired: SharedFlow<Unit> = _timeExpired.asSharedFlow()
     private val _blankSubmissionFinished = MutableSharedFlow<StudentSubmitResponse?>(extraBufferCapacity = 1)
     val blankSubmissionFinished: SharedFlow<StudentSubmitResponse?> = _blankSubmissionFinished.asSharedFlow()
+    private val _blankSubmissionFrozen = MutableSharedFlow<String>(extraBufferCapacity = 1)
+    val blankSubmissionFrozen: SharedFlow<String> = _blankSubmissionFrozen.asSharedFlow()
     private val _omrCodes = MutableStateFlow(LockModeOmrCodes())
     val omrCodes: StateFlow<LockModeOmrCodes> = _omrCodes.asStateFlow()
     private val _currentSessionId = MutableStateFlow("")
@@ -215,9 +218,12 @@ class LockModeViewModel(
             if (localExam != null) {
                 offlineCacheManager.saveExamBasic(localExam.copy(status = "SUBMITTED", hasSubmitted = true))
             }
-            studentSubmissionRepository.submit(
-                id,
-                StudentSubmitRequest(
+            val result = offlineSubmissionManager.freezeAndSync(
+                sessionId = id,
+                examId = examId,
+                requestFactory = { clientSubmissionId, capturedAt ->
+                    StudentSubmitRequest(
+                    clientSubmissionId = clientSubmissionId,
                     rawImageUrl = null,
                     dewarpedImageUrl = null,
                     processedImageUrl = null,
@@ -234,7 +240,7 @@ class LockModeViewModel(
                     studentAnswers = (1..count).map { questionNo ->
                         StudentAnswerRequest(questionNumber = questionNo, answer = null)
                     },
-                    capturedAt = nowIso(),
+                    capturedAt = capturedAt,
                     imageQualityScore = 0,
                     qualityFeedback = mapOf(
                         "auto_submitted" to "true",
@@ -242,15 +248,14 @@ class LockModeViewModel(
                         "exam_id" to examId
                     )
                 )
-            ).collect { result ->
-                if (result !is ApiResult.Loading) {
-                    val submission = if (result is ApiResult.Success) {
-                        activeSessionStore.clear(examId)
-                        activeSessionStore.clearBySessionId(id)
-                        result.data
-                    } else null
-                    _blankSubmissionFinished.tryEmit(submission)
                 }
+            )
+            activeSessionStore.clear(examId)
+            activeSessionStore.clearBySessionId(id)
+            when (result) {
+                is FreezeResult.Synced -> _blankSubmissionFinished.tryEmit(result.response)
+                is FreezeResult.Pending -> _blankSubmissionFrozen.tryEmit(result.clientSubmissionId)
+                is FreezeResult.TerminalFailure -> _blankSubmissionFrozen.tryEmit(result.clientSubmissionId)
             }
         }
     }

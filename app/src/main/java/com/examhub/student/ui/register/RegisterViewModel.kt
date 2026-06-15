@@ -98,7 +98,11 @@ class RegisterViewModel(
                     is ApiResult.Success -> {
                         _isLoading.value = false
                         registeredEmail = trimmedEmail
-                        if (isGoogleRegistration && !result.data.accessToken.isNullOrBlank()) {
+                        if (
+                            isGoogleRegistration &&
+                            !result.data.accessToken.isNullOrBlank() &&
+                            !result.data.refreshToken.isNullOrBlank()
+                        ) {
                             fcmTokenRegistrar.syncCurrentToken(viewModelScope)
                             _message.tryEmit(resources.getString(R.string.register_success))
                             _registerSuccess.tryEmit(RegisterDestination.Dashboard)

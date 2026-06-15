@@ -65,7 +65,7 @@ class ExamListViewModel(
                                 status = item.status.orEmpty(),
                                 gradedCount = if (item.resultId.isNullOrBlank()) 0 else 1,
                                 totalStudents = 0,
-                                isOfflineReady = offlineCacheManager.getTemplate(item.id) != null,
+                                isOfflineReady = offlineCacheManager.isOfflineReady(item.id),
                                 date = item.displayTime,
                                 resultSheetId = resultSheetId,
                                 hasSubmitted = !resultSheetId.isNullOrBlank() || item.hasSubmittedStatus(),

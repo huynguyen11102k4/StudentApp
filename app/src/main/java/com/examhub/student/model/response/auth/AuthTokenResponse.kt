@@ -8,7 +8,7 @@ data class AuthTokenResponse(
     val accessToken: String,
     @SerializedName(value = "refreshToken", alternate = ["refresh_token"])
     val refreshToken: String,
-    @SerializedName("must_change_password")
+    @SerializedName(value = "mustChangePassword", alternate = ["must_change_password"])
     val mustChangePassword: Boolean? = null,
-    val user: UserResponse
+    val user: UserResponse? = null
 )

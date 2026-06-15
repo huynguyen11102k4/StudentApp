@@ -71,6 +71,27 @@ fun <T> safeJsonFlow(
     emit(ApiResult.Error(throwable.toApiException()))
 }
 
+fun <T> safeJsonFlow(
+    gson: Gson,
+    parser: (JsonElement) -> T,
+    apiCall: suspend () -> Response<JsonElement>
+): Flow<ApiResult<T>> = flow {
+    emit(ApiResult.Loading)
+    val response = apiCall()
+    if (response.isSuccessful) {
+        val root = response.body()
+        if (root == null || root.isJsonNull) {
+            emit(ApiResult.Error(ApiException("EMPTY_BODY", "Response body is empty", response.code())))
+        } else {
+            emit(ApiResult.Success(parser(root)))
+        }
+    } else {
+        emit(ApiResult.Error(parseApiException(gson, response)))
+    }
+}.catch { throwable ->
+    emit(ApiResult.Error(throwable.toApiException()))
+}
+
 private fun JsonElement?.extractPayload(): JsonElement? {
     val root = this ?: return null
     if (!root.isJsonObject) return root
@@ -93,13 +114,26 @@ private fun <T> handleResponse(gson: Gson, response: Response<T>): ApiResult<T> 
 
 private fun parseApiException(gson: Gson, response: Response<*>): ApiException {
     val rawError = response.errorBody()?.string()
+    val root = rawError?.let {
+        runCatching { gson.fromJson(it, JsonElement::class.java) }.getOrNull()
+    }
     val parsed = rawError?.let {
         runCatching { gson.fromJson(it, ApiErrorEnvelope::class.java) }.getOrNull()
     }?.error
+    val fallbackObject = root?.takeIf { it.isJsonObject }?.asJsonObject
+    val nestedError = fallbackObject?.get("error")
+        ?.takeIf { it.isJsonObject }
+        ?.asJsonObject
+    val code = parsed?.code
+        ?: nestedError?.get("code")?.takeIf { it.isJsonPrimitive }?.asString
+        ?: fallbackObject?.get("code")?.takeIf { it.isJsonPrimitive }?.asString
+    val message = parsed?.message
+        ?: nestedError?.get("message")?.takeIf { it.isJsonPrimitive }?.asString
+        ?: fallbackObject?.get("message")?.takeIf { it.isJsonPrimitive }?.asString
 
     return ApiException(
-        code = parsed?.code ?: response.code().toString(),
-        message = parsed?.message ?: response.message(),
+        code = code ?: response.code().toString(),
+        message = message ?: response.message(),
         httpCode = response.code(),
         details = parsed?.details.orEmpty()
     )

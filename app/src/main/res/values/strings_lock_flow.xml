@@ -53,6 +53,18 @@
     <string name="submission_end_results">Xem kết quả</string>
     <string name="submission_end_home">Về trang chủ</string>
     <string name="submission_end_content_description">Đã nộp bài</string>
+    <string name="submission_status_saved">Đã lưu bài trên thiết bị</string>
+    <string name="submission_status_waiting_network">Đang chờ kết nối mạng</string>
+    <string name="submission_status_uploading">Đang tải ảnh lên</string>
+    <string name="submission_status_syncing">Đang đồng bộ bài</string>
+    <string name="submission_status_synced">Đã nộp thành công</string>
+    <string name="submission_status_after_deadline">Không thể đồng bộ vì bài được lưu sau giờ</string>
+    <string name="submission_status_failed">Không thể đồng bộ bài nộp</string>
+    <string name="submission_status_invalid_permit">Không thể đồng bộ vì giấy phép nộp offline không hợp lệ hoặc đã hết hạn</string>
+    <string name="submission_status_permit_mismatch">Giấy phép nộp offline không khớp với học sinh, phiên thi hoặc thiết bị</string>
+    <string name="submission_status_device_mismatch">Không thể đồng bộ bài từ thiết bị khác</string>
+    <string name="submission_status_missing_client_id">Bài nộp thiếu mã chống trùng; vui lòng liên hệ hỗ trợ</string>
+    <string name="submission_status_client_id_conflict">Mã bài nộp đã được dùng cho một phiên thi khác</string>
 
     <string name="dashboard_results_action">Xem kết quả</string>
     <string name="class_detail_student_title">Chi tiết lớp</string>

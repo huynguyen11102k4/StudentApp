@@ -33,10 +33,10 @@
     <color name="surface_variant">#FF44483D</color>
     <color name="on_surface_variant">#FFC3C7BA</color>
     <color name="surface_container_lowest">#FF161713</color>
-    <color name="surface_container_low">#FF1E1F1B</color>
-    <color name="surface_container">#FF22231F</color>
-    <color name="surface_container_high">#FF2D2E29</color>
-    <color name="surface_container_highest">#FF383934</color>
+    <color name="surface_container_low">#FF22241F</color>
+    <color name="surface_container">#FF282A25</color>
+    <color name="surface_container_high">#FF343630</color>
+    <color name="surface_container_highest">#FF3F413B</color>
     <color name="surface_dim">#FF131410</color>
     <color name="inverse_surface">#FFE4E3DB</color>
     <color name="inverse_on_surface">#FF2F3129</color>

@@ -1,9 +1,11 @@
 package com.examhub.student.ui.cameraar
 
 import android.Manifest
+import android.content.Context
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.drawable.GradientDrawable
 import android.graphics.ImageDecoder
 import android.net.Uri
 import android.os.Build
@@ -13,6 +15,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.RequiresApi
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
@@ -28,9 +31,12 @@ import com.examhub.student.util.extension.collectOnStarted
 import com.examhub.student.util.helper.protectScreenFromCapture
 import com.examhub.student.ui.lockmode.LockFlowMonitorController
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.koin.android.ext.android.inject
 
 class CameraARFragment : Fragment() {
@@ -85,10 +91,6 @@ class CameraARFragment : Fragment() {
     override fun onResume() {
         super.onResume()
         enterKioskModeIfLocked()
-        viewModel.resetProcessingState()
-        if (_binding != null) {
-            showCaptureLoading(false)
-        }
     }
 
     private fun enterKioskModeIfLocked() {
@@ -157,11 +159,13 @@ class CameraARFragment : Fragment() {
                 } else {
                     false
                 }
+            },
+            onCameraBound = { flashAvailable ->
+                viewModel.onCameraReady()
+                viewModel.onFlashAvailabilityChanged(flashAvailable)
             }
         )
         cameraManager?.startCamera()
-        viewModel.onCameraReady()
-        viewModel.onFlashAvailabilityChanged(cameraManager?.isFlashAvailable() ?: false)
     }
 
     private fun setupClickListeners() {
@@ -211,9 +215,16 @@ class CameraARFragment : Fragment() {
     }
 
     private fun processCapturedBitmap(bitmap: Bitmap) {
-        activity?.runOnUiThread {
+        val hostActivity = activity
+        if (hostActivity == null) {
+            bitmap.recycle()
+            captureInFlight = false
+            return
+        }
+        hostActivity.runOnUiThread {
             if (_binding == null || viewModel.isProcessing.value) {
                 captureInFlight = false
+                bitmap.recycle()
                 return@runOnUiThread
             }
             captureInFlight = true
@@ -240,31 +251,49 @@ class CameraARFragment : Fragment() {
     }
 
     private fun handleGalleryImage(uri: Uri) {
-        val bitmap = runCatching { decodeGalleryBitmap(uri) }.getOrElse { error ->
-            Toast.makeText(
-                requireContext(),
-                error.message ?: getString(R.string.camera_ar_gallery_read_failed),
-                Toast.LENGTH_SHORT
-            ).show()
-            return
+        if (viewModel.isProcessing.value || captureInFlight) return
+        captureInFlight = true
+        showCaptureLoading(true)
+        val appContext = requireContext().applicationContext
+        viewLifecycleOwner.lifecycleScope.launch {
+            val bitmap = try {
+                withContext(Dispatchers.IO) { decodeGalleryBitmap(appContext, uri) }
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Throwable) {
+                captureInFlight = false
+                if (_binding != null) {
+                    showCaptureLoading(false)
+                    Toast.makeText(
+                        requireContext(),
+                        error.message ?: getString(R.string.camera_ar_gallery_read_failed),
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+                return@launch
+            }
+            if (_binding == null) {
+                bitmap.recycle()
+                captureInFlight = false
+                return@launch
+            }
+            processCapturedBitmap(bitmap)
         }
-
-        processCapturedBitmap(bitmap)
     }
 
-    private fun decodeGalleryBitmap(uri: Uri): Bitmap {
+    private fun decodeGalleryBitmap(context: Context, uri: Uri): Bitmap {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-            return decodeGalleryBitmapWithImageDecoder(uri)
+            return decodeGalleryBitmapWithImageDecoder(context, uri)
         }
 
-        val resolver = requireContext().contentResolver
+        val resolver = context.contentResolver
         val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
         resolver.openInputStream(uri)?.use { input ->
             BitmapFactory.decodeStream(input, null, bounds)
-        } ?: error(getString(R.string.camera_ar_gallery_open_failed))
+        } ?: error(context.getString(R.string.camera_ar_gallery_open_failed))
 
         if (bounds.outWidth <= 0 || bounds.outHeight <= 0) {
-            error(getString(R.string.camera_ar_invalid_image))
+            error(context.getString(R.string.camera_ar_invalid_image))
         }
 
         val maxDimension = 4096
@@ -280,17 +309,18 @@ class CameraARFragment : Fragment() {
 
         return resolver.openInputStream(uri)?.use { input ->
             BitmapFactory.decodeStream(input, null, options)
-        } ?: error(getString(R.string.camera_ar_gallery_decode_failed))
+        } ?: error(context.getString(R.string.camera_ar_gallery_decode_failed))
     }
 
-    private fun decodeGalleryBitmapWithImageDecoder(uri: Uri): Bitmap {
-        val source = ImageDecoder.createSource(requireContext().contentResolver, uri)
+    @RequiresApi(Build.VERSION_CODES.P)
+    private fun decodeGalleryBitmapWithImageDecoder(context: Context, uri: Uri): Bitmap {
+        val source = ImageDecoder.createSource(context.contentResolver, uri)
         return ImageDecoder.decodeBitmap(source) { decoder, info, _ ->
             val maxDimension = 4096
             val width = info.size.width
             val height = info.size.height
             if (width <= 0 || height <= 0) {
-                error(getString(R.string.camera_ar_invalid_image))
+                error(context.getString(R.string.camera_ar_invalid_image))
             }
 
             val scale = minOf(1f, maxDimension.toFloat() / maxOf(width, height).toFloat())
@@ -306,7 +336,7 @@ class CameraARFragment : Fragment() {
             if (bitmap.config == Bitmap.Config.ARGB_8888) {
                 bitmap
             } else {
-                bitmap.copy(Bitmap.Config.ARGB_8888, false)
+                bitmap.copy(Bitmap.Config.ARGB_8888, false).also { bitmap.recycle() }
             }
         }
     }
@@ -325,7 +355,7 @@ class CameraARFragment : Fragment() {
         binding.progressOverlay.visibility = if (show) View.VISIBLE else View.GONE
         binding.fabCapture.isEnabled = !show
         binding.btnGallery.isEnabled = !show
-        binding.btnFlash.isEnabled = !show
+        binding.btnFlash.isEnabled = !show && viewModel.flashAvailable.value
         binding.btnClose.isEnabled = !show
     }
 
@@ -342,6 +372,15 @@ class CameraARFragment : Fragment() {
                 }
             }
             launch {
+                viewModel.flashAvailable.collect { available ->
+                    binding.btnFlash.visibility = if (available) View.VISIBLE else View.INVISIBLE
+                    binding.btnFlash.isEnabled = available && !viewModel.isProcessing.value
+                    if (!available) {
+                        viewModel.onFlashModeUpdated("off")
+                    }
+                }
+            }
+            launch {
                 viewModel.markerStatusText.collect { status ->
                     binding.tvMarkerStatus.text = status
                 }
@@ -352,6 +391,11 @@ class CameraARFragment : Fragment() {
                         captureInFlight = false
                     }
                     showCaptureLoading(processing)
+                }
+            }
+            launch {
+                viewModel.allMarkersDetected.collect { allDetected ->
+                    updateMarkerUi(allDetected)
                 }
             }
             launch {
@@ -375,7 +419,12 @@ class CameraARFragment : Fragment() {
             }
             launch {
                 viewModel.blankSubmissionFinished.collect { submission ->
-                    navigateToSubmissionEnd(submission?.resultId)
+                    navigateToSubmissionEnd(submission?.resultId, submission?.submissionId)
+                }
+            }
+            launch {
+                viewModel.blankSubmissionFrozen.collect { clientSubmissionId ->
+                    navigateToSubmissionEnd(null, null, clientSubmissionId)
                 }
             }
         }
@@ -389,6 +438,31 @@ class CameraARFragment : Fragment() {
             delay(seconds * 1_000L)
             finishExpiredSession()
         }
+    }
+
+    private fun updateMarkerUi(allDetected: Boolean) {
+        val overlay = binding.scanOverlay.background?.mutate() as? GradientDrawable ?: return
+        val color = ContextCompat.getColor(
+            requireContext(),
+            if (allDetected) R.color.camera_overlay_ready else R.color.camera_overlay_idle
+        )
+        overlay.setStroke(
+            resources.getDimensionPixelSize(R.dimen.camera_scan_overlay_stroke),
+            color,
+            resources.getDimension(R.dimen.camera_scan_overlay_dash_width),
+            resources.getDimension(R.dimen.camera_scan_overlay_dash_gap)
+        )
+        binding.scanOverlay.background = overlay
+
+        binding.tvMarkerStatus.setBackgroundResource(
+            if (allDetected) R.drawable.bg_badge_ready else R.drawable.bg_badge_processing
+        )
+        binding.tvMarkerStatus.setTextColor(
+            ContextCompat.getColor(
+                requireContext(),
+                if (allDetected) R.color.status_ready_text else R.color.status_processing_text
+            )
+        )
     }
 
     private fun remainingSeconds(): Int {
@@ -410,13 +484,19 @@ class CameraARFragment : Fragment() {
         Toast.makeText(requireContext(), R.string.lock_mode_time_expired, Toast.LENGTH_LONG).show()
     }
 
-    private fun navigateToSubmissionEnd(resultId: String?) {
+    private fun navigateToSubmissionEnd(
+        resultId: String?,
+        submissionId: String? = null,
+        clientSubmissionId: String = ""
+    ) {
         if (_binding == null) return
         findNavController().navigate(
             R.id.submissionEndFragment,
             Bundle().apply {
                 putString("examId", arguments?.getString("examId").orEmpty())
                 putString("sheetId", resultId.orEmpty())
+                putString("submissionId", submissionId.orEmpty())
+                putString("clientSubmissionId", clientSubmissionId)
             },
             navOptions {
                 popUpTo(R.id.lockModeFragment) { inclusive = true }

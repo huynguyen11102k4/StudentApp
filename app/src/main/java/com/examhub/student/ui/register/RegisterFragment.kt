@@ -67,7 +67,7 @@ class RegisterFragment : Fragment() {
         val isGoogleRegistration = googleIdToken.isNotBlank()
         binding.tilPassword.isVisible = !isGoogleRegistration
         binding.tilConfirmPassword.isVisible = !isGoogleRegistration
-        binding.etEmail.isEnabled = !isGoogleRegistration
+        binding.etEmail.isEnabled = !isGoogleRegistration || binding.etEmail.text.isNullOrBlank()
     }
 
     private fun setupOtpFields() {

@@ -28,6 +28,7 @@ class ResultDetailFragment : Fragment() {
     private val viewModel: ResultDetailViewModel by viewModel()
     private val sheetId: String get() = arguments?.getString("sheetId").orEmpty()
     private var currentResult: StudentResultDetailResponse? = null
+    private lateinit var appealsAdapter: ResultAppealsAdapter
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentResultDetailBinding.inflate(inflater, container, false)
@@ -37,6 +38,17 @@ class ResultDetailFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         binding.toolbar.applySystemWindowInsets(top = true)
         binding.toolbar.setNavigationOnClickListener { findNavController().navigateUp() }
+        appealsAdapter = ResultAppealsAdapter { appeal ->
+            findNavController().navigate(
+                R.id.action_result_detail_to_appeal_detail,
+                bundleOf(
+                    "appealId" to appeal.id,
+                    "studentName" to appeal.studentName,
+                    "studentCode" to appeal.studentCode
+                )
+            )
+        }
+        binding.rvAppeals.adapter = appealsAdapter
         binding.btnCreateAppeal.setOnClickListener { showCreateAppealDialog() }
         binding.cardAppealNotice.setOnClickListener {
             val bundle = bundleOf("examId" to currentResult?.exam?.id.orEmpty())
@@ -52,10 +64,21 @@ class ResultDetailFragment : Fragment() {
                     updateAppealButton()
                 }
             }
+            launch {
+                viewModel.appeals.collect { appeals ->
+                    appealsAdapter.submitList(appeals)
+                    bindAppealsSection(appeals.size, viewModel.appealsLoaded.value)
+                }
+            }
+            launch {
+                viewModel.appealsLoaded.collect { loaded ->
+                    bindAppealsSection(viewModel.appeals.value.size, loaded)
+                }
+            }
             launch { viewModel.isResultPending.collect(::bindPendingState) }
             launch {
                 viewModel.resultUnavailable.collect {
-                    findNavController().navigate(R.id.resultsListFragment)
+                    bindUnavailableState()
                 }
             }
             launch {
@@ -104,13 +127,28 @@ class ResultDetailFragment : Fragment() {
         binding.tvGradedAt.text = getString(R.string.result_detail_pending_message)
         binding.cardAppealNotice.visibility = View.GONE
         binding.btnCreateAppeal.visibility = View.GONE
+        hideAppealsSection()
     }
 
     private fun bindPendingState(isPending: Boolean) {
         if (isPending) {
             binding.btnCreateAppeal.visibility = View.GONE
             binding.cardAppealNotice.visibility = View.GONE
+            hideAppealsSection()
         }
+    }
+
+    private fun bindUnavailableState() {
+        binding.tvExamName.text = getString(R.string.result_detail_default_title)
+        binding.tvSubject.text = getString(R.string.result_detail_pending_message)
+        binding.tvScore.text = "--"
+        binding.tvQuestionCount.text = ""
+        binding.tvDuration.text = ""
+        binding.tvGradedAt.text = getString(R.string.result_detail_pending_message)
+        binding.tvStudentName.visibility = View.GONE
+        binding.cardAppealNotice.visibility = View.GONE
+        binding.btnCreateAppeal.visibility = View.GONE
+        hideAppealsSection()
     }
 
     private fun bindStudentInfo(result: StudentResultDetailResponse) {
@@ -143,6 +181,27 @@ class ResultDetailFragment : Fragment() {
         } else {
             getString(R.string.result_detail_has_appeal_notice)
         }
+    }
+
+    private fun bindAppealsSection(count: Int, loaded: Boolean) {
+        if (currentResult == null || viewModel.isResultPending.value) {
+            hideAppealsSection()
+            return
+        }
+        binding.tvAppealsTitle.visibility = View.VISIBLE
+        binding.tvAppealsTitle.text = if (count > 0) {
+            getString(R.string.result_detail_appeals_count, count)
+        } else {
+            getString(R.string.result_detail_appeals_title)
+        }
+        binding.rvAppeals.visibility = if (loaded && count > 0) View.VISIBLE else View.GONE
+        binding.tvAppealsEmpty.visibility = if (loaded && count == 0) View.VISIBLE else View.GONE
+    }
+
+    private fun hideAppealsSection() {
+        binding.tvAppealsTitle.visibility = View.GONE
+        binding.rvAppeals.visibility = View.GONE
+        binding.tvAppealsEmpty.visibility = View.GONE
     }
 
     private fun formatGradedAt(value: String?): String {

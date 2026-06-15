@@ -6,17 +6,16 @@ import androidx.lifecycle.viewModelScope
 import android.util.Base64
 import com.examhub.student.R
 import com.examhub.student.model.ApiResult
-import com.examhub.student.model.request.submission.PresignSubmissionImageRequest
 import com.examhub.student.model.request.submission.IdZoneResultRequest
 import com.examhub.student.model.request.submission.StudentAnswerRequest
 import com.examhub.student.model.request.submission.StudentSubmitRequest
 import com.examhub.student.data.model.Answer
 import com.examhub.student.omr.OmrReviewStore
-import com.examhub.student.repository.StudentSubmissionRepository
 import com.examhub.student.repository.ExamRepository
 import com.examhub.student.service.ActiveExamSessionStore
-import com.examhub.student.model.response.submission.PresignSubmissionImageResponse
 import com.examhub.student.model.response.submission.StudentSubmitResponse
+import com.examhub.student.data.local.model.FreezeResult
+import com.examhub.student.service.OfflineSubmissionManager
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -25,17 +24,14 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import java.text.SimpleDateFormat
-import java.util.Date
 import java.util.Locale
-import java.util.TimeZone
 
 class SmartReviewViewModel(
     private val omrReviewStore: OmrReviewStore,
-    private val studentSubmissionRepository: StudentSubmissionRepository,
     private val activeSessionStore: ActiveExamSessionStore,
     private val examRepository: ExamRepository,
-    private val context: Context
+    private val context: Context,
+    private val offlineSubmissionManager: OfflineSubmissionManager
 ) : ViewModel() {
 
     private val _filteredAnswers = MutableStateFlow<List<Answer>>(emptyList())
@@ -45,6 +41,8 @@ class SmartReviewViewModel(
     val savedSuccess: SharedFlow<StudentSubmitResponse> = _savedSuccess.asSharedFlow()
     private val _blankSubmissionFinished = MutableSharedFlow<StudentSubmitResponse?>(extraBufferCapacity = 1)
     val blankSubmissionFinished: SharedFlow<StudentSubmitResponse?> = _blankSubmissionFinished.asSharedFlow()
+    private val _submissionFrozen = MutableSharedFlow<SubmissionFreezeUi>(extraBufferCapacity = 1)
+    val submissionFrozen: SharedFlow<SubmissionFreezeUi> = _submissionFrozen.asSharedFlow()
 
     private val _errorMessage = MutableSharedFlow<String>(extraBufferCapacity = 1)
     val errorMessage: SharedFlow<String> = _errorMessage.asSharedFlow()
@@ -74,6 +72,7 @@ class SmartReviewViewModel(
     private var currentLaplacianVariance: Float = 0f
     private var currentMeanBrightness: Float = 0f
     private var currentWarnings: List<String> = emptyList()
+    private var frozen = false
 
     fun loadReviewData(submissionId: String) {
         omrReviewStore.consume()?.let { result ->
@@ -112,6 +111,7 @@ class SmartReviewViewModel(
     }
 
     fun editAnswer(answer: Answer) {
+        if (frozen) return
         val index = allAnswers.indexOfFirst { it.questionNo == answer.questionNo }
         if (index >= 0) {
             allAnswers[index] = answer
@@ -121,6 +121,7 @@ class SmartReviewViewModel(
     }
 
     fun saveResults(totalScore: Double, examId: String, studentId: String) {
+        if (frozen) return
         val sessionId = currentSessionId.ifBlank { _reviewState.value.sessionId }
         if (sessionId.isBlank()) {
             _errorMessage.tryEmit(context.getString(R.string.smart_review_missing_session))
@@ -156,17 +157,16 @@ class SmartReviewViewModel(
                 _errorMessage.tryEmit(context.getString(R.string.smart_review_invalid_review_image))
                 return@launch
             }
-            val fileType = "image/jpeg"
-            val rawImageUrl = uploadSubmissionImage(sessionId, rawImageBytes, fileType, "raw") ?: return@launch
-            val dewarpedImageUrl = uploadSubmissionImage(sessionId, dewarpedImageBytes, fileType, "dewarped") ?: return@launch
-            val processedImageUrl = uploadSubmissionImage(sessionId, processedImageBytes, fileType, "processed") ?: return@launch
-
-            val submit = studentSubmissionRepository.submit(
-                sessionId,
-                StudentSubmitRequest(
-                    rawImageUrl = rawImageUrl,
-                    dewarpedImageUrl = dewarpedImageUrl,
-                    processedImageUrl = processedImageUrl,
+            frozen = true
+            val result = offlineSubmissionManager.freezeAndSync(
+                sessionId = sessionId,
+                examId = currentExamId.ifBlank { examId },
+                rawImage = rawImageBytes,
+                dewarpedImage = dewarpedImageBytes,
+                processedImage = processedImageBytes,
+                requestFactory = { clientSubmissionId, capturedAt ->
+                    StudentSubmitRequest(
+                    clientSubmissionId = clientSubmissionId,
                     scannedStudentId = if (currentStudentIdEnabled) currentStudentId.ifBlank { null } else null,
                     scannedClassCode = if (currentClassCodeEnabled) currentClassCode else null,
                     scannedExamCode = if (currentExamCodeEnabled) currentExamCode else null,
@@ -177,58 +177,28 @@ class SmartReviewViewModel(
                             answer = it.studentAnswer?.ifBlank { null }
                         )
                     },
-                    capturedAt = nowIso(),
+                    capturedAt = capturedAt,
                     imageQualityScore = calculateImageQualityScore(),
                     qualityFeedback = buildQualityFeedback()
                 )
-            ).first { it !is ApiResult.Loading }
+                }
+            )
 
             _isLoading.value = false
-            when (submit) {
-                is ApiResult.Success -> {
-                    activeSessionStore.clear(currentExamId)
-                    activeSessionStore.clearBySessionId(sessionId)
-                    _savedSuccess.tryEmit(submit.data)
+            activeSessionStore.clear(currentExamId)
+            activeSessionStore.clearBySessionId(sessionId)
+            when (result) {
+                is FreezeResult.Synced -> {
+                    _savedSuccess.tryEmit(result.response)
                 }
-                is ApiResult.Error -> _errorMessage.tryEmit(submit.exception.message ?: context.getString(R.string.smart_review_submit_failed))
-                else -> Unit
+                is FreezeResult.Pending -> {
+                    _submissionFrozen.tryEmit(SubmissionFreezeUi(result.clientSubmissionId, false))
+                }
+                is FreezeResult.TerminalFailure -> {
+                    _submissionFrozen.tryEmit(SubmissionFreezeUi(result.clientSubmissionId, true))
+                }
             }
         }
-    }
-
-    private suspend fun uploadSubmissionImage(
-        sessionId: String,
-        imageBytes: ByteArray,
-        fileType: String,
-        imageKind: String
-    ): String? {
-        val presign = studentSubmissionRepository
-            .presignImage(
-                sessionId,
-                PresignSubmissionImageRequest(
-                    fileSize = imageBytes.size.toLong(),
-                    fileType = fileType,
-                    imageKind = imageKind
-                )
-            )
-            .first { it !is ApiResult.Loading }
-
-        if (presign !is ApiResult.Success<PresignSubmissionImageResponse>) {
-            _isLoading.value = false
-            _errorMessage.tryEmit((presign as? ApiResult.Error)?.exception?.message ?: context.getString(R.string.smart_review_presign_failed_format, imageKind))
-            return null
-        }
-
-        val uploadResult = studentSubmissionRepository
-            .uploadImage(presign.data.uploadUrl, imageBytes, fileType)
-            .first { it !is ApiResult.Loading }
-        if (uploadResult is ApiResult.Error) {
-            _isLoading.value = false
-            _errorMessage.tryEmit(uploadResult.exception.message ?: context.getString(R.string.smart_review_upload_failed_format, imageKind))
-            return null
-        }
-
-        return presign.data.fileUrl
     }
 
     private fun buildIdResultRequest(): IdZoneResultRequest? {
@@ -311,6 +281,7 @@ class SmartReviewViewModel(
     }
 
     fun submitBlankOnTimeout(examId: String, questionCount: Int) {
+        if (frozen) return
         val sessionId = currentSessionId.ifBlank { _reviewState.value.sessionId }
         if (sessionId.isBlank()) {
             _blankSubmissionFinished.tryEmit(null)
@@ -319,9 +290,13 @@ class SmartReviewViewModel(
         val resolvedExamId = currentExamId.ifBlank { examId }
         viewModelScope.launch {
             _isLoading.value = true
-            val submit = studentSubmissionRepository.submit(
-                sessionId,
-                StudentSubmitRequest(
+            frozen = true
+            val result = offlineSubmissionManager.freezeAndSync(
+                sessionId = sessionId,
+                examId = resolvedExamId,
+                requestFactory = { clientSubmissionId, capturedAt ->
+                    StudentSubmitRequest(
+                    clientSubmissionId = clientSubmissionId,
                     rawImageUrl = null,
                     dewarpedImageUrl = null,
                     processedImageUrl = null,
@@ -338,7 +313,7 @@ class SmartReviewViewModel(
                     studentAnswers = (1..questionCount.coerceAtLeast(0)).map { questionNo ->
                         StudentAnswerRequest(questionNumber = questionNo, answer = null)
                     },
-                    capturedAt = nowIso(),
+                    capturedAt = capturedAt,
                     imageQualityScore = 0,
                     qualityFeedback = mapOf(
                         "auto_submitted" to "true",
@@ -346,26 +321,26 @@ class SmartReviewViewModel(
                         "exam_id" to resolvedExamId
                     )
                 )
-            ).first { it !is ApiResult.Loading }
+                }
+            )
 
             _isLoading.value = false
-            val submission = if (submit is ApiResult.Success) {
-                activeSessionStore.clear(resolvedExamId)
-                activeSessionStore.clearBySessionId(sessionId)
-                submit.data
-            } else {
-                null
+            when (result) {
+                is FreezeResult.Synced -> _blankSubmissionFinished.tryEmit(result.response)
+                is FreezeResult.Pending -> _submissionFrozen.tryEmit(SubmissionFreezeUi(result.clientSubmissionId, false))
+                is FreezeResult.TerminalFailure -> _submissionFrozen.tryEmit(SubmissionFreezeUi(result.clientSubmissionId, true))
             }
-            _blankSubmissionFinished.tryEmit(submission)
+            activeSessionStore.clear(resolvedExamId)
+            activeSessionStore.clearBySessionId(sessionId)
         }
     }
 
-    private fun nowIso(): String {
-        return SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US).apply {
-            timeZone = TimeZone.getTimeZone("UTC")
-        }.format(Date())
-    }
 }
+
+data class SubmissionFreezeUi(
+    val clientSubmissionId: String,
+    val terminalFailure: Boolean
+)
 
 data class ReviewUiState(
     val score: Double? = null,

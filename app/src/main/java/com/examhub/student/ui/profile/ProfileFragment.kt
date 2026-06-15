@@ -94,8 +94,17 @@ class ProfileFragment : Fragment() {
         binding.etEmail.isEnabled = false
         binding.ivEditAvatar.setOnClickListener { showAvatarSourceDialog() }
         binding.btnGoogleLink.setOnClickListener {
-            if (viewModel.userProfile.value.isGoogleLinked()) {
-                confirmUnlinkGoogle()
+            val profile = viewModel.userProfile.value
+            if (profile.isGoogleLinked()) {
+                if (profile?.hasPassword == false && profile.authMethods?.password != true) {
+                    Snackbar.make(
+                        binding.root,
+                        R.string.profile_google_unlink_password_required,
+                        Snackbar.LENGTH_SHORT
+                    ).show()
+                } else {
+                    confirmUnlinkGoogle()
+                }
             } else {
                 startGoogleLink()
             }
@@ -200,10 +209,10 @@ class ProfileFragment : Fragment() {
             ?.takeIf { it.isNotBlank() }
             ?.let { getString(R.string.profile_student_code_format, it) }
             ?: getString(R.string.profile_student_code_empty)
-        binding.tvPasswordStatus.text = if (profile.mustChangePassword == true) {
-            getString(R.string.profile_password_must_change)
-        } else {
-            getString(R.string.profile_password_ok)
+        binding.tvPasswordStatus.text = when {
+            profile.hasPassword == false -> getString(R.string.profile_password_not_set)
+            profile.mustChangePassword == true -> getString(R.string.profile_password_must_change)
+            else -> getString(R.string.profile_password_ok)
         }
         binding.tvCreatedAt.text = getString(
             R.string.profile_created_at_format,
@@ -358,7 +367,7 @@ class ProfileFragment : Fragment() {
     }
 
     private fun UserResponse?.isGoogleLinked(): Boolean {
-        return this?.googleLinked == true || !this?.googleId.isNullOrBlank()
+        return this?.googleLinked == true || this?.authMethods?.google == true
     }
 
     private fun initials(name: String): String {

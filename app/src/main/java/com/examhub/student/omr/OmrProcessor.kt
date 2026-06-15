@@ -26,6 +26,13 @@ class OmrProcessor(
     private val gson = Gson()
     private val tag = "OmrProcessorKt"
 
+    private companion object {
+        val NOT_ENOUGH_MARKERS =
+            Regex("""Not enough markers found,\s*Only found:\s*(\d+)""", RegexOption.IGNORE_CASE)
+        val MISSING_CORNER_MARKERS =
+            Regex("""Missing required corner markers:\s*\[([^\]]*)]""", RegexOption.IGNORE_CASE)
+    }
+
     suspend fun process(
         bitmap: Bitmap,
         examId: String
@@ -58,7 +65,7 @@ class OmrProcessor(
         )
 
         if (!output.success) {
-            error(output.errorMessage.ifBlank { context.getString(R.string.omr_processing_failed_format, output.errorCode) })
+            error(localizedOmrError(output.errorMessage, output.errorCode))
         }
 
         validateIdZone(output.idResult, enabledIdFields, studentIdentifierMode, examId)
@@ -387,6 +394,19 @@ class OmrProcessor(
                     })
                 })
             }
+        }
+    }
+
+    private fun localizedOmrError(message: String, errorCode: String): String {
+        val trimmed = message.trim()
+        NOT_ENOUGH_MARKERS.find(trimmed)?.groupValues?.getOrNull(1)?.toIntOrNull()?.let { found ->
+            return context.getString(R.string.omr_error_not_enough_markers, found, 4)
+        }
+        MISSING_CORNER_MARKERS.find(trimmed)?.groupValues?.getOrNull(1)?.let { markerIds ->
+            return context.getString(R.string.omr_error_missing_corner_markers, markerIds)
+        }
+        return trimmed.ifBlank {
+            context.getString(R.string.omr_processing_failed_format, errorCode)
         }
     }
 
