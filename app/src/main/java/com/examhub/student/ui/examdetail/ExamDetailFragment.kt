@@ -130,8 +130,7 @@ class ExamDetailFragment : Fragment() {
             }
             launch {
                 viewModel.resultOnly.collect { resultOnly ->
-                    binding.btnStartScanning.visibility = if (resultOnly) View.GONE else View.VISIBLE
-                    binding.cardOfflineAlert.visibility = if (resultOnly || viewModel.isOfflineReady.value) View.GONE else View.VISIBLE
+                    updateButtonVisibilities(resultOnly = resultOnly)
                 }
             }
             launch {
@@ -159,8 +158,12 @@ class ExamDetailFragment : Fragment() {
                         binding.btnDownloadOffline.text = getString(R.string.exam_detail_download_template)
                         binding.btnStartScanning.alpha = if (viewModel.canStartExam.value) 1.0f else 0.55f
                     }
-                    binding.cardOfflineAlert.visibility = if (ready || viewModel.resultOnly.value) View.GONE else View.VISIBLE
-                    binding.btnStartScanning.visibility = if (viewModel.resultOnly.value) View.GONE else View.VISIBLE
+                    updateButtonVisibilities(isOfflineReady = ready)
+                }
+            }
+            launch {
+                viewModel.isExamExpired.collect { expired ->
+                    updateButtonVisibilities(isExamExpired = expired)
                 }
             }
             launch {
@@ -194,6 +197,18 @@ class ExamDetailFragment : Fragment() {
                 }
             }
         }
+    }
+
+    private fun updateButtonVisibilities(
+        resultOnly: Boolean = viewModel.resultOnly.value,
+        isOfflineReady: Boolean = viewModel.isOfflineReady.value,
+        isExamExpired: Boolean = viewModel.isExamExpired.value
+    ) {
+        val hideStartScanning = resultOnly || isExamExpired
+        val hideOfflineAlert = resultOnly || isOfflineReady || isExamExpired
+
+        binding.btnStartScanning.visibility = if (hideStartScanning) View.GONE else View.VISIBLE
+        binding.cardOfflineAlert.visibility = if (hideOfflineAlert) View.GONE else View.VISIBLE
     }
 
     private fun updateLoadingState(loading: Boolean) {

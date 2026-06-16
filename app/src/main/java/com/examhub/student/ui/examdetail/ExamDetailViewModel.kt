@@ -92,6 +92,8 @@ class ExamDetailViewModel(
     val resultOnly: StateFlow<Boolean> = _resultOnly.asStateFlow()
     private val _resultId = MutableStateFlow("")
     val resultId: StateFlow<String> = _resultId.asStateFlow()
+    private val _isExamExpired = MutableStateFlow(false)
+    val isExamExpired: StateFlow<Boolean> = _isExamExpired.asStateFlow()
     private val _toastMessage = MutableSharedFlow<String>(extraBufferCapacity = 1)
     val toastMessage: SharedFlow<String> = _toastMessage.asSharedFlow()
     private val _sessionStarted = MutableSharedFlow<ExamDetailSessionUiEvent>(extraBufferCapacity = 1)
@@ -153,6 +155,8 @@ class ExamDetailViewModel(
         _progressText.value = context.getString(R.string.exam_detail_ready_to_submit)
         refreshExamWindowNotice()
         refreshCanStartExam()
+        _isExamExpired.value = currentExamStatus.equals("END", ignoreCase = true) ||
+            (currentExamStatus.equals("ACTIVE", ignoreCase = true) && isAfterEndTime(currentEndTime))
         offlineCacheManager.saveExamClassCode(exam.id, exam.classInfo?.classCode)
         offlineCacheManager.saveExamBasic(exam.toCachedExam())
     }
@@ -392,6 +396,8 @@ class ExamDetailViewModel(
         _isOfflineReady.value = offlineCacheManager.isOfflineReady(exam.id)
         refreshExamWindowNotice()
         refreshCanStartExam()
+        _isExamExpired.value = currentExamStatus.equals("END", ignoreCase = true) ||
+            (currentExamStatus.equals("ACTIVE", ignoreCase = true) && isAfterEndTime(currentEndTime))
     }
 
     private fun refreshCanStartExam() {
