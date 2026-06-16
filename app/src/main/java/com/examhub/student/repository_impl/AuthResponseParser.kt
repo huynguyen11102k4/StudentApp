@@ -20,7 +20,7 @@ class AuthResponseParser(
         val tokens = layers.objectAt("tokens", "token", "auth") ?: payload
         val accessToken = tokens.stringAt("accessToken", "access_token", "token")
             ?: layers.stringAt("accessToken", "access_token")
-            ?: throw JsonParseException("Missing access token")
+            ?: throw authStateException(layers)
         val refreshToken = tokens.stringAt("refreshToken", "refresh_token")
             ?: layers.stringAt("refreshToken", "refresh_token")
             ?: throw JsonParseException("Missing refresh token")
@@ -57,7 +57,9 @@ class AuthResponseParser(
         val layers = root.envelopeObjects()
         val user = parseOptionalUser(layers)
         val google = layers.objectAt("google", "googleAccount", "google_account")
-        val authMethodsObject = layers.objectAt("authMethods", "auth_methods")
+        val authentication = layers.objectAt("authentication", "auth_state", "authState")
+        val authMethodsObject = layers.objectAt("authMethods", "auth_methods", "loginMethods", "login_methods")
+            ?: authentication?.objectAt("methods", "authMethods", "auth_methods")
             ?: user?.authMethods?.let(gson::toJsonTree)?.asJsonObject
         val authMethods = authMethodsObject?.let {
             gson.fromJson(it, AuthMethodsResponse::class.java)
@@ -110,6 +112,38 @@ class AuthResponseParser(
                 ?.let { merged.add("googleLinked", it) }
         }
         return gson.fromJson(merged, UserResponse::class.java)?.sanitizedStudentProfile()
+    }
+
+    private fun authStateException(layers: List<JsonObject>): Exception {
+        val user = parseOptionalUser(layers)
+        val error = layers.objectAt("error")
+        val code = error?.stringAt("code", "errorCode", "error_code")
+            ?: layers.stringAt("code", "errorCode", "error_code")
+        val message = error?.stringAt("message", "msg")
+            ?: layers.stringAt("message", "msg")
+            ?: "Authentication failed"
+        val isActive = layers.booleanAt("isActive", "is_active", "active") ?: user?.isActive
+        val registrationRequired = layers.booleanAt(
+            "registrationRequired",
+            "registration_required",
+            "requiresRegistration",
+            "requires_registration"
+        )
+        val linkRequired = layers.booleanAt(
+            "linkRequired",
+            "link_required",
+            "googleLinkRequired",
+            "google_link_required"
+        )
+        return when {
+            isActive == false -> com.examhub.student.model.ApiException("ACCOUNT_INACTIVE", message)
+            registrationRequired == true ->
+                com.examhub.student.model.ApiException("GOOGLE_REGISTRATION_REQUIRED", message)
+            linkRequired == true || code?.contains("NOT_LINKED", ignoreCase = true) == true ->
+                com.examhub.student.model.ApiException("GOOGLE_ACCOUNT_NOT_LINKED", message)
+            !code.isNullOrBlank() -> com.examhub.student.model.ApiException(code, message)
+            else -> JsonParseException("Missing access token")
+        }
     }
 
     private fun JsonElement.envelopeObjects(): List<JsonObject> {

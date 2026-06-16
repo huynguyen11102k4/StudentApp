@@ -66,11 +66,14 @@ class LoginFragment : Fragment() {
                 }.exceptionOrNull()
                     ?.let { it as? ApiException }
                     ?.statusCode
-                Snackbar.make(
-                    binding.root,
-                    statusCode?.let(::googleErrorMessage) ?: getString(R.string.login_error_google_failed),
-                    Snackbar.LENGTH_SHORT
-                ).show()
+                if (statusCode != com.google.android.gms.auth.api.signin.GoogleSignInStatusCodes.SIGN_IN_CANCELLED) {
+                    Snackbar.make(
+                        binding.root,
+                        statusCode?.let(::googleErrorMessage)
+                            ?: getString(R.string.login_error_google_failed),
+                        Snackbar.LENGTH_SHORT
+                    ).show()
+                }
             }
         }
 
@@ -169,7 +172,7 @@ class LoginFragment : Fragment() {
                         "GOOGLE_ACCOUNT_MISMATCH" -> getString(R.string.auth_error_google_account_mismatch)
                         "ACCOUNT_INACTIVE" -> getString(R.string.auth_error_account_inactive)
                         "INVALID_CREDENTIALS" -> getString(R.string.auth_error_invalid_credentials)
-                        else -> code // raw API error message
+                        else -> code
                     }
                     Snackbar.make(binding.root, message, Snackbar.LENGTH_SHORT).show()
                 }

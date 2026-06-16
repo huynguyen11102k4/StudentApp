@@ -1,6 +1,7 @@
 package com.examhub.student.ui.profile
 
 import android.app.Activity
+import android.app.Dialog
 import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Bundle
@@ -8,6 +9,9 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ImageView
+import android.widget.LinearLayout
+import android.widget.TextView
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
@@ -75,7 +79,21 @@ class ProfileFragment : Fragment() {
                     Snackbar.make(binding.root, googleErrorMessage(e.statusCode), Snackbar.LENGTH_SHORT).show()
                 }
             } else {
-                Snackbar.make(binding.root, R.string.login_error_google_failed, Snackbar.LENGTH_SHORT).show()
+                val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
+                val statusCode = runCatching {
+                    task.getResult(ApiException::class.java)
+                    null
+                }.exceptionOrNull()
+                    ?.let { it as? ApiException }
+                    ?.statusCode
+                if (statusCode != com.google.android.gms.auth.api.signin.GoogleSignInStatusCodes.SIGN_IN_CANCELLED) {
+                    Snackbar.make(
+                        binding.root,
+                        statusCode?.let(::googleErrorMessage)
+                            ?: getString(R.string.login_error_google_failed),
+                        Snackbar.LENGTH_SHORT
+                    ).show()
+                }
             }
         }
 
@@ -228,7 +246,7 @@ class ProfileFragment : Fragment() {
 
     private fun updateSaveButton() {
         binding.btnSave.isEnabled = !isSaving && pendingAvatarPart != null
-        binding.btnGoogleLink.isEnabled = !isSaving
+        binding.btnGoogleLink.isEnabled = !isSaving && hasProfile
     }
 
     private fun startGoogleLink() {
@@ -285,19 +303,33 @@ class ProfileFragment : Fragment() {
     }
 
     private fun showAvatarSourceDialog() {
-        val options = arrayOf(
-            getString(R.string.profile_avatar_source_gallery),
-            getString(R.string.profile_avatar_source_camera)
-        )
-        MaterialAlertDialogBuilder(requireContext())
-            .setTitle(R.string.profile_avatar_source_title)
-            .setItems(options) { _, which ->
-                when (which) {
-                    0 -> pickAvatarLauncher.launch("image/*")
-                    1 -> takeAvatarLauncher.launch(null)
-                }
+        val container = LinearLayout(requireContext()).apply {
+            orientation = LinearLayout.VERTICAL
+            val padding = resources.getDimensionPixelSize(R.dimen.spacing_8)
+            setPadding(0, padding, 0, padding)
+        }
+        var dialog: Dialog? = null
+
+        container.addView(
+            avatarSourceRow(R.drawable.ic_gallery, R.string.profile_avatar_source_gallery) {
+                dialog?.dismiss()
+                pickAvatarLauncher.launch("image/*")
             }
-            .show()
+        )
+
+        container.addView(
+            avatarSourceRow(R.drawable.ic_camera, R.string.profile_avatar_source_camera) {
+                dialog?.dismiss()
+                takeAvatarLauncher.launch(null)
+            }
+        )
+
+        dialog = MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.profile_avatar_source_title)
+            .setView(container)
+            .create()
+
+        dialog.show()
     }
 
     private fun prepareAvatar(uri: Uri) {
@@ -391,5 +423,37 @@ class ProfileFragment : Fragment() {
                     }
                 }
             }
+    }
+
+    private fun avatarSourceRow(iconRes: Int, textRes: Int, onClick: () -> Unit): View {
+        return LinearLayout(requireContext()).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = android.view.Gravity.CENTER_VERTICAL
+            isClickable = true
+            isFocusable = true
+            val vertical = resources.getDimensionPixelSize(R.dimen.spacing_12)
+            val horizontal = resources.getDimensionPixelSize(R.dimen.spacing_24)
+            setPadding(horizontal, vertical, horizontal, vertical)
+            setOnClickListener { onClick() }
+
+            addView(ImageView(requireContext()).apply {
+                setImageResource(iconRes)
+                setColorFilter(requireContext().getColor(R.color.primary))
+                layoutParams = LinearLayout.LayoutParams(24.dp(), 24.dp())
+            })
+
+            addView(TextView(requireContext()).apply {
+                text = getString(textRes)
+                setTextColor(requireContext().getColor(R.color.text_primary))
+                textSize = 16f
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
+                    marginStart = resources.getDimensionPixelSize(R.dimen.spacing_16)
+                }
+            })
+        }
+    }
+
+    private fun Int.dp(): Int {
+        return (this * resources.displayMetrics.density).toInt()
     }
 }

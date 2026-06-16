@@ -35,4 +35,23 @@ interface QueuedSubmissionDao {
         errorCode: String? = null,
         errorMessage: String? = null
     )
+
+    @Query("""
+        UPDATE queued_submissions
+        SET status = 'SYNCED',
+            updatedAtMillis = :updatedAt,
+            lastErrorCode = NULL,
+            lastErrorMessage = NULL,
+            serverSubmissionId = :submissionId,
+            resultId = :resultId,
+            serverStatus = :serverStatus
+        WHERE clientSubmissionId = :id
+    """)
+    suspend fun markSynced(
+        id: String,
+        updatedAt: Long,
+        submissionId: String?,
+        resultId: String?,
+        serverStatus: String?
+    )
 }

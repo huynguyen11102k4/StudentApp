@@ -7,6 +7,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import com.examhub.student.model.ApiException
 
 class AuthResponseParserTest {
     private val gson = Gson()
@@ -68,6 +69,63 @@ class AuthResponseParserTest {
 
         assertEquals("user-1", result.user?.id)
         assertEquals(false, result.user?.isActive)
+    }
+
+    @Test
+    fun successEnvelopeWithoutTokensReportsRegistrationRequirement() {
+        val root = gson.parse(
+            """
+            {
+              "data": {
+                "registration_required": true,
+                "message": "Create an account first"
+              }
+            }
+            """
+        )
+
+        val error = runCatching { parser.parseAuthToken(root) }.exceptionOrNull() as ApiException
+
+        assertEquals("GOOGLE_REGISTRATION_REQUIRED", error.code)
+    }
+
+    @Test
+    fun successEnvelopeWithoutTokensReportsInactiveNestedUser() {
+        val root = gson.parse(
+            """
+            {
+              "data": {
+                "user": {
+                  "id": "user-1",
+                  "is_active": false
+                },
+                "message": "Account inactive"
+              }
+            }
+            """
+        )
+
+        val error = runCatching { parser.parseAuthToken(root) }.exceptionOrNull() as ApiException
+
+        assertEquals("ACCOUNT_INACTIVE", error.code)
+    }
+
+    @Test
+    fun successEnvelopeWithoutTokensReportsGoogleLinkRequirement() {
+        val root = gson.parse(
+            """
+            {
+              "data": {
+                "google_link_required": true,
+                "message": "Google is not linked"
+              }
+            }
+            """
+        )
+
+        val error = runCatching { parser.parseAuthToken(root) }.exceptionOrNull() as ApiException
+
+        assertEquals("GOOGLE_ACCOUNT_NOT_LINKED", error.code)
     }
 
     @Test
@@ -133,6 +191,29 @@ class AuthResponseParserTest {
         assertTrue(result.googleLinked)
         assertFalse(result.updated == true)
         assertTrue(result.hasPassword == true)
+        assertTrue(result.authMethods?.password == true)
+        assertTrue(result.authMethods?.google == true)
+    }
+
+    @Test
+    fun linkParsesAuthenticationMethodsWrapperAndAliases() {
+        val root = gson.parse(
+            """
+            {
+              "response": {
+                "authentication": {
+                  "methods": {
+                    "password_enabled": true,
+                    "google_enabled": true
+                  }
+                }
+              }
+            }
+            """
+        )
+
+        val result = parser.parseGoogleLink(root, expectedLinked = true)
+
         assertTrue(result.authMethods?.password == true)
         assertTrue(result.authMethods?.google == true)
     }

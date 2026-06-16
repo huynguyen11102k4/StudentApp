@@ -29,6 +29,8 @@
     <string name="auth_error_google_account_mismatch">Hãy đăng nhập bằng đúng tài khoản Google đã liên kết trước đó.</string>
     <string name="auth_error_account_inactive">Tài khoản học sinh chưa được kích hoạt.</string>
     <string name="auth_error_invalid_credentials">Email hoặc mật khẩu không chính xác.</string>
+    <string name="auth_error_google_not_linked">Tài khoản này chưa liên kết Google. Hãy đăng nhập bằng mật khẩu, sau đó liên kết Google trong hồ sơ.</string>
+    <string name="auth_error_network">Không thể kết nối máy chủ. Vui lòng kiểm tra mạng và thử lại.</string>
 
     <!-- Register Screen -->
     <string name="register_title">Đăng ký tài khoản</string>

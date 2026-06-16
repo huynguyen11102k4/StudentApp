@@ -42,10 +42,16 @@ class StudentSubmissionRepositoryImpl(
                 if (response.isSuccessful) {
                     emit(ApiResult.Success(Unit))
                 } else {
+                    val code = when (response.code) {
+                        401, 403 -> "UPLOAD_URL_EXPIRED"
+                        408, 425, 429 -> "UPLOAD_RETRYABLE"
+                        in 500..599 -> "UPLOAD_RETRYABLE"
+                        else -> "UPLOAD_FAILED"
+                    }
                     emit(
                         ApiResult.Error(
                             ApiException(
-                                code = "UPLOAD_FAILED",
+                                code = code,
                                 message = "Upload image failed (${response.code})",
                                 httpCode = response.code
                             )

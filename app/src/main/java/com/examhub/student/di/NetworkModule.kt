@@ -27,7 +27,7 @@ import com.examhub.student.security.EncryptedSubmissionFileStore
 import com.examhub.student.security.KeystoreCrypto
 import com.examhub.student.security.SecurePermitStore
 import com.examhub.student.data.local.StudentAppDatabase
-import com.examhub.student.data.local.LegacySubmissionQueueImporter
+import com.examhub.student.data.local.StudentDatabaseMigrations
 import com.examhub.student.service.OfflineSubmissionManager
 import androidx.room.Room
 import com.examhub.student.util.helper.ResourceProvider
@@ -51,11 +51,12 @@ object NetworkModule {
                 androidContext(),
                 StudentAppDatabase::class.java,
                 "student_app.db"
-            ).build()
+            )
+                .addMigrations(StudentDatabaseMigrations.MIGRATION_1_2)
+                .build()
         }
         single { get<StudentAppDatabase>().studentCacheDao() }
         single { get<StudentAppDatabase>().queuedSubmissionDao() }
-        single { LegacySubmissionQueueImporter(androidContext(), get()) }
         single { TokenManager(androidContext(), get(), get()) }
         single { SecurePermitStore(androidContext(), get(), get()) }
         single { EncryptedSubmissionFileStore(androidContext(), get()) }

@@ -18,5 +18,8 @@ data class QueuedSubmissionEntity(
     val createdAtMillis: Long,
     val updatedAtMillis: Long,
     val lastErrorCode: String? = null,
-    val lastErrorMessage: String? = null
+    val lastErrorMessage: String? = null,
+    val serverSubmissionId: String? = null,
+    val resultId: String? = null,
+    val serverStatus: String? = null
 )

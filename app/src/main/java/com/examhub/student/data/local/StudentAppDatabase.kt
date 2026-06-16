@@ -23,7 +23,7 @@ import com.examhub.student.data.local.submission.QueuedSubmissionEntity
         StudentIdentityEntity::class,
         QueuedSubmissionEntity::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = true
 )
 abstract class StudentAppDatabase : RoomDatabase() {

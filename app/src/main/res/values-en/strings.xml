@@ -247,6 +247,8 @@
     <string name="auth_error_google_account_mismatch">Sign in with the Google account that was linked previously.</string>
     <string name="auth_error_account_inactive">This student account has not been activated.</string>
     <string name="auth_error_invalid_credentials">The email or password is incorrect.</string>
+    <string name="auth_error_google_not_linked">This account is not linked to Google. Sign in with your password, then link Google from your profile.</string>
+    <string name="auth_error_network">Unable to reach the server. Check your connection and try again.</string>
     <string name="register_title">Create an account</string>
     <string name="register_subtitle">Create a student account to join classes and take exams</string>
     <string name="register_full_name_hint">Full name</string>

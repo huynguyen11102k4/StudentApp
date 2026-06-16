@@ -106,7 +106,7 @@
                 android:background="@drawable/bg_icon_container_secondary"
                 android:contentDescription="@string/camera_ar_gallery"
                 android:padding="@dimen/spacing_12"
-                android:src="@drawable/ic_assignment"
+                android:src="@drawable/ic_gallery"
                 app:tint="@color/tertiary" />
 
             <com.google.android.material.floatingactionbutton.FloatingActionButton

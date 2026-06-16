@@ -37,7 +37,8 @@ class SubmissionEndFragment : Fragment() {
         collectOnStarted {
             launch {
                 viewModel.isResolving.collect { resolving ->
-                    binding.btnResults.isEnabled = !resolving
+                    binding.btnResults.isEnabled =
+                        !resolving && !viewModel.submissionState.value.isTerminalFailure
                 }
             }
             launch {
@@ -61,9 +62,23 @@ class SubmissionEndFragment : Fragment() {
                 }
             }
             launch {
-                viewModel.syncStatus.collect { statusRes ->
-                    binding.tvSyncStatus.visibility = if (statusRes == null) View.GONE else View.VISIBLE
-                    if (statusRes != null) binding.tvSyncStatus.setText(statusRes)
+                viewModel.submissionState.collect { state ->
+                    binding.tvSyncStatus.visibility = if (state.statusRes == null) View.GONE else View.VISIBLE
+                    state.statusRes?.let(binding.tvSyncStatus::setText)
+                    binding.tvSyncStatus.setTextColor(
+                        androidx.core.content.ContextCompat.getColor(
+                            requireContext(),
+                            if (state.isTerminalFailure) R.color.error else R.color.primary
+                        )
+                    )
+                    binding.btnResults.text = getString(
+                        if (state.isWaitingForGrading) {
+                            R.string.submission_end_check_result
+                        } else {
+                            R.string.submission_end_results
+                        }
+                    )
+                    binding.btnResults.isEnabled = !viewModel.isResolving.value && !state.isTerminalFailure
                 }
             }
         }

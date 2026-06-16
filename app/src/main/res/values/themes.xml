@@ -9,6 +9,17 @@
         <!-- Typography -->
         <item name="fontFamily">@font/outfit</item>
         <item name="android:fontFamily">@font/outfit</item>
+        <item name="textAppearanceHeadlineMedium">@style/Text_Headline_Medium</item>
+        <item name="textAppearanceHeadlineSmall">@style/Text_Headline_Small</item>
+        <item name="textAppearanceTitleLarge">@style/Text_Title_Large</item>
+        <item name="textAppearanceTitleMedium">@style/Text_Title_Medium</item>
+        <item name="textAppearanceTitleSmall">@style/Text_Title_Small</item>
+        <item name="textAppearanceBodyLarge">@style/Text_Body_Large</item>
+        <item name="textAppearanceBodyMedium">@style/Text_Body_Medium</item>
+        <item name="textAppearanceBodySmall">@style/Text_Body_Small</item>
+        <item name="textAppearanceLabelLarge">@style/Text_Label_Large</item>
+        <item name="textAppearanceLabelMedium">@style/Text_Label_Medium</item>
+        <item name="textAppearanceLabelSmall">@style/Text_Label_Small</item>
 
         <!-- Primary -->
         <item name="colorPrimary">@color/primary</item>

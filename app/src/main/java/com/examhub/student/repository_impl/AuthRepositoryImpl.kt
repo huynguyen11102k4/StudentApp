@@ -84,7 +84,7 @@ class AuthRepositoryImpl(
                         tokenManager.saveCachedAvatarUrl(user.avatarUrl)
                         tokenManager.saveCachedProfileJson(gson.toJson(user))
                         offlineCacheManager.saveStudentIdentity(user)
-                    }
+                    } ?: clearUnknownUserCache()
                 }
             }
 
@@ -103,7 +103,7 @@ class AuthRepositoryImpl(
                         tokenManager.saveCachedAvatarUrl(user.avatarUrl)
                         tokenManager.saveCachedProfileJson(gson.toJson(user))
                         offlineCacheManager.saveStudentIdentity(user)
-                    }
+                    } ?: clearUnknownUserCache()
                 }
             }
 
@@ -265,5 +265,12 @@ class AuthRepositoryImpl(
         } else {
             result
         }
+    }
+
+    private fun clearUnknownUserCache() {
+        offlineCacheManager.clearUserScopedLists()
+        tokenManager.saveCachedAvatarUrl(null)
+        tokenManager.saveCachedProfileJson(null)
+        tokenManager.saveCachedSessionsJson(null)
     }
 }

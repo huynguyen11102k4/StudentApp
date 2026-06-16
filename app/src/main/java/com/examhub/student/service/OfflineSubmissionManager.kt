@@ -220,7 +220,14 @@ class OfflineSubmissionManager(
 
         return when (submit) {
             is ApiResult.Success -> {
-                dao.updateStatus(item.clientSubmissionId, SubmissionSyncStatus.SYNCED.name, System.currentTimeMillis())
+                dao.markSynced(
+                    id = item.clientSubmissionId,
+                    updatedAt = System.currentTimeMillis(),
+                    submissionId = submit.data.submissionId.takeIf(String::isNotBlank),
+                    resultId = submit.data.resultId?.takeIf(String::isNotBlank),
+                    serverStatus = submit.data.status.takeIf(String::isNotBlank)
+                        ?: submit.data.sessionStatus.takeIf(String::isNotBlank)
+                )
                 fileStore.deleteSubmission(item.clientSubmissionId)
                 permitStore.clear(item.sessionId)
                 activeSessionStore.clearBySessionId(item.sessionId)
@@ -242,22 +249,28 @@ class OfflineSubmissionManager(
         message: String?,
         httpCode: Int?
     ): SyncAttempt {
-        if (code in TERMINAL_CODES) {
-            markTerminal(item, code, message)
-            return SyncAttempt.TerminalFailure(code)
+        val normalizedCode = normalizeErrorCode(code)
+        if (normalizedCode in TERMINAL_CODES) {
+            markTerminal(item, normalizedCode, message)
+            return SyncAttempt.TerminalFailure(normalizedCode)
         }
-        return if (code == "NETWORK_ERROR" || httpCode == null || httpCode >= 500) {
+        return if (
+            normalizedCode in RETRYABLE_CODES ||
+            httpCode == null ||
+            httpCode in RETRYABLE_HTTP_CODES ||
+            httpCode >= 500
+        ) {
             dao.updateStatus(
                 item.clientSubmissionId,
                 SubmissionSyncStatus.PENDING_SYNC.name,
                 System.currentTimeMillis(),
-                code,
+                normalizedCode,
                 message
             )
             SyncAttempt.Retry
         } else {
-            markTerminal(item, code, message)
-            SyncAttempt.TerminalFailure(code)
+            markTerminal(item, normalizedCode, message)
+            SyncAttempt.TerminalFailure(normalizedCode)
         }
     }
 
@@ -276,6 +289,36 @@ class OfflineSubmissionManager(
         }.format(java.util.Date())
     }
 
+    private fun normalizeErrorCode(code: String): String {
+        val normalized = code.trim().uppercase()
+            .replace('-', '_')
+            .replace(' ', '_')
+        return when {
+            normalized in setOf(
+                "OFFLINE_PERMIT_INVALID",
+                "OFFLINE_PERMIT_EXPIRED",
+                "PERMIT_INVALID",
+                "PERMIT_EXPIRED"
+            ) ->
+                "INVALID_OFFLINE_PERMIT"
+            normalized == "PERMIT_MISMATCH" ||
+                normalized == "OFFLINE_SUBMISSION_PERMIT_MISMATCH" ||
+                normalized.contains("PERMIT_MISMATCH") ->
+                "OFFLINE_PERMIT_MISMATCH"
+            normalized == "DEVICE_MISMATCH" ||
+                normalized == "SUBMISSION_FROM_DIFFERENT_DEVICE" ||
+                normalized.contains("DEVICE_MISMATCH") ->
+                "SUBMISSION_DEVICE_MISMATCH"
+            normalized == "MISSING_CLIENT_SUBMISSION_ID" ||
+                normalized == "CLIENT_ID_REQUIRED" ->
+                "CLIENT_SUBMISSION_ID_REQUIRED"
+            normalized == "CLIENT_ID_CONFLICT" ||
+                normalized == "DUPLICATE_CLIENT_SUBMISSION_ID" ->
+                "CLIENT_SUBMISSION_ID_CONFLICT"
+            else -> normalized
+        }
+    }
+
     private sealed interface SyncAttempt {
         data class Synced(val response: StudentSubmitResponse) : SyncAttempt
         data class TerminalFailure(val code: String) : SyncAttempt
@@ -292,5 +335,14 @@ class OfflineSubmissionManager(
             "CLIENT_SUBMISSION_ID_REQUIRED",
             "CLIENT_SUBMISSION_ID_CONFLICT"
         )
+        private val RETRYABLE_CODES = setOf(
+            "NETWORK_ERROR",
+            "UPLOAD_URL_EXPIRED",
+            "UPLOAD_RETRYABLE",
+            "RATE_LIMITED",
+            "TOO_MANY_REQUESTS",
+            "REQUEST_TIMEOUT"
+        )
+        private val RETRYABLE_HTTP_CODES = setOf(408, 425, 429)
     }
 }

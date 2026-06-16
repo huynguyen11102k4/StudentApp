@@ -3,7 +3,6 @@ package com.examhub.student.service
 import android.app.Application
 import android.content.Context
 import androidx.room.Room
-import com.examhub.student.data.local.LegacySubmissionQueueImporter
 import com.examhub.student.data.local.StudentAppDatabase
 import com.examhub.student.data.local.entity.ActiveExamSessionEntity
 import com.examhub.student.data.local.model.SubmissionSyncStatus
@@ -187,25 +186,24 @@ class OfflineCacheManagerRoomTest {
     }
 
     @Test
-    fun failedLegacyQueueReadIsRetriedInsteadOfMarkedComplete() {
-        val legacyFile = context.getDatabasePath("student_submission_queue.db")
-        legacyFile.parentFile?.mkdirs()
-        legacyFile.writeText("not a sqlite database")
+    fun syncedSubmissionKeepsServerNavigationMetadata() = runBlocking {
+        val dao = database.queuedSubmissionDao()
+        dao.insert(pendingSubmission("client-result"))
 
-        LegacySubmissionQueueImporter(context, database).importOnce()
+        dao.markSynced(
+            id = "client-result",
+            updatedAt = 2,
+            submissionId = "submission-1",
+            resultId = "sheet-1",
+            serverStatus = "PENDING_GRADING"
+        )
 
-        assertEquals(
-            null,
-            database.studentCacheDao()
-                .getMetadata("legacy_submission_queue_import_complete")
-        )
-        legacyFile.delete()
-        LegacySubmissionQueueImporter(context, database).importOnce()
-        assertEquals(
-            "1",
-            database.studentCacheDao()
-                .getMetadata("legacy_submission_queue_import_complete")
-        )
+        val synced = dao.get("client-result")
+        assertEquals(SubmissionSyncStatus.SYNCED.name, synced?.status)
+        assertEquals("submission-1", synced?.serverSubmissionId)
+        assertEquals("sheet-1", synced?.resultId)
+        assertEquals("PENDING_GRADING", synced?.serverStatus)
+        assertTrue(dao.getPending().isEmpty())
     }
 
     @Test

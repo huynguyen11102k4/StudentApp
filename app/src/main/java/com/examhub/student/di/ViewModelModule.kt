@@ -30,7 +30,7 @@ object ViewModelModule {
         viewModel { SplashViewModel(get()) }
 
         // Auth
-        viewModel { LoginViewModel(get(), get()) }
+        viewModel { LoginViewModel(get(), get(), get()) }
         viewModel { RegisterViewModel(get(), get(), get()) }
         viewModel { ForgotPasswordViewModel(get(), get()) }
         viewModel { ProfileViewModel(get(), get()) }
