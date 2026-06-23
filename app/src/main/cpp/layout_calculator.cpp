@@ -240,9 +240,14 @@ bool LayoutCalculator::computeAnswerZoneLayout(
     bool hasStart = zone.has_start_number;
     bool hasEnd = zone.has_end_number;
 
-    if (rows <= 0 || options <= 0) {
+    if (rows < 0 || options <= 0) {
         LOGE("AnswerZone [%s]: invalid rows=%d options=%d", zone.zone_id.c_str(), rows, options);
         return false;
+    }
+
+    if (rows == 0) {
+        LOGI("AnswerZone [%s]: rows=0; no answer cells generated", zone.zone_id.c_str());
+        return true;
     }
 
     float innerX, innerY, innerW, innerH;

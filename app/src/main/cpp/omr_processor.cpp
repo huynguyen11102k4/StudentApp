@@ -964,7 +964,7 @@ bool OmrProcessor::parseTemplateJson(
                 if (layoutPos != std::string::npos) {
                     size_t layoutEnd = jsonFindClose(zoneStr, layoutPos);
                     std::string layoutStr = zoneStr.substr(layoutPos, layoutEnd - layoutPos + 1);
-                    az.rows = jsonGetInt(layoutStr, "rows", 20);
+                    az.rows = jsonGetInt(layoutStr, "rows", jsonGetAnyInt(zoneStr, {"rows"}, 20));
                     az.options = jsonGetInt(layoutStr, "options", 4);
                     az.has_start_number = jsonGetAnyBool(layoutStr, {"has_start_number", "hasStartNumber"}, true);
                     az.has_end_number = jsonGetAnyBool(layoutStr, {"has_end_number", "hasEndNumber"}, false);
@@ -974,7 +974,11 @@ bool OmrProcessor::parseTemplateJson(
                 } else {
                     int startNumber = jsonGetAnyInt(zoneStr, {"start_number", "startNumber"}, 1);
                     int endNumber = jsonGetAnyInt(zoneStr, {"end_number", "endNumber"}, startNumber + 19);
-                    az.rows = std::max(1, endNumber - startNumber + 1);
+                    az.rows = jsonGetAnyInt(
+                        zoneStr,
+                        {"rows"},
+                        std::max(0, endNumber - startNumber + 1)
+                    );
                     az.options = jsonGetAnyInt(zoneStr, {"options_per_question", "optionsPerQuestion"}, 4);
                     az.has_start_number = true;
                     az.has_end_number = false;

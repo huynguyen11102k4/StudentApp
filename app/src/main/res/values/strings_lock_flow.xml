@@ -55,7 +55,7 @@
     <string name="submission_end_home">Về trang chủ</string>
     <string name="submission_end_content_description">Đã nộp bài</string>
     <string name="submission_status_saved">Đã lưu bài trên thiết bị</string>
-    <string name="submission_status_waiting_network">Đang chờ kết nối mạng</string>
+    <string name="submission_status_waiting_network">Bài thi đã được lưu và sẽ được đồng bộ khi có mạng</string>
     <string name="submission_status_uploading">Đang tải ảnh lên</string>
     <string name="submission_status_syncing">Đang đồng bộ bài</string>
     <string name="submission_status_synced">Đã nộp thành công</string>

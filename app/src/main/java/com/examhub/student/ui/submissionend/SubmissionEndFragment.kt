@@ -4,13 +4,16 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.activity.OnBackPressedCallback
 import androidx.core.os.bundleOf
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
+import androidx.navigation.navOptions
 import com.examhub.student.MainActivity
 import com.examhub.student.R
 import com.examhub.student.databinding.FragmentSubmissionEndBinding
 import com.examhub.student.util.extension.collectOnStarted
+import com.examhub.student.util.extension.replaceTechnicalLabels
 import com.google.android.material.snackbar.Snackbar
 import kotlinx.coroutines.launch
 import org.koin.androidx.viewmodel.ext.android.viewModel
@@ -19,6 +22,7 @@ class SubmissionEndFragment : Fragment() {
     private var _binding: FragmentSubmissionEndBinding? = null
     private val binding get() = _binding!!
     private val viewModel: SubmissionEndViewModel by viewModel()
+    private lateinit var backCallback: OnBackPressedCallback
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentSubmissionEndBinding.inflate(inflater, container, false)
@@ -27,6 +31,13 @@ class SubmissionEndFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         (requireActivity() as? MainActivity)?.exitKioskMode()
+        backCallback = object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                navigateHomeClearingExamFlow()
+            }
+        }
+        requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, backCallback)
+
         viewModel.observeSubmission(arguments?.getString("clientSubmissionId").orEmpty())
         binding.btnResults.setOnClickListener {
             viewModel.openResult(
@@ -58,7 +69,7 @@ class SubmissionEndFragment : Fragment() {
             }
             launch {
                 viewModel.message.collect { message ->
-                    Snackbar.make(binding.root, message, Snackbar.LENGTH_LONG).show()
+                    Snackbar.make(binding.root, message.replaceTechnicalLabels(), Snackbar.LENGTH_LONG).show()
                 }
             }
             launch {
@@ -83,8 +94,23 @@ class SubmissionEndFragment : Fragment() {
             }
         }
         binding.btnHome.setOnClickListener {
-            findNavController().navigate(R.id.dashboardFragment)
+            navigateHomeClearingExamFlow()
         }
+    }
+
+    private fun navigateHomeClearingExamFlow() {
+        val navController = findNavController()
+        if (navController.popBackStack(R.id.dashboardFragment, false)) return
+        navController.navigate(
+            R.id.dashboardFragment,
+            null,
+            navOptions {
+                launchSingleTop = true
+                popUpTo(R.id.nav_graph) {
+                    inclusive = false
+                }
+            }
+        )
     }
 
     override fun onDestroyView() {

@@ -14,6 +14,7 @@ import com.examhub.student.databinding.FragmentExamStartBinding
 import com.examhub.student.model.response.exam.MobileExamDetailResponse
 import com.examhub.student.util.extension.applySystemWindowInsets
 import com.examhub.student.util.extension.collectOnStarted
+import com.examhub.student.util.extension.replaceTechnicalLabels
 import com.examhub.student.util.extension.toFriendlyExamStatus
 import com.examhub.student.util.extension.toFriendlyGradingType
 import kotlinx.coroutines.launch
@@ -45,14 +46,14 @@ class ExamStartFragment : Fragment() {
                 binding.btnStart.isEnabled = canStart && !viewModel.isLoading.value
                 binding.btnStart.alpha = if (canStart) 1.0f else 0.55f
             } }
-            launch { viewModel.message.collect { Snackbar.make(binding.root, it, Snackbar.LENGTH_LONG).show() } }
+            launch { viewModel.message.collect { Snackbar.make(binding.root, it.replaceTechnicalLabels(), Snackbar.LENGTH_LONG).show() } }
             launch { viewModel.sessionStarted.collect { event ->
                 val session = event.session
                 val bundle = Bundle().apply {
                     putString("examId", examId)
                     putString("sessionId", session.sessionId)
                     putInt("remainingSeconds", event.remainingSeconds)
-                    putInt("questionCount", viewModel.exam.value?.totalQuestions ?: 0)
+                    putInt("questionCount", event.questionCount)
                     putBoolean("isLockedMode", session.isLockedMode)
                     putString("classCode", event.omrCodes.classCode)
                     putString("studentCode", event.omrCodes.studentCode)

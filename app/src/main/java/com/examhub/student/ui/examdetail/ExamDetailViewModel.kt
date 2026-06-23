@@ -1,8 +1,10 @@
 package com.examhub.student.ui.examdetail
 
 import android.content.Context
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.examhub.student.BuildConfig
 import com.examhub.student.R
 import com.examhub.student.data.model.Exam
 import com.examhub.student.data.model.ExamSubmissionItem
@@ -21,6 +23,7 @@ import com.examhub.student.util.extension.replaceTechnicalLabels
 import com.examhub.student.util.extension.toFriendlyExamStatus
 import com.examhub.student.util.extension.toFriendlyExamType
 import com.examhub.student.util.extension.toFriendlyGradingType
+import com.examhub.student.util.helper.TemplateQuestionCounter
 import com.examhub.student.util.helper.parseUserProfileJson
 import com.examhub.student.security.SecurePermitStore
 import com.google.gson.Gson
@@ -188,27 +191,19 @@ class ExamDetailViewModel(
                 return@launch
             }
             templateResult as ApiResult.Success
-            offlineCacheManager.saveTemplate(currentExamId, gson.toJson(templateResult.data.toCacheMap()))
-
-            val metadataResult = examRepository.getQuestionMetadata(currentExamId)
-                .first { it !is ApiResult.Loading }
-            if (metadataResult is ApiResult.Success) {
-                offlineCacheManager.saveQuestionMetadata(currentExamId, gson.toJson(metadataResult.data))
-            }
+            val templateJson = gson.toJson(templateResult.data.toCacheMap())
+            logLong(
+                "Template downloaded from exam detail examId=$currentExamId bytes=${templateJson.length}",
+                templateJson
+            )
+            offlineCacheManager.saveTemplate(currentExamId, templateJson)
 
             offlineCacheManager.markOfflineReady(currentExamId)
             _isOfflineReady.value = offlineCacheManager.isOfflineReady(currentExamId)
             refreshCanStartExam()
             _downloadStep.value = ""
             _isDownloading.value = false
-            if (metadataResult is ApiResult.Error) {
-                _toastMessage.tryEmit(
-                    (metadataResult.exception.message ?: context.getString(R.string.exam_detail_download_failed))
-                        .replaceTechnicalLabels()
-                )
-            } else {
-                _toastMessage.tryEmit(context.getString(R.string.exam_detail_download_success))
-            }
+            _toastMessage.tryEmit(context.getString(R.string.exam_detail_download_success))
         }
     }
 
@@ -319,7 +314,7 @@ class ExamDetailViewModel(
                 classCode = omrCodes.classCode,
                 studentCode = omrCodes.studentCode,
                 studentCodeMode = omrCodes.studentCodeMode,
-                questionCount = _questionCount.value,
+                questionCount = resolvedQuestionCount(_questionCount.value),
                 deviceId = tokenManager.getDeviceId(),
                 offlineDeadlineAt = session.offlineSubmission?.deadlineAt,
                 offlineSyncDeadlineAt = session.offlineSubmission?.syncDeadlineAt,
@@ -372,6 +367,12 @@ class ExamDetailViewModel(
             ).firstNotNullOfOrNull { StudentIdentifierMode.from(it) } ?: StudentIdentifierMode.UNKNOWN
         }.getOrDefault(StudentIdentifierMode.UNKNOWN)
     }
+
+    private fun resolvedQuestionCount(defaultCount: Int): Int =
+        TemplateQuestionCounter.countFromTemplateJsonOrDefault(
+            offlineCacheManager.getTemplate(currentExamId),
+            defaultCount
+        )
 
     private fun applyCachedExam(exam: Exam) {
         currentExamStatus = exam.status
@@ -492,6 +493,14 @@ class ExamDetailViewModel(
         }
     }
 
+    private fun logLong(message: String, payload: String) {
+        if (!BuildConfig.DEBUG) return
+        Log.d(TAG, message)
+        payload.chunked(LOG_CHUNK_SIZE).forEachIndexed { index, chunk ->
+            Log.d(TAG, "$message chunk=${index + 1}: $chunk")
+        }
+    }
+
     private fun StartExamSessionResponse.toSessionEvent(
         omrCodes: LockModeOmrCodes,
         remainingSeconds: Int
@@ -500,7 +509,7 @@ class ExamDetailViewModel(
             session = this,
             omrCodes = omrCodes,
             remainingSeconds = remainingSeconds,
-            questionCount = _questionCount.value
+            questionCount = resolvedQuestionCount(_questionCount.value)
         )
     }
 
@@ -522,6 +531,9 @@ class ExamDetailViewModel(
         )
     }
 }
+
+private const val TAG = "ExamDetailViewModel"
+private const val LOG_CHUNK_SIZE = 3500
 
 data class ExamDetailSessionUiEvent(
     val session: StartExamSessionResponse,

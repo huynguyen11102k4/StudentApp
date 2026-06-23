@@ -16,6 +16,16 @@ class AuthErrorMapperTest {
     }
 
     @Test
+    fun linkGoogleRequiredDoesNotNavigateToRegistration() {
+        assertEquals(
+            GoogleLoginFailure.ACCOUNT_NOT_LINKED,
+            AuthErrorMapper.googleLoginFailure(
+                ApiException("LINK_GOOGLE_ACCOUNT", "Existing account must link Google", 409)
+            )
+        )
+    }
+
+    @Test
     fun missingAccountNavigatesToRegistration() {
         assertEquals(
             GoogleLoginFailure.REGISTER_ACCOUNT,

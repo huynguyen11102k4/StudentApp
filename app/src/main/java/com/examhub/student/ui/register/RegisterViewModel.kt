@@ -60,7 +60,8 @@ class RegisterViewModel(
         password: String,
         confirmPassword: String,
         studentCode: String,
-        googleIdToken: String
+        googleIdToken: String,
+        dateOfBirth: String? = null
     ) {
         val trimmedEmail = email.trim()
         val trimmedStudentCode = studentCode.trim()
@@ -90,7 +91,8 @@ class RegisterViewModel(
                     fullName = fullName.trim(),
                     password = password.takeIf { !isGoogleRegistration },
                     googleIdToken = googleIdToken.takeIf { isGoogleRegistration },
-                    studentCode = trimmedStudentCode.takeIf { it.isNotBlank() }
+                    studentCode = trimmedStudentCode.takeIf { it.isNotBlank() },
+                    dateOfBirth = dateOfBirth?.trim()?.takeIf { it.isNotBlank() }
                 )
             ).collect { result ->
                 when (result) {

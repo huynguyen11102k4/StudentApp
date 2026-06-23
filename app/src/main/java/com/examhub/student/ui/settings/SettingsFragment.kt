@@ -24,6 +24,7 @@ import com.examhub.student.service.LanguagePreferenceManager
 import com.examhub.student.service.ThemePreferenceManager
 import com.examhub.student.util.extension.applySystemWindowInsets
 import com.examhub.student.util.extension.collectOnStarted
+import com.examhub.student.util.extension.replaceTechnicalLabels
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
@@ -139,7 +140,7 @@ class SettingsFragment : Fragment() {
             }
             launch {
                 viewModel.errorMessage.collect {
-                    Snackbar.make(binding.root, it, Snackbar.LENGTH_SHORT).show()
+                    Snackbar.make(binding.root, it.replaceTechnicalLabels(), Snackbar.LENGTH_SHORT).show()
                 }
             }
             launch {

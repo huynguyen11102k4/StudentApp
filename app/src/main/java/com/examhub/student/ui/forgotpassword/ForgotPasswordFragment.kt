@@ -16,6 +16,7 @@ import com.google.android.material.snackbar.Snackbar
 import com.examhub.student.R
 import com.examhub.student.databinding.FragmentForgotPasswordBinding
 import com.examhub.student.util.extension.collectOnStarted
+import com.examhub.student.util.extension.replaceTechnicalLabels
 import kotlinx.coroutines.launch
 
 class ForgotPasswordFragment : Fragment() {
@@ -106,7 +107,7 @@ class ForgotPasswordFragment : Fragment() {
             }
             launch {
                 viewModel.errorMessage.collect {
-                    Snackbar.make(binding.root, it, Snackbar.LENGTH_SHORT).show()
+                    Snackbar.make(binding.root, it.replaceTechnicalLabels(), Snackbar.LENGTH_SHORT).show()
                 }
             }
             launch {

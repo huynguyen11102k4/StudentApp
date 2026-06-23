@@ -17,6 +17,7 @@ import com.examhub.student.util.extension.add3DTouch
 import com.examhub.student.util.extension.applySystemWindowInsets
 import com.examhub.student.util.extension.collectOnStarted
 import com.examhub.student.util.extension.showShimmer
+import com.examhub.student.util.extension.replaceTechnicalLabels
 import kotlinx.coroutines.launch
 import org.koin.androidx.viewmodel.ext.android.viewModel
 
@@ -126,7 +127,7 @@ class DashboardFragment : Fragment() {
             }
             launch {
                 viewModel.toastMessage.collect {
-                    com.google.android.material.snackbar.Snackbar.make(binding.root, it, com.google.android.material.snackbar.Snackbar.LENGTH_SHORT).show()
+                    com.google.android.material.snackbar.Snackbar.make(binding.root, it.replaceTechnicalLabels(), com.google.android.material.snackbar.Snackbar.LENGTH_SHORT).show()
                 }
             }
         }

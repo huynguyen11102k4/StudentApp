@@ -127,19 +127,30 @@ class AuthResponseParser(
             "registrationRequired",
             "registration_required",
             "requiresRegistration",
-            "requires_registration"
+            "requires_registration",
+            "registerRequired",
+            "register_required"
         )
         val linkRequired = layers.booleanAt(
             "linkRequired",
             "link_required",
             "googleLinkRequired",
-            "google_link_required"
+            "google_link_required",
+            "requiresGoogleLink",
+            "requires_google_link",
+            "googleAccountNotLinked",
+            "google_account_not_linked",
+            "accountNotLinked",
+            "account_not_linked"
         )
         return when {
             isActive == false -> com.examhub.student.model.ApiException("ACCOUNT_INACTIVE", message)
             registrationRequired == true ->
                 com.examhub.student.model.ApiException("GOOGLE_REGISTRATION_REQUIRED", message)
-            linkRequired == true || code?.contains("NOT_LINKED", ignoreCase = true) == true ->
+            linkRequired == true ||
+                code?.contains("NOT_LINKED", ignoreCase = true) == true ||
+                code?.contains("LINK_GOOGLE", ignoreCase = true) == true ||
+                code?.contains("GOOGLE_LINK_REQUIRED", ignoreCase = true) == true ->
                 com.examhub.student.model.ApiException("GOOGLE_ACCOUNT_NOT_LINKED", message)
             !code.isNullOrBlank() -> com.examhub.student.model.ApiException(code, message)
             else -> JsonParseException("Missing access token")

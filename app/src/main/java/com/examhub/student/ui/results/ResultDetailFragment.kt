@@ -16,6 +16,7 @@ import com.examhub.student.util.extension.toLocalDisplayDateTime
 import com.examhub.student.model.response.result.StudentResultDetailResponse
 import com.examhub.student.util.extension.applySystemWindowInsets
 import com.examhub.student.util.extension.collectOnStarted
+import com.examhub.student.util.extension.replaceTechnicalLabels
 import kotlinx.coroutines.launch
 import org.koin.androidx.viewmodel.ext.android.viewModel
 import java.text.SimpleDateFormat
@@ -57,7 +58,7 @@ class ResultDetailFragment : Fragment() {
         collectOnStarted {
             launch { viewModel.result.collect { it?.let(::bindResult) } }
             launch { viewModel.isLoading.collect { binding.progressBar.visibility = if (it) View.VISIBLE else View.GONE } }
-            launch { viewModel.message.collect { Snackbar.make(binding.root, it, Snackbar.LENGTH_LONG).show() } }
+            launch { viewModel.message.collect { Snackbar.make(binding.root, it.replaceTechnicalLabels(), Snackbar.LENGTH_LONG).show() } }
             launch {
                 viewModel.appealCount.collect { count ->
                     bindAppealNotice(count)

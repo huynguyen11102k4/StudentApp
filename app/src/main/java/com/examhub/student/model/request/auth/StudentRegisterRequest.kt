@@ -12,5 +12,7 @@ data class StudentRegisterRequest(
     @SerializedName("student_code")
     val studentCode: String? = null,
     @SerializedName("device_id")
-    val deviceId: String? = null
+    val deviceId: String? = null,
+    @SerializedName("date_of_birth")
+    val dateOfBirth: String? = null
 )

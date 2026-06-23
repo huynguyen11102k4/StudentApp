@@ -8,5 +8,6 @@ data class StudentProfileResponse(
     val internalId: String? = null,
     @SerializedName(value = "studentCode", alternate = ["student_code", "code"])
     val studentCode: String? = null,
+    @SerializedName(value = "dateOfBirth", alternate = ["date_of_birth"])
     val dateOfBirth: String? = null
 )

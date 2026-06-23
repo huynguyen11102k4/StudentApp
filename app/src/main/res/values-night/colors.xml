@@ -56,6 +56,14 @@
     <color name="on_warning_container">#FFFFDEA1</color>
 
     <!-- Status badges -->
+    <color name="status_open_bg">@color/success_container</color>
+    <color name="status_open_text">@color/success</color>
+    <color name="status_upcoming_bg">#FF593700</color>
+    <color name="status_upcoming_text">#FFFFDDB8</color>
+    <color name="status_closed_bg">@color/error_container</color>
+    <color name="status_closed_text">@color/error</color>
+    <color name="status_review_bg">@color/warning_container</color>
+    <color name="status_review_text">@color/warning</color>
     <color name="status_online_bg">#FF1F4E25</color>
     <color name="status_online_text">#FFD7F5D8</color>
     <color name="status_offline_bg">#FF593700</color>

@@ -98,8 +98,20 @@ class NotificationsViewModel(
     }
 
     fun clearNotifications(ids: List<String>) {
+        val unreadIds = offlineCacheManager.getCachedNotifications()
+            .filter { it.id in ids && !it.isRead }
+            .map { it.id }
+
+        if (unreadIds.isNotEmpty()) {
+            viewModelScope.launch {
+                unreadIds.forEach { id ->
+                    notificationRepository.markAsRead(id).collect {}
+                }
+            }
+            _unreadCount.value = (_unreadCount.value - unreadIds.size).coerceAtLeast(0)
+        }
+
         offlineCacheManager.dismissNotifications(ids)
-        offlineCacheManager.clearNotifications()
         _refresh.tryEmit(Unit)
     }
 

@@ -15,6 +15,7 @@ import com.examhub.student.databinding.FragmentClassDetailStudentBinding
 import com.examhub.student.model.response.classroom.MobileClassResponse
 import com.examhub.student.util.extension.applySystemWindowInsets
 import com.examhub.student.util.extension.collectOnStarted
+import com.examhub.student.util.extension.replaceTechnicalLabels
 import com.examhub.student.ui.dashboard.RecentExamAdapter
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
@@ -55,7 +56,7 @@ class ClassDetailFragment : Fragment() {
             launch { viewModel.classDetail.collect { it?.let(::bindClass) } }
             launch { viewModel.classExams.collect(::bindClassExams) }
             launch { viewModel.isLoading.collect { binding.progressBar.visibility = if (it) View.VISIBLE else View.GONE } }
-            launch { viewModel.message.collect { Snackbar.make(binding.root, it, Snackbar.LENGTH_LONG).show() } }
+            launch { viewModel.message.collect { Snackbar.make(binding.root, it.replaceTechnicalLabels(), Snackbar.LENGTH_LONG).show() } }
             launch {
                 viewModel.leaveRequested.collect {
                     Snackbar.make(binding.root, R.string.class_detail_leave_request_success, Snackbar.LENGTH_LONG).show()
@@ -79,7 +80,10 @@ class ClassDetailFragment : Fragment() {
             .mapNotNull { it?.takeIf(String::isNotBlank) }
             .joinToString("\n")
             .ifBlank { getString(R.string.common_not_updated) }
-        binding.tvClassCode.text = (info?.classCode ?: info?.joinCode).orEmpty().ifBlank {
+        binding.tvClassCode.text = info?.classCode.orEmpty().ifBlank {
+            getString(R.string.common_not_updated)
+        }
+        binding.tvJoinCode.text = info?.joinCode.orEmpty().ifBlank {
             getString(R.string.common_not_updated)
         }
         binding.tvStudentCount.text = studentCount(item).toString()

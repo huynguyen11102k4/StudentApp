@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.examhub.student.R
 import com.examhub.student.model.ApiResult
 import com.examhub.student.model.request.auth.GoogleLinkRequest
+import com.examhub.student.model.request.profile.UpdateProfileRequest
 import com.examhub.student.model.response.profile.UserResponse
 import com.examhub.student.repository.AuthRepository
 import com.examhub.student.util.helper.ResourceProvider
@@ -33,6 +34,9 @@ class ProfileViewModel(
 
     private val _saveSuccess = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     val saveSuccess: SharedFlow<Unit> = _saveSuccess.asSharedFlow()
+
+    private val _avatarUploadSuccess = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    val avatarUploadSuccess: SharedFlow<Unit> = _avatarUploadSuccess.asSharedFlow()
 
     private val _errorMessage = MutableSharedFlow<String>(extraBufferCapacity = 1)
     val errorMessage: SharedFlow<String> = _errorMessage.asSharedFlow()
@@ -74,16 +78,16 @@ class ProfileViewModel(
         _hasPendingAvatar.value = pending
     }
 
-    fun saveProfile(avatarFile: MultipartBody.Part?) {
-        if (avatarFile == null) return
+    fun uploadAvatarOnly(avatarFile: MultipartBody.Part) {
+        if (_isSaving.value) return
         viewModelScope.launch {
-            _isSaving.value = true
+            setSaving(SAVE_AVATAR, true)
 
             val latestProfile = when (val result = authRepository.uploadAvatar(avatarFile)
                 .first { it !is ApiResult.Loading }) {
                 is ApiResult.Success -> result.data
                 is ApiResult.Error -> {
-                    _isSaving.value = false
+                    setSaving(SAVE_AVATAR, false)
                     _errorMessage.tryEmit(
                         AuthErrorMapper.message(
                             result.exception,
@@ -96,11 +100,91 @@ class ProfileViewModel(
                 else -> null
             }
 
-            _isSaving.value = false
             _hasPendingAvatar.value = false
+            setSaving(SAVE_AVATAR, false)
             latestProfile?.let { _userProfile.value = it }
-            _saveSuccess.tryEmit(Unit)
+            _avatarUploadSuccess.tryEmit(Unit)
         }
+    }
+
+    fun saveProfile(
+        fullName: String,
+        dateOfBirth: String?,
+        avatarFile: MultipartBody.Part?,
+        updateTextProfile: Boolean
+    ) {
+        if (_isSaving.value) return
+        val normalizedName = fullName.trim().replace(Regex("\\s+"), " ")
+        val normalizedDob = dateOfBirth?.trim()?.takeIf { it.isNotBlank() }?.substringBefore("T")
+        if (normalizedName.isBlank()) {
+            _errorMessage.tryEmit(resources.getString(R.string.profile_name_required))
+            return
+        }
+        viewModelScope.launch {
+            var latestProfile: UserResponse? = null
+            setSaving(SAVE_PROFILE, updateTextProfile)
+            setSaving(SAVE_AVATAR, avatarFile != null)
+            if (updateTextProfile) {
+                when (val profileResult = authRepository.updateProfile(
+                    UpdateProfileRequest(
+                        fullName = normalizedName,
+                        dateOfBirth = normalizedDob
+                    )
+                ).first { it !is ApiResult.Loading }) {
+                    is ApiResult.Success -> {
+                        latestProfile = profileResult.data
+                        _userProfile.value = profileResult.data
+                    }
+                    is ApiResult.Error -> {
+                        setSaving(SAVE_PROFILE, false)
+                        setSaving(SAVE_AVATAR, false)
+                        _errorMessage.tryEmit(
+                            AuthErrorMapper.message(
+                                profileResult.exception,
+                                resources,
+                                R.string.profile_update_failed
+                            )
+                        )
+                        return@launch
+                    }
+                    ApiResult.Loading -> Unit
+                }
+                setSaving(SAVE_PROFILE, false)
+            }
+
+            if (avatarFile != null) {
+                when (val avatarResult = authRepository.uploadAvatar(avatarFile)
+                    .first { it !is ApiResult.Loading }) {
+                    is ApiResult.Success -> {
+                        latestProfile = avatarResult.data
+                        _userProfile.value = avatarResult.data
+                        _hasPendingAvatar.value = false
+                        _avatarUploadSuccess.tryEmit(Unit)
+                    }
+                    is ApiResult.Error -> {
+                        setSaving(SAVE_AVATAR, false)
+                        _errorMessage.tryEmit(
+                            AuthErrorMapper.message(
+                                avatarResult.exception,
+                                resources,
+                                R.string.profile_avatar_update_failed
+                            )
+                        )
+                        return@launch
+                    }
+                    ApiResult.Loading -> Unit
+                }
+                setSaving(SAVE_AVATAR, false)
+            }
+
+            latestProfile?.let {
+                _saveSuccess.tryEmit(Unit)
+            }
+        }
+    }
+
+    fun saveProfile(avatarFile: MultipartBody.Part?) {
+        avatarFile?.let(::uploadAvatarOnly)
     }
 
     fun linkGoogle(idToken: String) {
@@ -111,7 +195,7 @@ class ProfileViewModel(
         viewModelScope.launch {
             authRepository.linkGoogle(GoogleLinkRequest(idToken)).collect { result ->
                 when (result) {
-                    is ApiResult.Loading -> _isSaving.value = true
+                    is ApiResult.Loading -> setSaving(SAVE_GOOGLE, true)
                     is ApiResult.Success -> {
                         _userProfile.value = _userProfile.value?.copy(
                             googleLinked = result.data.googleLinked,
@@ -120,7 +204,7 @@ class ProfileViewModel(
                                 ?: _userProfile.value?.authMethods?.copy(google = result.data.googleLinked)
                         )?.sanitizedStudentProfile()
                         refreshProfileAfterGoogleChange()
-                        _isSaving.value = false
+                        setSaving(SAVE_GOOGLE, false)
                         _successMessage.tryEmit(
                             if (result.data.updated == false) {
                                 resources.getString(R.string.profile_google_linked_noop)
@@ -130,7 +214,7 @@ class ProfileViewModel(
                         )
                     }
                     is ApiResult.Error -> {
-                        _isSaving.value = false
+                        setSaving(SAVE_GOOGLE, false)
                         _errorMessage.tryEmit(
                             AuthErrorMapper.message(
                                 result.exception,
@@ -148,7 +232,7 @@ class ProfileViewModel(
         viewModelScope.launch {
             authRepository.unlinkGoogle().collect { result ->
                 when (result) {
-                    is ApiResult.Loading -> _isSaving.value = true
+                    is ApiResult.Loading -> setSaving(SAVE_GOOGLE, true)
                     is ApiResult.Success -> {
                         _userProfile.value = _userProfile.value?.copy(
                             googleLinked = result.data.googleLinked,
@@ -157,7 +241,7 @@ class ProfileViewModel(
                                 ?: _userProfile.value?.authMethods?.copy(google = result.data.googleLinked)
                         )?.sanitizedStudentProfile()
                         refreshProfileAfterGoogleChange()
-                        _isSaving.value = false
+                        setSaving(SAVE_GOOGLE, false)
                         _successMessage.tryEmit(
                             if (result.data.updated == false) {
                                 resources.getString(R.string.profile_google_unlinked_noop)
@@ -167,7 +251,7 @@ class ProfileViewModel(
                         )
                     }
                     is ApiResult.Error -> {
-                        _isSaving.value = false
+                        setSaving(SAVE_GOOGLE, false)
                         _errorMessage.tryEmit(
                             AuthErrorMapper.message(
                                 result.exception,
@@ -189,4 +273,20 @@ class ProfileViewModel(
         }
     }
 
+    private fun setSaving(operation: String, saving: Boolean) {
+        if (saving) {
+            activeSaveOperations.add(operation)
+        } else {
+            activeSaveOperations.remove(operation)
+        }
+        _isSaving.value = activeSaveOperations.isNotEmpty()
+    }
+
+    private val activeSaveOperations = mutableSetOf<String>()
+
+    private companion object {
+        const val SAVE_AVATAR = "avatar"
+        const val SAVE_PROFILE = "profile"
+        const val SAVE_GOOGLE = "google"
+    }
 }

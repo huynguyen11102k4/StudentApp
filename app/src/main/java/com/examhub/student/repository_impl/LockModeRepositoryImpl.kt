@@ -3,6 +3,7 @@ package com.examhub.student.repository_impl
 import com.google.gson.Gson
 import com.examhub.student.OmrApplication
 import com.examhub.student.R
+import com.examhub.student.model.ApiException
 import com.examhub.student.model.ApiResult
 import com.examhub.student.model.request.lock.LockHeartbeatRequest
 import com.examhub.student.model.request.lock.LockValidateSessionRequest
@@ -16,6 +17,7 @@ import com.examhub.student.repository.LockModeRepository
 import com.examhub.student.service.LockModeApiService
 import com.examhub.student.service.ViolationQueueManager
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flow
 
 class LockModeRepositoryImpl(
@@ -74,6 +76,16 @@ class LockModeRepositoryImpl(
             }
         }
         emit(ApiResult.Success(flushed))
+    }.catch { error ->
+        emit(
+            ApiResult.Error(
+                ApiException(
+                    code = "NETWORK_ERROR",
+                    message = error.message ?: string(R.string.common_no_internet),
+                    causeThrowable = error
+                )
+            )
+        )
     }
 
     override fun queuedViolationCount(): Int = violationQueueManager.count()

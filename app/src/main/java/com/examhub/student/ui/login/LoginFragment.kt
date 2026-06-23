@@ -19,6 +19,7 @@ import com.examhub.student.R
 import com.examhub.student.databinding.FragmentLoginBinding
 import com.examhub.student.util.extension.add3DTouch
 import com.examhub.student.util.extension.collectOnStarted
+import com.examhub.student.util.extension.replaceTechnicalLabels
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 
@@ -174,7 +175,7 @@ class LoginFragment : Fragment() {
                         "INVALID_CREDENTIALS" -> getString(R.string.auth_error_invalid_credentials)
                         else -> code
                     }
-                    Snackbar.make(binding.root, message, Snackbar.LENGTH_SHORT).show()
+                    Snackbar.make(binding.root, message.replaceTechnicalLabels(), Snackbar.LENGTH_SHORT).show()
                 }
             }
 

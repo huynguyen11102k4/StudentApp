@@ -19,6 +19,7 @@ import com.examhub.student.repository.LockModeRepository
 import com.examhub.student.ui.lockmode.LockFlowMonitorController
 import com.examhub.student.util.extension.applySystemWindowInsets
 import com.examhub.student.util.extension.collectOnStarted
+import com.examhub.student.util.extension.replaceTechnicalLabels
 import com.examhub.student.util.helper.protectScreenFromCapture
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -94,7 +95,7 @@ class SmartReviewFragment : Fragment() {
             }
             launch {
                 viewModel.errorMessage.collect { message ->
-                    Snackbar.make(binding.root, message, Snackbar.LENGTH_LONG).show()
+                    Snackbar.make(binding.root, message.replaceTechnicalLabels(), Snackbar.LENGTH_LONG).show()
                     if (finishingExpiredSession) finishExpiredSession()
                 }
             }

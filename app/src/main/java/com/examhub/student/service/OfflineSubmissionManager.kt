@@ -1,6 +1,7 @@
 package com.examhub.student.service
 
 import android.content.Context
+import android.util.Log
 import androidx.work.BackoffPolicy
 import androidx.work.Constraints
 import androidx.work.ExistingWorkPolicy
@@ -8,6 +9,7 @@ import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.workDataOf
+import com.examhub.student.BuildConfig
 import com.examhub.student.data.local.submission.QueuedSubmissionDao
 import com.examhub.student.data.local.submission.QueuedSubmissionEntity
 import com.examhub.student.data.local.model.FreezeResult
@@ -23,6 +25,7 @@ import com.examhub.student.security.KeystoreCrypto
 import com.examhub.student.security.SecurePermitStore
 import com.examhub.student.worker.SubmissionSyncWorker
 import com.google.gson.Gson
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
@@ -55,6 +58,11 @@ class OfflineSubmissionManager(
         val clientSubmissionId = UUID.randomUUID().toString()
         val capturedAt = nowIso()
         val request = requestFactory(clientSubmissionId, capturedAt)
+        logSubmitPayload(
+            message = "Submission freeze payload sessionId=$sessionId examId=$examId clientSubmissionId=$clientSubmissionId " +
+                "rawBytes=${rawImage?.size ?: 0} dewarpedBytes=${dewarpedImage?.size ?: 0} processedBytes=${processedImage?.size ?: 0}",
+            request = request
+        )
         val now = System.currentTimeMillis()
         val entity = QueuedSubmissionEntity(
             clientSubmissionId = clientSubmissionId,
@@ -75,7 +83,24 @@ class OfflineSubmissionManager(
         )
         dao.insert(entity)
 
-        val immediate = syncSafely(entity, useOfflinePermit = false)
+        if (!NetworkUtils.isNetworkAvailable(appContext)) {
+            scheduleSync(clientSubmissionId)
+            return FreezeResult.Pending(clientSubmissionId)
+        }
+
+        val immediate = runCatching {
+            syncSafely(entity, useOfflinePermit = false)
+        }.getOrElse { error ->
+            if (error is CancellationException) throw error
+            dao.updateStatus(
+                clientSubmissionId,
+                SubmissionSyncStatus.PENDING_SYNC.name,
+                System.currentTimeMillis(),
+                "NETWORK_ERROR",
+                error.message
+            )
+            SyncAttempt.Retry
+        }
         return when (immediate) {
             is SyncAttempt.Synced -> FreezeResult.Synced(clientSubmissionId, immediate.response)
             is SyncAttempt.TerminalFailure -> FreezeResult.TerminalFailure(clientSubmissionId, immediate.code)
@@ -185,13 +210,26 @@ class OfflineSubmissionManager(
                 markTerminal(item, "LOCAL_IMAGE_INVALID", kind)
                 return SyncAttempt.TerminalFailure("LOCAL_IMAGE_INVALID")
             }
+            val presignRequest = PresignSubmissionImageRequest(bytes.size.toLong(), "image/jpeg", kind)
+            logLong(
+                "Submission presign request sessionId=${item.sessionId} clientSubmissionId=${item.clientSubmissionId} " +
+                    "deviceId=${item.deviceId} imageKind=$kind",
+                gson.toJson(presignRequest)
+            )
             val presign = repository.presignImage(
                 item.sessionId,
-                PresignSubmissionImageRequest(bytes.size.toLong(), "image/jpeg", kind),
+                presignRequest,
                 item.deviceId
             ).first { it !is ApiResult.Loading }
             if (presign is ApiResult.Error) return classifyFailure(item, presign.exception.code, presign.exception.message, presign.exception.httpCode)
             presign as ApiResult.Success
+            if (BuildConfig.DEBUG) {
+                Log.d(
+                    TAG,
+                    "Submission presign response sessionId=${item.sessionId} clientSubmissionId=${item.clientSubmissionId} " +
+                        "imageKind=$kind fileUrl=${presign.data.fileUrl}"
+                )
+            }
             val upload = repository.uploadImage(presign.data.uploadUrl, bytes, "image/jpeg")
                 .first { it !is ApiResult.Loading }
             if (upload is ApiResult.Error) {
@@ -207,14 +245,20 @@ class OfflineSubmissionManager(
 
         dao.updateStatus(item.clientSubmissionId, SubmissionSyncStatus.SYNCING.name, System.currentTimeMillis())
         val permit = if (useOfflinePermit) permitStore.get(item.sessionId) else null
+        val submitRequest = request.copy(
+            offlinePermit = permit,
+            rawImageUrl = rawUrl,
+            dewarpedImageUrl = dewarpedUrl,
+            processedImageUrl = processedUrl
+        )
+        logSubmitPayload(
+            message = "Submission submit request POST student/sessions/${item.sessionId}/submit " +
+                "clientSubmissionId=${item.clientSubmissionId} deviceId=${item.deviceId} useOfflinePermit=$useOfflinePermit",
+            request = submitRequest
+        )
         val submit = repository.submit(
             item.sessionId,
-            request.copy(
-                offlinePermit = permit,
-                rawImageUrl = rawUrl,
-                dewarpedImageUrl = dewarpedUrl,
-                processedImageUrl = processedUrl
-            ),
+            submitRequest,
             item.deviceId
         ).first { it !is ApiResult.Loading }
 
@@ -289,6 +333,21 @@ class OfflineSubmissionManager(
         }.format(java.util.Date())
     }
 
+    private fun logSubmitPayload(message: String, request: StudentSubmitRequest) {
+        val redacted = request.copy(
+            offlinePermit = request.offlinePermit?.let { "<redacted:${it.length}>" }
+        )
+        logLong(message, gson.toJson(redacted))
+    }
+
+    private fun logLong(message: String, payload: String) {
+        if (!BuildConfig.DEBUG) return
+        Log.d(TAG, message)
+        payload.chunked(LOG_CHUNK_SIZE).forEachIndexed { index, chunk ->
+            Log.d(TAG, "$message chunk=${index + 1}: $chunk")
+        }
+    }
+
     private fun normalizeErrorCode(code: String): String {
         val normalized = code.trim().uppercase()
             .replace('-', '_')
@@ -327,6 +386,9 @@ class OfflineSubmissionManager(
     }
 
     companion object {
+        private const val TAG = "OfflineSubmission"
+        private const val LOG_CHUNK_SIZE = 3500
+
         private val TERMINAL_CODES = setOf(
             "INVALID_OFFLINE_PERMIT",
             "OFFLINE_PERMIT_MISMATCH",

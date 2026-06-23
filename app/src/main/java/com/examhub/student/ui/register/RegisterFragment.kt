@@ -19,9 +19,12 @@ import androidx.navigation.fragment.findNavController
 import com.examhub.student.R
 import com.examhub.student.databinding.FragmentRegisterBinding
 import com.examhub.student.util.extension.collectOnStarted
+import com.examhub.student.util.extension.replaceTechnicalLabels
 import com.google.android.material.snackbar.Snackbar
 import kotlinx.coroutines.launch
 import org.koin.androidx.viewmodel.ext.android.viewModel
+import java.util.Calendar
+import java.util.Locale
 
 class RegisterFragment : Fragment() {
 
@@ -123,6 +126,10 @@ class RegisterFragment : Fragment() {
     private fun setupClickListeners() {
         binding.btnBack.setOnClickListener { findNavController().navigateUp() }
 
+        binding.etDateOfBirth.setOnClickListener {
+            showDatePickerDialog()
+        }
+
         binding.btnRegister.setOnClickListener {
             if (!validateForm(showErrors = true)) return@setOnClickListener
             viewModel.register(
@@ -131,7 +138,8 @@ class RegisterFragment : Fragment() {
                 password = binding.etPassword.text.toString(),
                 confirmPassword = binding.etConfirmPassword.text.toString(),
                 studentCode = binding.etStudentCode.text.toString(),
-                googleIdToken = googleIdToken
+                googleIdToken = googleIdToken,
+                dateOfBirth = binding.etDateOfBirth.text.toString().takeIf { it.isNotBlank() }
             )
         }
 
@@ -147,6 +155,36 @@ class RegisterFragment : Fragment() {
         binding.btnLoginLink.setOnClickListener {
             findNavController().navigate(R.id.action_register_to_login)
         }
+    }
+
+    private fun showDatePickerDialog() {
+        val calendar = Calendar.getInstance()
+        val currentText = binding.etDateOfBirth.text.toString().trim()
+        if (currentText.isNotEmpty()) {
+            val parts = currentText.split("-")
+            if (parts.size == 3) {
+                val year = parts[0].toIntOrNull()
+                val month = parts[1].toIntOrNull()?.minus(1)
+                val day = parts[2].toIntOrNull()
+                if (year != null && month != null && day != null) {
+                    calendar.set(year, month, day)
+                }
+            }
+        } else {
+            calendar.set(2008, 0, 1)
+        }
+
+        val datePickerDialog = android.app.DatePickerDialog(
+            requireContext(),
+            { _, year, month, dayOfMonth ->
+                val formattedDate = String.format(Locale.US, "%04d-%02d-%02d", year, month + 1, dayOfMonth)
+                binding.etDateOfBirth.setText(formattedDate)
+            },
+            calendar.get(Calendar.YEAR),
+            calendar.get(Calendar.MONTH),
+            calendar.get(Calendar.DAY_OF_MONTH)
+        )
+        datePickerDialog.show()
     }
 
     private fun setupFormValidation() {
@@ -223,12 +261,12 @@ class RegisterFragment : Fragment() {
             }
             launch {
                 viewModel.message.collect {
-                    Snackbar.make(binding.root, it, Snackbar.LENGTH_SHORT).show()
+                    Snackbar.make(binding.root, it.replaceTechnicalLabels(), Snackbar.LENGTH_SHORT).show()
                 }
             }
             launch {
                 viewModel.errorMessage.collect {
-                    Snackbar.make(binding.root, it, Snackbar.LENGTH_SHORT).show()
+                    Snackbar.make(binding.root, it.replaceTechnicalLabels(), Snackbar.LENGTH_SHORT).show()
                 }
             }
             launch {

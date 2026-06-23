@@ -22,6 +22,8 @@ object AuthErrorMapper {
 
             code in NOT_LINKED_CODES ||
                 code.contains("NOT_LINKED") ||
+                code.contains("LINK_GOOGLE") ||
+                code.contains("GOOGLE_LINK_REQUIRED") ||
                 message.contains("chua lien ket") -> GoogleLoginFailure.ACCOUNT_NOT_LINKED
 
             error.httpCode == 404 ||
@@ -76,7 +78,9 @@ object AuthErrorMapper {
         "GOOGLE_ACCOUNT_NOT_LINKED",
         "GOOGLE_NOT_LINKED",
         "ACCOUNT_NOT_LINKED",
-        "LINK_REQUIRED"
+        "LINK_REQUIRED",
+        "GOOGLE_LINK_REQUIRED",
+        "LINK_GOOGLE_ACCOUNT"
     )
 
     private val REGISTRATION_CODES = setOf(

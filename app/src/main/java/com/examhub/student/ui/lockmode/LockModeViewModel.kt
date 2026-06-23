@@ -21,6 +21,7 @@ import com.examhub.student.service.NetworkStatusProvider
 import com.examhub.student.service.OfflineSubmissionManager
 import com.examhub.student.service.OfflineCacheManager
 import com.examhub.student.service.TokenManager
+import com.examhub.student.util.helper.TemplateQuestionCounter
 import com.examhub.student.util.helper.parseUserProfileJson
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -262,23 +263,7 @@ class LockModeViewModel(
 
     private fun resolveQuestionCount(): Int {
         if (questionCount > 0) return questionCount
-        val rawTemplate = offlineCacheManager.getTemplate(examId) ?: return 0
-        return runCatching {
-            val root = org.json.JSONObject(rawTemplate)
-            val grid = root.optJSONObject("gridConfig") ?: root.optJSONObject("grid_config")
-            val zones = grid?.optJSONArray("answer_zones") ?: grid?.optJSONArray("answerZones")
-            var maxQuestion = 0
-            if (zones != null) {
-                for (i in 0 until zones.length()) {
-                    val zone = zones.optJSONObject(i) ?: continue
-                    maxQuestion = maxOf(
-                        maxQuestion,
-                        zone.optInt("end_number", zone.optInt("endNumber", 0))
-                    )
-                }
-            }
-            maxQuestion
-        }.getOrDefault(0)
+        return TemplateQuestionCounter.countFromTemplateJson(offlineCacheManager.getTemplate(examId))
     }
 
     private fun loadOmrCodes(examId: String, argCodes: LockModeOmrCodes) {

@@ -15,6 +15,7 @@ import com.examhub.student.data.model.AppNotification
 import com.examhub.student.databinding.FragmentNotificationsBinding
 import com.examhub.student.util.extension.applySystemWindowInsets
 import com.examhub.student.util.extension.collectOnStarted
+import com.examhub.student.util.extension.replaceTechnicalLabels
 import com.examhub.student.util.helper.NotificationNavigationHelper
 import com.google.android.material.snackbar.Snackbar
 import kotlinx.coroutines.launch
@@ -94,7 +95,7 @@ class NotificationsFragment : Fragment() {
                 }
             }
             launch { viewModel.refresh.collect { adapter.refresh() } }
-            launch { viewModel.errorMessage.collect { msg -> Snackbar.make(binding.root, msg, Snackbar.LENGTH_LONG).show() } }
+            launch { viewModel.errorMessage.collect { msg -> Snackbar.make(binding.root, msg.replaceTechnicalLabels(), Snackbar.LENGTH_LONG).show() } }
         }
     }
 

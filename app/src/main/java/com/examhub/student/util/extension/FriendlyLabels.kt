@@ -2,6 +2,9 @@ package com.examhub.student.util.extension
 
 import com.examhub.student.OmrApplication
 import com.examhub.student.R
+import java.nio.charset.Charset
+import java.text.Normalizer
+import kotlin.math.max
 import java.util.Locale
 
 private val technicalLabelMap = mapOf(
@@ -42,7 +45,12 @@ private val technicalLabelMap = mapOf(
     "EXAM_CREATED" to R.string.friendly_exam_created,
     "EXAM_CLOSED" to R.string.friendly_exam_closed,
     "CLASS_INVITE" to R.string.friendly_class_invite,
+    "SESSION_DEVICE_MISMATCH" to R.string.friendly_session_device_mismatch,
+    "DEVICE_MISMATCH" to R.string.friendly_device_mismatch,
+    "SESSION_ACTIVE" to R.string.friendly_session_active,
+    "SUBMISSION_DEVICE_MISMATCH" to R.string.friendly_submission_device_mismatch,
     "SYSTEM" to R.string.friendly_system
+
 )
 
 private val viLocale = Locale.forLanguageTag("vi-VN")
@@ -109,13 +117,13 @@ fun String?.toFriendlyNotificationType(): String =
 
 fun String.replaceTechnicalLabels(): String {
     if (isBlank()) return this
+    val readableText = repairMojibakeIfNeeded()
+    readableText.toKnownLocalizedServerMessage()?.let { return it }
     return technicalLabelMap.entries
         .sortedByDescending { it.key.length }
-        .fold(this) { text, (technical, friendlyRes) ->
-            text.replace(
-                Regex("\\b${Regex.escape(technical)}\\b", RegexOption.IGNORE_CASE),
-                localized(friendlyRes)
-            )
+        .fold(readableText) { text, (technical, friendlyRes) ->
+            Regex("\\b${Regex.escape(technical)}\\b", RegexOption.IGNORE_CASE)
+                .replace(text) { localized(friendlyRes) }
         }
 }
 
@@ -150,3 +158,72 @@ private fun String.normalizeEnumKey(): String {
 private fun String.looksTechnicalEnum(): Boolean {
     return any { it == '_' } || all { !it.isLetter() || it.isUpperCase() }
 }
+
+private fun String.toKnownLocalizedServerMessage(): String? {
+    val normalized = normalizeForMessageMatching()
+    return when {
+        normalized.contains("su dung het") &&
+            normalized.contains("luot") &&
+            normalized.contains("lam bai") -> localized(R.string.friendly_attempts_exhausted)
+        normalized.contains("used") &&
+            normalized.contains("attempt") &&
+            (normalized.contains("exam") || normalized.contains("submission")) -> localized(R.string.friendly_attempts_exhausted)
+        else -> null
+    }
+}
+
+private fun String.normalizeForMessageMatching(): String {
+    return Normalizer.normalize(this, Normalizer.Form.NFD)
+        .replace("\\p{Mn}+".toRegex(), "")
+        .replace('\u0111', 'd')
+        .replace('\u0110', 'D')
+        .lowercase(Locale.US)
+}
+
+private fun String.repairMojibakeIfNeeded(): String {
+    if (!looksLikeUtf8DecodedAsWindows1252()) return this
+    val repaired = runCatching {
+        String(toByteArray(WINDOWS_1252), Charsets.UTF_8)
+    }.getOrDefault(this)
+
+    return if (repaired.mojibakeScore() < mojibakeScore()) repaired else this
+}
+
+private fun String.looksLikeUtf8DecodedAsWindows1252(): Boolean {
+    return mojibakeScore() >= 2
+}
+
+private fun String.mojibakeScore(): Int {
+    val suspiciousChars = count { it in MOJIBAKE_CHARS }
+    val suspiciousTokens = MOJIBAKE_TOKENS.sumOf { token ->
+        Regex.escape(token).toRegex().findAll(this).count()
+    }
+    return suspiciousChars + (suspiciousTokens * 2) + max(0, count { it == '\uFFFD' } * 3)
+}
+
+private val WINDOWS_1252: Charset = Charset.forName("windows-1252")
+
+private val MOJIBAKE_CHARS = setOf(
+    '\u00C3',
+    '\u00C4',
+    '\u00C2',
+    '\u00C6',
+    '\u00E1'
+)
+
+private val MOJIBAKE_TOKENS = listOf(
+    "\u00E1\u00BA",
+    "\u00E1\u00BB",
+    "\u00C4\u2018",
+    "\u00C6\u00B0",
+    "\u00C3\u00A3",
+    "\u00C3\u00A0",
+    "\u00C3\u00A1",
+    "\u00C3\u00A9",
+    "\u00C3\u00A8",
+    "\u00C3\u00AA",
+    "\u00C3\u00B4",
+    "\u00C3\u00B3",
+    "\u00C3\u00B2",
+    "\u00C3\u00A2"
+)

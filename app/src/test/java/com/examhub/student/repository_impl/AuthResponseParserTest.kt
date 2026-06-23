@@ -129,6 +129,24 @@ class AuthResponseParserTest {
     }
 
     @Test
+    fun successEnvelopeWithoutTokensReportsGoogleLinkRequirementFromBackendAliases() {
+        val root = gson.parse(
+            """
+            {
+              "data": {
+                "requires_google_link": true,
+                "message": "Existing account must link Google first"
+              }
+            }
+            """
+        )
+
+        val error = runCatching { parser.parseAuthToken(root) }.exceptionOrNull() as ApiException
+
+        assertEquals("GOOGLE_ACCOUNT_NOT_LINKED", error.code)
+    }
+
+    @Test
     fun registrationParsesStringFlagsAndNestedTokenObject() {
         val root = gson.parse(
             """

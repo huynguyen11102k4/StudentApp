@@ -40,7 +40,8 @@ fun UserResponse.sanitizedStudentProfile(): UserResponse {
         student = student?.copy(
             id = student.id.orEmpty(),
             internalId = student.internalId.orEmpty(),
-            studentCode = student.studentCode.orEmpty()
+            studentCode = student.studentCode.orEmpty(),
+            dateOfBirth = student.dateOfBirth?.substringBefore("T")?.trim()
         )
     )
 }

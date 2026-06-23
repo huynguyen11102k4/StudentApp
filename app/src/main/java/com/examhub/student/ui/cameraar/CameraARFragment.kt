@@ -28,6 +28,7 @@ import com.examhub.student.R
 import com.examhub.student.databinding.FragmentCameraArBinding
 import com.examhub.student.repository.LockModeRepository
 import com.examhub.student.util.extension.collectOnStarted
+import com.examhub.student.util.extension.replaceTechnicalLabels
 import com.examhub.student.util.helper.protectScreenFromCapture
 import com.examhub.student.ui.lockmode.LockFlowMonitorController
 import kotlinx.coroutines.Job
@@ -414,7 +415,7 @@ class CameraARFragment : Fragment() {
             }
             launch {
                 viewModel.toastMessage.collect { msg ->
-                    Toast.makeText(requireContext(), msg, Toast.LENGTH_SHORT).show()
+                    Toast.makeText(requireContext(), msg.replaceTechnicalLabels(), Toast.LENGTH_SHORT).show()
                 }
             }
             launch {

@@ -22,6 +22,7 @@ import com.examhub.student.databinding.FragmentClassListBinding
 import com.examhub.student.util.extension.applySystemWindowInsets
 import com.examhub.student.util.extension.collectOnStarted
 import com.examhub.student.util.extension.showShimmer
+import com.examhub.student.util.extension.replaceTechnicalLabels
 import kotlinx.coroutines.launch
 import org.koin.androidx.viewmodel.ext.android.viewModel
 
@@ -76,7 +77,7 @@ class ClassListFragment : Fragment() {
             launch {
                 viewModel.message.collect { message ->
                     if (message.isNotBlank()) {
-                        Snackbar.make(binding.root, message, Snackbar.LENGTH_SHORT).show()
+                        Snackbar.make(binding.root, message.replaceTechnicalLabels(), Snackbar.LENGTH_SHORT).show()
                     }
                 }
             }

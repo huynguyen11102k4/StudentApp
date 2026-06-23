@@ -196,7 +196,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="@dimen/spacing_16"
-                        android:text="@string/class_detail_join_code_label" />
+                        android:text="@string/class_detail_class_code_label" />
 
                     <TextView
                         android:id="@+id/tvClassCode"
@@ -206,6 +206,22 @@
                         android:layout_marginTop="@dimen/spacing_4"
                         android:textColor="@color/text_primary"
                         tools:text="12A1-MATH" />
+
+                    <TextView
+                        style="@style/Text_Label_Medium"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/spacing_16"
+                        android:text="@string/class_detail_join_code_label" />
+
+                    <TextView
+                        android:id="@+id/tvJoinCode"
+                        style="@style/Text_Body_Medium"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/spacing_4"
+                        android:textColor="@color/text_primary"
+                        tools:text="XYZ123" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 

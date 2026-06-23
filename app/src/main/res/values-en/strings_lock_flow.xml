@@ -55,7 +55,7 @@
     <string name="submission_end_home">Back to Home</string>
     <string name="submission_end_content_description">Submitted</string>
     <string name="submission_status_saved">Submission saved on this device</string>
-    <string name="submission_status_waiting_network">Waiting for a network connection</string>
+    <string name="submission_status_waiting_network">Submission saved and will sync when the network is available</string>
     <string name="submission_status_uploading">Uploading images</string>
     <string name="submission_status_syncing">Syncing submission</string>
     <string name="submission_status_synced">Submitted successfully</string>

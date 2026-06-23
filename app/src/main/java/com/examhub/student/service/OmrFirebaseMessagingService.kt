@@ -15,6 +15,7 @@ import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import com.examhub.student.MainActivity
 import com.examhub.student.R
+import com.examhub.student.util.helper.NotificationTextResolver
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import org.koin.core.context.GlobalContext
@@ -46,15 +47,41 @@ class OmrFirebaseMessagingService : FirebaseMessagingService() {
         if (preferences?.isEnabled() == false) return
 
         val type = data["type"].orEmpty()
-        val title = message.notification?.title
-            ?: data["title"]
-            ?: defaultTitleFor(type)
-        val body = message.notification?.body
-            ?: data["body"]
-            ?: data["content"]
-            ?: data["message"]
-            ?: data["exam_name"]?.let { defaultTitleFor(type) + ": " + it }
-            ?: defaultBodyFor(type)
+
+        val titleLocKey = message.notification?.titleLocalizationKey
+            ?: data["title_loc_key"]
+            ?: data["title-loc-key"]
+            ?: data["titleLocKey"]
+        val titleLocArgs = message.notification?.titleLocalizationArgs
+            ?.toList()
+            ?: NotificationTextResolver.parseLocArgs(data["title_loc_args"])
+            ?: NotificationTextResolver.parseLocArgs(data["title-loc-args"])
+            ?: NotificationTextResolver.parseLocArgs(data["titleLocArgs"])
+
+        val bodyLocKey = message.notification?.bodyLocalizationKey
+            ?: data["body_loc_key"]
+            ?: data["body-loc-key"]
+            ?: data["bodyLocKey"]
+        val bodyLocArgs = message.notification?.bodyLocalizationArgs
+            ?.toList()
+            ?: NotificationTextResolver.parseLocArgs(data["body_loc_args"])
+            ?: NotificationTextResolver.parseLocArgs(data["body-loc-args"])
+            ?: NotificationTextResolver.parseLocArgs(data["bodyLocArgs"])
+
+        val text = NotificationTextResolver.resolve(
+            NotificationTextResolver.Payload(
+                type = type,
+                notificationTitle = message.notification?.title,
+                notificationBody = message.notification?.body,
+                titleLocKey = titleLocKey,
+                titleLocArgs = titleLocArgs,
+                bodyLocKey = bodyLocKey,
+                bodyLocArgs = bodyLocArgs,
+                data = data
+            ),
+            AndroidNotificationStrings()
+        )
+
         val notificationId = data["notification_id"]?.hashCode() ?: System.currentTimeMillis().toInt()
 
         ensureNotificationChannel(this)
@@ -72,9 +99,9 @@ class OmrFirebaseMessagingService : FirebaseMessagingService() {
 
         val notification = NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_notification)
-            .setContentTitle(title)
-            .setContentText(body)
-            .setStyle(NotificationCompat.BigTextStyle().bigText(body))
+            .setContentTitle(text.title)
+            .setContentText(text.body)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(text.body))
             .setAutoCancel(true)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setContentIntent(pendingIntent)
@@ -83,26 +110,51 @@ class OmrFirebaseMessagingService : FirebaseMessagingService() {
         NotificationManagerCompat.from(this).notify(notificationId, notification)
     }
 
+    private fun resolveLocString(locKey: String, args: List<String>): String? {
+        val resId = resources.getIdentifier(locKey, "string", packageName)
+        if (resId == 0) return null
+        return if (args.isEmpty()) {
+            getString(resId)
+        } else {
+            runCatching {
+                getString(resId, *args.toTypedArray())
+            }.getOrElse {
+                getString(resId)
+            }
+        }
+    }
+
+    private inner class AndroidNotificationStrings : NotificationTextResolver.Strings {
+        override fun resolve(key: String, args: List<String>): String? =
+            resolveLocString(key, args)
+
+        override fun defaultTitle(type: String): String = defaultTitleFor(type)
+
+        override fun defaultBody(type: String): String = defaultBodyFor(type)
+    }
+
     private fun defaultTitleFor(type: String): String {
-        return when (type.normalizedNotificationType()) {
+        return when (NotificationTextResolver.normalizeType(type)) {
+            "exam_started" -> getString(R.string.notif_title_exam_started)
             "exam_opened" -> getString(R.string.notifications_exam_opened_default_title)
             "exam_closed" -> getString(R.string.notifications_exam_closed_default_title)
+            "exam_graded" -> getString(R.string.notif_title_exam_graded)
+            "appeal_responded" -> getString(R.string.notif_title_appeal_responded)
             "submission_pending" -> getString(R.string.notifications_submission_pending_default_title)
             else -> getString(R.string.notifications_title)
         }
     }
 
     private fun defaultBodyFor(type: String): String {
-        return when (type.normalizedNotificationType()) {
+        return when (NotificationTextResolver.normalizeType(type)) {
+            "exam_started" -> getString(R.string.notifications_exam_opened_default_body)
             "exam_opened" -> getString(R.string.notifications_exam_opened_default_body)
             "exam_closed" -> getString(R.string.notifications_exam_closed_default_body)
+            "exam_graded" -> getString(R.string.notifications_grade_new_sentence)
+            "appeal_responded" -> getString(R.string.notifications_subtitle)
             "submission_pending" -> getString(R.string.notifications_submission_pending_default_body)
             else -> getString(R.string.notifications_subtitle)
         }
-    }
-
-    private fun String.normalizedNotificationType(): String {
-        return trim().lowercase().replace('-', '_')
     }
 
     companion object {

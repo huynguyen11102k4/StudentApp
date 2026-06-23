@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">ExamHub Student</string>
     <string name="kiosk_device_admin_description">Cho phép ứng dụng khóa thiết bị trong khi làm bài.</string>
@@ -159,6 +159,7 @@
     <string name="class_detail_student_count">%d học sinh</string>
     <string name="class_detail_exam_list">Kỳ thi của lớp</string>
     <string name="class_detail_join_code_label">Mã tham gia</string>
+    <string name="class_detail_class_code_label">Mã lớp</string>
     <string name="class_detail_teacher_label">Giáo viên</string>
     <string name="class_detail_grade_year_format">Khối %1$s - %2$s</string>
     <string name="class_detail_stats_students">Học sinh</string>
@@ -211,7 +212,7 @@
     <string name="exam_detail_title">Chi tiết kỳ thi</string>
     <string name="exam_detail_duration_format">%d phút</string>
     <string name="exam_detail_question_count_format">%d câu</string>
-    <string name="exam_detail_need_template_data">Cần tải dữ liệu kỳ thi trước khi quét phiếu.</string>
+    <string name="exam_detail_need_template_data">Cần tải dữ liệu kì thi trước khi làm bài.</string>
     <string name="exam_detail_download_template">Tải dữ liệu kỳ thi</string>
     <string name="exam_detail_start_locked">Hãy tải dữ liệu kỳ thi trước khi bắt đầu</string>
     <string name="exam_detail_submissions_title">Bài làm của bạn</string>
@@ -411,6 +412,10 @@
 
     <!-- Profile Screen -->
     <string name="profile_title">Thông tin cá nhân</string>
+    <string name="profile_dob_hint">Ngày sinh</string>
+    <string name="profile_crop_title">Cắt ảnh đại diện</string>
+    <string name="profile_crop_save">Lưu</string>
+    <string name="profile_crop_cancel">Hủy</string>
     <string name="profile_save">Lưu thay đổi</string>
     <string name="profile_saving">Đang lưu...</string>
     <string name="profile_saved">Đã lưu!</string>
@@ -561,6 +566,12 @@
     <string name="friendly_reviewing">Đang xem lại</string>
     <string name="friendly_failed">Xử lý thất bại</string>
     <string name="friendly_appeal_pending_note">Đang chờ giáo viên xem lại</string>
+    <string name="friendly_session_device_mismatch">Tài khoản đang làm bài thi này trên một thiết bị khác</string>
+    <string name="friendly_device_mismatch">Thiết bị không khớp với phiên làm bài hiện tại</string>
+    <string name="friendly_session_active">Bạn đang có phiên làm bài chưa kết thúc</string>
+    <string name="friendly_submission_device_mismatch">Không thể nộp hoặc đồng bộ bài từ thiết bị này</string>
+    <string name="friendly_attempts_exhausted">Bạn đã sử dụng hết lượt làm bài</string>
+
 
     <plurals name="settings_session_count">
         <item quantity="one">%d thiết bị đang đăng nhập</item>
@@ -574,4 +585,17 @@
 
     <string name="omr_error_not_enough_markers">Không nhận diện đủ marker. Chỉ tìm thấy %1$d/%2$d marker cần thiết</string>
     <string name="omr_error_missing_corner_markers">Thiếu marker góc bắt buộc: %1$s</string>
+
+    <!-- FCM Notifications -->
+    <!-- Bài kiểm tra bắt đầu -->
+    <string name="notif_title_exam_started">Bài kiểm tra đã bắt đầu</string>
+    <string name="notif_body_exam_started">Bài kiểm tra \"%1$s\" môn %2$s đã bắt đầu.</string>
+
+    <!-- Bài kiểm tra đã chấm điểm -->
+    <string name="notif_title_exam_graded">Bài thi đã được chấm</string>
+    <string name="notif_body_exam_graded">Bài thi của bạn đã được chấm. Tổng điểm: %1$s</string>
+
+    <!-- Khiếu nại đã được phản hồi -->
+    <string name="notif_title_appeal_responded">Khiếu nại đã được phản hồi</string>
+    <string name="notif_body_appeal_responded">Giáo viên đã phản hồi khiếu nại bài thi %1$s.</string>
 </resources>

@@ -13,6 +13,7 @@
         app:itemIconTint="@color/text_secondary"
         app:layout_constraintTop_toTopOf="parent"
         app:navigationIcon="@drawable/ic_chevron_left"
+        app:navigationIconTint="@color/text_primary"
         app:title="@string/appeals_list_title"
         app:titleTextAppearance="@style/Text_Toolbar_Title_Bold"
         app:titleTextColor="@color/text_primary" />

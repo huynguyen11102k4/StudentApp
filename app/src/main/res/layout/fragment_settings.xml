@@ -178,7 +178,8 @@
                     <ImageView
                         android:layout_width="@dimen/icon_size_large"
                         android:layout_height="@dimen/icon_size_large"
-                        android:src="@drawable/ic_chevron_right" />
+                        android:src="@drawable/ic_chevron_right"
+                        app:tint="@color/text_secondary" />
                 </LinearLayout>
 
                 <View
@@ -228,7 +229,8 @@
                     <ImageView
                         android:layout_width="@dimen/icon_size_large"
                         android:layout_height="@dimen/icon_size_large"
-                        android:src="@drawable/ic_chevron_right" />
+                        android:src="@drawable/ic_chevron_right"
+                        app:tint="@color/text_secondary" />
                 </LinearLayout>
 
                 <View
@@ -332,7 +334,8 @@
                     <ImageView
                         android:layout_width="@dimen/icon_size_large"
                         android:layout_height="@dimen/icon_size_large"
-                        android:src="@drawable/ic_chevron_right" />
+                        android:src="@drawable/ic_chevron_right"
+                        app:tint="@color/text_secondary" />
                 </LinearLayout>
             </LinearLayout>
 
@@ -397,7 +400,8 @@
                     <ImageView
                         android:layout_width="@dimen/icon_size_large"
                         android:layout_height="@dimen/icon_size_large"
-                        android:src="@drawable/ic_chevron_right" />
+                        android:src="@drawable/ic_chevron_right"
+                        app:tint="@color/text_secondary" />
                 </LinearLayout>
 
                 <View
@@ -509,7 +513,8 @@
                     <ImageView
                         android:layout_width="@dimen/icon_size_large"
                         android:layout_height="@dimen/icon_size_large"
-                        android:src="@drawable/ic_chevron_right" />
+                        android:src="@drawable/ic_chevron_right"
+                        app:tint="@color/text_secondary" />
                 </LinearLayout>
             </LinearLayout>
 

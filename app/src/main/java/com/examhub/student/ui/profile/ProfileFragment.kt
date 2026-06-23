@@ -31,12 +31,15 @@ import com.examhub.student.util.extension.applySystemWindowInsets
 import com.examhub.student.util.extension.collectOnStarted
 import com.examhub.student.util.extension.replaceTechnicalLabels
 import com.examhub.student.util.extension.showShimmer
+import android.text.Editable
+import android.text.TextWatcher
 import kotlinx.coroutines.launch
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.asRequestBody
 import org.koin.androidx.viewmodel.ext.android.viewModel
 import java.io.File
+import java.util.Calendar
 import java.util.Locale
 import java.util.UUID
 
@@ -54,6 +57,9 @@ class ProfileFragment : Fragment() {
     private var pendingAvatarFile: File? = null
     private var hasProfile = false
     private var isSaving = false
+    private var bindingProfile = false
+    private var originalProfileName = ""
+    private var originalDateOfBirth = ""
     private val avatarMaxBytes = 5L * 1024L * 1024L
     private val vietnameseLocale = Locale.forLanguageTag("vi-VN")
     private val pickAvatarLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
@@ -108,7 +114,7 @@ class ProfileFragment : Fragment() {
         initGoogleSignIn()
         binding.toolbar.applySystemWindowInsets(top = true)
         binding.toolbar.setNavigationOnClickListener { findNavController().navigateUp() }
-        binding.etFullName.isEnabled = false
+        binding.etFullName.isEnabled = true
         binding.etEmail.isEnabled = false
         binding.ivEditAvatar.setOnClickListener { showAvatarSourceDialog() }
         binding.btnGoogleLink.setOnClickListener {
@@ -127,9 +133,33 @@ class ProfileFragment : Fragment() {
                 startGoogleLink()
             }
         }
-        binding.btnSave.setOnClickListener {
-            viewModel.saveProfile(pendingAvatarPart)
+
+        binding.etDateOfBirth.setOnClickListener {
+            if (!isSaving) showDatePickerDialog()
         }
+
+        binding.btnSave.setOnClickListener {
+            val fullName = binding.etFullName.text.toString().normalizedName()
+            val dob = binding.etDateOfBirth.text.toString().normalizedDate().takeIf { it.isNotEmpty() }
+            viewModel.saveProfile(
+                fullName = fullName,
+                dateOfBirth = dob,
+                avatarFile = pendingAvatarPart,
+                updateTextProfile = hasTextProfileChanges()
+            )
+        }
+
+        val profileTextWatcher = object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: Editable?) {
+                checkProfileChanges()
+            }
+        }
+        binding.etFullName.addTextChangedListener(profileTextWatcher)
+        binding.etDateOfBirth.addTextChangedListener(profileTextWatcher)
+
+        binding.btnSave.visibility = View.GONE
         updateSaveButton()
 
         collectOnStarted {
@@ -137,23 +167,29 @@ class ProfileFragment : Fragment() {
                 viewModel.isSaving.collect { saving ->
                     isSaving = saving
                     binding.progressBar.visibility = if (saving) View.VISIBLE else View.GONE
+                    showUploadProgress(saving && viewModel.hasPendingAvatar.value)
                     updateSaveButton()
                 }
             }
             launch {
                 viewModel.saveSuccess.collect {
+                    Snackbar.make(binding.root, R.string.profile_saved, Snackbar.LENGTH_SHORT).show()
+                    viewModel.userProfile.value?.let { bindProfile(it, forceText = true) }
+                }
+            }
+            launch {
+                viewModel.avatarUploadSuccess.collect {
                     pendingAvatarFile?.takeIf { it.exists() }?.delete()
                     pendingAvatarPart = null
                     pendingAvatarFile = null
-                    viewModel.setAvatarPending(false)
-                    Snackbar.make(binding.root, R.string.profile_saved, Snackbar.LENGTH_SHORT).show()
-                    viewModel.userProfile.value?.let(::bindProfile)
+                    bindAvatar(viewModel.userProfile.value?.avatarUrl)
+                    updateSaveButton()
                 }
             }
             launch {
                 viewModel.userProfile.collect { profile ->
                     hasProfile = profile != null
-                    profile?.let(::bindProfile)
+                    profile?.let { bindProfile(it) }
                     updateProfileLoadingState(viewModel.isLoading.value)
                 }
             }
@@ -173,7 +209,8 @@ class ProfileFragment : Fragment() {
                 }
             }
             launch {
-                viewModel.hasPendingAvatar.collect {
+                viewModel.hasPendingAvatar.collect { pending ->
+                    showUploadProgress(isSaving && pending)
                     updateSaveButton()
                 }
             }
@@ -204,11 +241,21 @@ class ProfileFragment : Fragment() {
         binding.contentScroll.visibility = if (showSkeleton) View.GONE else View.VISIBLE
     }
 
-    private fun bindProfile(profile: UserResponse) {
+    private fun bindProfile(profile: UserResponse, forceText: Boolean = false) {
         val rawName: String? = profile.fullName
         val rawRole: String? = profile.role
         val rawEmail: String? = profile.email
-        val displayName = rawName.orEmpty().toTitleCaseName().ifBlank { getString(R.string.profile_name_placeholder) }
+        val editableName = rawName.orEmpty().normalizedName()
+        val dateOfBirth = profile.student?.dateOfBirth.normalizedDate()
+        val currentName = binding.etFullName.text.toString().normalizedName()
+        val currentDob = binding.etDateOfBirth.text.toString().normalizedDate()
+        val hasUnsavedTextChanges = hasProfile &&
+            (currentName != originalProfileName || currentDob != originalDateOfBirth)
+        val preserveTextEdits = hasUnsavedTextChanges && !forceText
+        val displayName = (if (preserveTextEdits) currentName else editableName)
+            .toTitleCaseName()
+            .ifBlank { getString(R.string.profile_name_placeholder) }
+        bindingProfile = true
         binding.tvProfileDisplayName.text = displayName
         binding.tvProfileRole.text = rawRole.orEmpty()
             .ifBlank { getString(R.string.profile_role_student) }
@@ -216,7 +263,12 @@ class ProfileFragment : Fragment() {
         binding.tvProfileStudentCodeTop.text = profile.student?.studentCode
             ?.takeIf { it.isNotBlank() }
             ?: getString(R.string.profile_student_code_top_empty)
-        binding.etFullName.setText(displayName)
+        if (!preserveTextEdits) {
+            originalProfileName = editableName
+            originalDateOfBirth = dateOfBirth
+            binding.etFullName.setText(editableName)
+            binding.etDateOfBirth.setText(dateOfBirth)
+        }
         binding.etEmail.setText(rawEmail.orEmpty())
         binding.btnGoogleLink.text = if (profile.isGoogleLinked()) {
             getString(R.string.profile_google_linked_action)
@@ -241,11 +293,16 @@ class ProfileFragment : Fragment() {
             bindAvatar(profile.avatarUrl)
         }
         binding.tvProfileInitials.text = initials(displayName)
+        bindingProfile = false
         updateSaveButton()
     }
 
     private fun updateSaveButton() {
-        binding.btnSave.isEnabled = !isSaving && pendingAvatarPart != null
+        checkProfileChanges()
+        binding.etFullName.isEnabled = !isSaving
+        binding.etDateOfBirth.isEnabled = !isSaving
+        binding.ivEditAvatar.isEnabled = !isSaving
+        binding.ivEditAvatar.isClickable = !isSaving
         binding.btnGoogleLink.isEnabled = !isSaving && hasProfile
     }
 
@@ -295,6 +352,16 @@ class ProfileFragment : Fragment() {
             .into(binding.ivProfileAvatar)
     }
 
+    private fun bindAvatarFile(file: File) {
+        binding.ivProfileAvatar.visibility = View.VISIBLE
+        binding.tvProfileInitials.visibility = View.GONE
+        Glide.with(this)
+            .load(file)
+            .centerCrop()
+            .error(R.drawable.bg_avatar)
+            .into(binding.ivProfileAvatar)
+    }
+
     private fun resolveAvatarUrl(url: String): String {
         if (url.startsWith("http://") || url.startsWith("https://")) return url
         val apiBase = BuildConfig.API_BASE_URL.trimEnd('/')
@@ -332,6 +399,50 @@ class ProfileFragment : Fragment() {
         dialog.show()
     }
 
+    private var progressDialog: Dialog? = null
+
+    private fun showUploadProgress(show: Boolean) {
+        if (show) {
+            if (progressDialog == null) {
+                progressDialog = Dialog(requireContext()).apply {
+                    setContentView(android.widget.ProgressBar(requireContext()))
+                    window?.setBackgroundDrawableResource(android.R.color.transparent)
+                    setCancelable(false)
+                }
+            }
+            if (progressDialog?.isShowing == false) {
+                progressDialog?.show()
+            }
+        } else {
+            progressDialog?.dismiss()
+            progressDialog = null
+        }
+    }
+
+    private fun getRotatedBitmap(file: File): Bitmap? {
+        val bitmap = android.graphics.BitmapFactory.decodeFile(file.absolutePath) ?: return null
+        return runCatching {
+            val exif = android.media.ExifInterface(file.absolutePath)
+            val orientation = exif.getAttributeInt(android.media.ExifInterface.TAG_ORIENTATION, android.media.ExifInterface.ORIENTATION_NORMAL)
+            val rotationDegrees = when (orientation) {
+                android.media.ExifInterface.ORIENTATION_ROTATE_90 -> 90
+                android.media.ExifInterface.ORIENTATION_ROTATE_180 -> 180
+                android.media.ExifInterface.ORIENTATION_ROTATE_270 -> 270
+                else -> 0
+            }
+            if (rotationDegrees != 0) {
+                val matrix = android.graphics.Matrix().apply { postRotate(rotationDegrees.toFloat()) }
+                val rotated = Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
+                if (rotated != bitmap) {
+                    bitmap.recycle()
+                }
+                rotated
+            } else {
+                bitmap
+            }
+        }.getOrDefault(bitmap)
+    }
+
     private fun prepareAvatar(uri: Uri) {
         val mimeType = requireContext().contentResolver.getType(uri) ?: "image/jpeg"
         if (mimeType !in setOf("image/jpeg", "image/png")) {
@@ -340,49 +451,97 @@ class ProfileFragment : Fragment() {
         }
 
         val extension = if (mimeType == "image/png") "png" else "jpg"
-        val file = File(requireContext().cacheDir, "avatar-${UUID.randomUUID()}.$extension")
+        val tempFile = File(requireContext().cacheDir, "temp-${UUID.randomUUID()}.$extension")
         runCatching {
             requireContext().contentResolver.openInputStream(uri)?.use { input ->
-                file.outputStream().use { output -> input.copyTo(output) }
+                tempFile.outputStream().use { output -> input.copyTo(output) }
             } ?: error(getString(R.string.settings_avatar_read_failed))
         }.onFailure {
-            Snackbar.make(binding.root, it.message ?: getString(R.string.settings_avatar_read_failed), Snackbar.LENGTH_LONG).show()
+            Snackbar.make(
+                binding.root,
+                (it.message ?: getString(R.string.settings_avatar_read_failed)).replaceTechnicalLabels(),
+                Snackbar.LENGTH_LONG
+            ).show()
             return
         }
 
-        prepareAvatarFile(file, mimeType)
+        val rotatedBitmap = getRotatedBitmap(tempFile)
+        tempFile.delete()
+
+        if (rotatedBitmap != null) {
+            showCropDialog(rotatedBitmap)
+        } else {
+            Snackbar.make(binding.root, R.string.settings_avatar_read_failed, Snackbar.LENGTH_LONG).show()
+        }
     }
 
     private fun prepareAvatar(bitmap: Bitmap) {
+        showCropDialog(bitmap)
+    }
+
+    private fun showCropDialog(bitmap: Bitmap) {
+        val dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_crop_image, null)
+        val cropImageView = dialogView.findViewById<CropImageView>(R.id.cropImageView)
+        val zoomSeekBar = dialogView.findViewById<android.widget.SeekBar>(R.id.zoomSeekBar)
+        val btnCancel = dialogView.findViewById<android.view.View>(R.id.btnCancel)
+        val btnSave = dialogView.findViewById<android.view.View>(R.id.btnSave)
+
+        cropImageView.setImageBitmap(bitmap)
+
+        zoomSeekBar.setOnSeekBarChangeListener(object : android.widget.SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: android.widget.SeekBar?, progress: Int, fromUser: Boolean) {
+                cropImageView.setZoom(progress)
+            }
+            override fun onStartTrackingTouch(seekBar: android.widget.SeekBar?) {}
+            override fun onStopTrackingTouch(seekBar: android.widget.SeekBar?) {}
+        })
+
+        val dialog = MaterialAlertDialogBuilder(requireContext())
+            .setView(dialogView)
+            .setCancelable(false)
+            .create()
+
+        btnCancel.setOnClickListener {
+            dialog.dismiss()
+        }
+
+        btnSave.setOnClickListener {
+            val croppedBitmap = cropImageView.cropImage()
+            if (croppedBitmap != null) {
+                dialog.dismiss()
+                uploadCroppedAvatar(croppedBitmap)
+            } else {
+                Snackbar.make(binding.root, R.string.settings_avatar_read_failed, Snackbar.LENGTH_SHORT).show()
+            }
+        }
+
+        dialog.show()
+    }
+
+    private fun uploadCroppedAvatar(bitmap: Bitmap) {
         val file = File(requireContext().cacheDir, "avatar-${UUID.randomUUID()}.jpg")
         runCatching {
-            file.outputStream().use { output -> bitmap.compress(Bitmap.CompressFormat.JPEG, 92, output) }
+            file.outputStream().use { output ->
+                bitmap.compress(Bitmap.CompressFormat.JPEG, 92, output)
+            }
         }.onFailure {
             Snackbar.make(binding.root, R.string.settings_avatar_read_failed, Snackbar.LENGTH_LONG).show()
             return
         }
-        prepareAvatarFile(file, "image/jpeg")
-    }
 
-    private fun prepareAvatarFile(file: File, mimeType: String) {
         if (file.length() > avatarMaxBytes) {
             file.delete()
             Snackbar.make(binding.root, R.string.settings_avatar_too_large, Snackbar.LENGTH_LONG).show()
             return
         }
 
-        val body = file.asRequestBody(mimeType.toMediaTypeOrNull())
+        val body = file.asRequestBody("image/jpeg".toMediaTypeOrNull())
         pendingAvatarFile?.takeIf { it.exists() }?.delete()
         pendingAvatarFile = file
-        pendingAvatarPart = MultipartBody.Part.createFormData("file", file.name, body)
+        val avatarPart = MultipartBody.Part.createFormData("file", file.name, body)
+        pendingAvatarPart = avatarPart
         viewModel.setAvatarPending(true)
-
-        binding.ivProfileAvatar.visibility = View.VISIBLE
-        binding.tvProfileInitials.visibility = View.GONE
-        Glide.with(this)
-            .load(file)
-            .centerCrop()
-            .into(binding.ivProfileAvatar)
+        bindAvatarFile(file)
         updateSaveButton()
     }
 
@@ -394,6 +553,8 @@ class ProfileFragment : Fragment() {
 
     override fun onDestroyView() {
         super.onDestroyView()
+        progressDialog?.dismiss()
+        progressDialog = null
         pendingAvatarFile?.takeIf { it.exists() }?.delete()
         _binding = null
     }
@@ -456,4 +617,61 @@ class ProfileFragment : Fragment() {
     private fun Int.dp(): Int {
         return (this * resources.displayMetrics.density).toInt()
     }
+
+    private fun showDatePickerDialog() {
+        val calendar = Calendar.getInstance()
+        val currentText = binding.etDateOfBirth.text.toString().trim()
+        if (currentText.isNotEmpty()) {
+            val parts = currentText.split("-")
+            if (parts.size == 3) {
+                val year = parts[0].toIntOrNull()
+                val month = parts[1].toIntOrNull()?.minus(1)
+                val day = parts[2].toIntOrNull()
+                if (year != null && month != null && day != null) {
+                    calendar.set(year, month, day)
+                }
+            }
+        } else {
+            calendar.set(2008, 0, 1)
+        }
+
+        val datePickerDialog = android.app.DatePickerDialog(
+            requireContext(),
+            { _, year, month, dayOfMonth ->
+                val formattedDate = String.format(Locale.US, "%04d-%02d-%02d", year, month + 1, dayOfMonth)
+                binding.etDateOfBirth.setText(formattedDate)
+            },
+            calendar.get(Calendar.YEAR),
+            calendar.get(Calendar.MONTH),
+            calendar.get(Calendar.DAY_OF_MONTH)
+        )
+        datePickerDialog.show()
+    }
+
+    private fun checkProfileChanges() {
+        if (bindingProfile) return
+        val profile = viewModel.userProfile.value
+        val hasChanges = hasTextProfileChanges() || pendingAvatarPart != null
+
+        binding.btnSave.visibility = if (hasChanges) View.VISIBLE else View.GONE
+        binding.btnSave.isEnabled = !isSaving &&
+            hasChanges &&
+            profile != null &&
+            binding.etFullName.text.toString().normalizedName().isNotEmpty()
+    }
+
+    private fun hasTextProfileChanges(): Boolean {
+        val profile = viewModel.userProfile.value ?: return false
+        val originalName = originalProfileName.ifBlank { profile.fullName.orEmpty().normalizedName() }
+        val originalDob = originalDateOfBirth.ifBlank { profile.student?.dateOfBirth.normalizedDate() }
+        val currentName = binding.etFullName.text.toString().normalizedName()
+        val currentDob = binding.etDateOfBirth.text.toString().normalizedDate()
+        return currentName != originalName || currentDob != originalDob
+    }
+
+    private fun String?.normalizedName(): String =
+        orEmpty().trim().replace(Regex("\\s+"), " ")
+
+    private fun String?.normalizedDate(): String =
+        orEmpty().substringBefore("T").trim()
 }

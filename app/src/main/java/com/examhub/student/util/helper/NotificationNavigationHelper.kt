@@ -13,7 +13,8 @@ object NotificationNavigationHelper {
         "appeal_updated",
         "appeal_new",
         "appeal_resolved",
-        "appeal_replied"
+        "appeal_replied",
+        "appeal_responded"
     )
     private val examTypes = setOf(
         "exam_created",
@@ -21,7 +22,8 @@ object NotificationNavigationHelper {
         "exam_upcoming",
         "exam_reminder",
         "exam_assigned",
-        "exam_closed"
+        "exam_closed",
+        "exam_started"
     )
     private val resultTypes = setOf(
         "grade_updated",

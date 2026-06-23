@@ -57,7 +57,7 @@ class OfflineCacheManager(
     fun isOfflineReady(examId: String): Boolean =
         dbCall {
             val exam = dao.getOfflineExam(examId)
-            exam?.templateJson != null && exam.questionMetadataJson != null
+            exam?.templateJson != null
         }
 
     fun markOfflineReady(examId: String) =
@@ -137,12 +137,16 @@ class OfflineCacheManager(
 
     fun saveNotifications(notifications: List<AppNotification>) {
         val dismissed = getDismissedNotificationIds().toSet()
+        val visibleNotifications = notifications.filterNot { it.id in dismissed }
+        if (visibleNotifications.isEmpty()) return
         synchronized(mutationLock) {
             dbCall {
                 database.runInTransaction {
-                    dao.deleteJsonNamespace(NAMESPACE_NOTIFICATIONS)
-                    dao.upsertJson(notifications.filterNot { it.id in dismissed }.mapIndexed { index, item ->
-                        jsonEntity(NAMESPACE_NOTIFICATIONS, item.id, gson.toJson(item), index.toLong())
+                    val existingMaxOrder = dao.getJsonNamespace(NAMESPACE_NOTIFICATIONS)
+                        .maxOfOrNull { it.sortOrder }
+                        ?: -1L
+                    dao.upsertJson(visibleNotifications.mapIndexed { index, item ->
+                        jsonEntity(NAMESPACE_NOTIFICATIONS, item.id, gson.toJson(item), existingMaxOrder + index + 1)
                     })
                 }
             }
@@ -160,11 +164,16 @@ class OfflineCacheManager(
     fun clearNotifications() = dbCall { dao.deleteJsonNamespace(NAMESPACE_NOTIFICATIONS) }
 
     fun dismissNotifications(notificationIds: List<String>) {
-        if (notificationIds.isEmpty()) return
+        val validIds = notificationIds.map(String::trim).filter(String::isNotBlank).distinct()
+        if (validIds.isEmpty()) return
         val merged = getDismissedNotificationIds().toMutableSet()
-        merged.addAll(notificationIds.filter(String::isNotBlank))
-        saveMetadata(KEY_DISMISSED_NOTIFICATION_IDS, gson.toJson(merged.toList()))
-        clearNotifications()
+        merged.addAll(validIds)
+        dbCall {
+            database.runInTransaction {
+                saveMetadataInDao(KEY_DISMISSED_NOTIFICATION_IDS, gson.toJson(merged.toList()))
+                dao.deleteJson(NAMESPACE_NOTIFICATIONS, validIds)
+            }
+        }
     }
 
     fun getDismissedNotificationIds(): List<String> = dbCall {
@@ -303,7 +312,7 @@ class OfflineCacheManager(
 
     private fun isOfflineReadyInDao(examId: String): Boolean =
         dao.getOfflineExam(examId)?.let {
-            it.templateJson != null && it.questionMetadataJson != null
+            it.templateJson != null
         } == true
 
     private fun saveMetadata(key: String, value: String) =

@@ -29,6 +29,7 @@ import com.examhub.student.service.AuthEvent
 import com.examhub.student.service.FcmTokenRegistrar
 import com.examhub.student.service.TokenManager
 import com.examhub.student.util.helper.NotificationNavigationHelper
+import com.examhub.student.util.helper.PushNotificationHandoff
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -49,6 +50,14 @@ class MainActivity : AppCompatActivity() {
     private var activeLockSessionId: String = ""
     private var activeLockScreen: String = ""
     private var lockModeStopped = false
+    private val pushNotificationHandoff = PushNotificationHandoff(
+        splashDestinationId = R.id.splashFragment,
+        authDestinationIds = setOf(
+            R.id.loginFragment,
+            R.id.registerFragment,
+            R.id.forgotPasswordFragment
+        )
+    )
     private var repinJob: Job? = null
     private var screenDimJob: Job? = null
     private val notificationPermissionLauncher = registerForActivityResult(
@@ -190,6 +199,7 @@ class MainActivity : AppCompatActivity() {
             } else {
                 clearLockFlowScreenPolicy()
             }
+            tryRoutePendingNotification()
         }
     }
 
@@ -202,15 +212,32 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun handlePushIntent(intent: Intent?) {
-        if (!tokenManager.hasToken()) return
-        when (val destination = NotificationNavigationHelper.resolveDestination(intent?.extras)) {
+        if (intent?.action != ACTION_OPEN_NOTIFICATION) return
+        if (pushNotificationHandoff.capture(intent?.extras)) {
+            intent?.replaceExtras(Bundle())
+            tryRoutePendingNotification()
+        }
+    }
+
+    private fun tryRoutePendingNotification() {
+        when (val action = pushNotificationHandoff.nextAction(
+            navController.currentDestination?.id,
+            tokenManager.hasToken()
+        )) {
+            PushNotificationHandoff.Action.None -> Unit
+            PushNotificationHandoff.Action.NavigateLogin -> navigateToLogin()
+            is PushNotificationHandoff.Action.NavigateDestination -> navigateNotificationDestination(action.destination)
+        }
+    }
+
+    private fun navigateNotificationDestination(destination: NotificationNavigationHelper.Destination) {
+        when (destination) {
             is NotificationNavigationHelper.Destination.AppealDetail -> {
                 navController.navigate(
                     R.id.appealDetailFragment,
                     bundleOf("appealId" to destination.appealId),
                     navOptions { launchSingleTop = true }
                 )
-                intent?.replaceExtras(Bundle())
             }
             is NotificationNavigationHelper.Destination.ResultDetail -> {
                 navController.navigate(
@@ -218,7 +245,6 @@ class MainActivity : AppCompatActivity() {
                     bundleOf("sheetId" to destination.sheetId),
                     navOptions { launchSingleTop = true }
                 )
-                intent?.replaceExtras(Bundle())
             }
             is NotificationNavigationHelper.Destination.ExamDetail -> {
                 navController.navigate(
@@ -226,23 +252,18 @@ class MainActivity : AppCompatActivity() {
                     bundleOf("examId" to destination.examId),
                     navOptions { launchSingleTop = true }
                 )
-                intent?.replaceExtras(Bundle())
             }
             NotificationNavigationHelper.Destination.AppealsList -> {
                 navController.navigate(R.id.appealsListFragment, null, navOptions { launchSingleTop = true })
-                intent?.replaceExtras(Bundle())
             }
             NotificationNavigationHelper.Destination.ResultsList -> {
                 navController.navigate(R.id.resultsListFragment, null, navOptions { launchSingleTop = true })
-                intent?.replaceExtras(Bundle())
             }
             NotificationNavigationHelper.Destination.ExamList -> {
                 navController.navigate(R.id.examListFragment, null, navOptions { launchSingleTop = true })
-                intent?.replaceExtras(Bundle())
             }
             NotificationNavigationHelper.Destination.Notifications -> {
                 navController.navigate(R.id.notificationsFragment, null, navOptions { launchSingleTop = true })
-                intent?.replaceExtras(Bundle())
             }
             NotificationNavigationHelper.Destination.None -> Unit
         }

@@ -1,9 +1,11 @@
 package com.examhub.student.ui.examstart
 
 import android.content.Context
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.gson.Gson
+import com.examhub.student.BuildConfig
 import com.examhub.student.R
 import com.examhub.student.data.model.Exam
 import com.examhub.student.model.ApiResult
@@ -18,6 +20,8 @@ import com.examhub.student.service.ActiveExamSessionStore
 import com.examhub.student.service.OfflineCacheManager
 import com.examhub.student.service.TokenManager
 import com.examhub.student.security.SecurePermitStore
+import com.examhub.student.util.extension.replaceTechnicalLabels
+import com.examhub.student.util.helper.TemplateQuestionCounter
 import com.examhub.student.util.helper.parseUserProfileJson
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -91,7 +95,7 @@ class ExamStartViewModel(
                             currentStartTime = cached.date
                             currentEndTime = null
                             refreshCanStartExam()
-                        } ?: _message.tryEmit(result.exception.message ?: context.getString(R.string.exam_start_load_failed))
+                        } ?: _message.tryEmit((result.exception.message ?: context.getString(R.string.exam_start_load_failed)).replaceTechnicalLabels())
                     }
                 }
             }
@@ -123,7 +127,7 @@ class ExamStartViewModel(
                                 _sessionResume.tryEmit(active.toResumeEvent())
                             } ?: _message.tryEmit(context.getString(R.string.exam_start_session_active_remote))
                         } else {
-                            _message.tryEmit(result.exception.message ?: context.getString(R.string.exam_start_session_failed))
+                            _message.tryEmit((result.exception.message ?: context.getString(R.string.exam_start_session_failed)).replaceTechnicalLabels())
                         }
                     }
                 }
@@ -140,7 +144,8 @@ class ExamStartViewModel(
                 ExamStartSessionUiEvent(
                     session = session,
                     omrCodes = omrCodes,
-                    remainingSeconds = session.remainingSeconds
+                    remainingSeconds = session.remainingSeconds,
+                    questionCount = resolvedQuestionCount(_exam.value?.totalQuestions ?: 0)
                 )
             )
             return
@@ -159,16 +164,17 @@ class ExamStartViewModel(
                             ExamStartSessionUiEvent(
                                 session = session,
                                 omrCodes = omrCodes,
-                                remainingSeconds = result.data.remainingSeconds ?: session.remainingSeconds
+                                remainingSeconds = result.data.remainingSeconds ?: session.remainingSeconds,
+                                questionCount = resolvedQuestionCount(_exam.value?.totalQuestions ?: 0)
                             )
                         )
                     } else {
-                        _message.tryEmit(result.data.reason ?: context.getString(R.string.exam_start_lock_invalid))
+                        _message.tryEmit((result.data.reason ?: context.getString(R.string.exam_start_lock_invalid)).replaceTechnicalLabels())
                     }
                 }
                 is ApiResult.Error -> {
                     _isLoading.value = false
-                    _message.tryEmit(result.exception.message ?: context.getString(R.string.exam_start_lock_validate_failed))
+                    _message.tryEmit((result.exception.message ?: context.getString(R.string.exam_start_lock_validate_failed)).replaceTechnicalLabels())
                 }
                 else -> Unit
             }
@@ -178,17 +184,19 @@ class ExamStartViewModel(
     private fun cacheStartPayload(session: StartExamSessionResponse) {
         val template = session.template ?: return
         val gridConfig = template.gridConfig ?: return
-        offlineCacheManager.saveTemplate(
-            currentExamId,
-            gson.toJson(
-                buildMap<String, Any?> {
-                    put("gridConfig", gridConfig)
-                    session.studentCodeType?.takeIf { it.isNotBlank() }?.let {
-                        put("student_code_type", it)
-                    }
+        val templateJson = gson.toJson(
+            buildMap<String, Any?> {
+                put("gridConfig", gridConfig)
+                session.studentCodeType?.takeIf { it.isNotBlank() }?.let {
+                    put("student_code_type", it)
                 }
-            )
+            }
         )
+        logLong(
+            "Template received from start-session examId=$currentExamId sessionId=${session.sessionId} bytes=${templateJson.length}",
+            templateJson
+        )
+        offlineCacheManager.saveTemplate(currentExamId, templateJson)
         offlineCacheManager.markOfflineReady(currentExamId)
     }
 
@@ -211,7 +219,7 @@ class ExamStartViewModel(
                 classCode = omrCodes.classCode,
                 studentCode = omrCodes.studentCode,
                 studentCodeMode = omrCodes.studentCodeMode,
-                questionCount = _exam.value?.totalQuestions ?: 0,
+                questionCount = resolvedQuestionCount(_exam.value?.totalQuestions ?: 0),
                 deviceId = tokenManager.getDeviceId(),
                 offlineDeadlineAt = session.offlineSubmission?.deadlineAt,
                 offlineSyncDeadlineAt = session.offlineSubmission?.syncDeadlineAt,
@@ -275,6 +283,12 @@ class ExamStartViewModel(
             ).firstNotNullOfOrNull { StudentIdentifierMode.from(it) } ?: StudentIdentifierMode.UNKNOWN
         }.getOrDefault(StudentIdentifierMode.UNKNOWN)
     }
+
+    private fun resolvedQuestionCount(defaultCount: Int): Int =
+        TemplateQuestionCounter.countFromTemplateJsonOrDefault(
+            offlineCacheManager.getTemplate(currentExamId),
+            defaultCount
+        )
 
     private fun refreshCanStartExam() {
         _canStartExam.value = currentGradingType.equals("STUDENT_SUBMISSION", ignoreCase = true) &&
@@ -343,12 +357,24 @@ class ExamStartViewModel(
             )
         )
     }
+
+    private fun logLong(message: String, payload: String) {
+        if (!BuildConfig.DEBUG) return
+        Log.d(TAG, message)
+        payload.chunked(LOG_CHUNK_SIZE).forEachIndexed { index, chunk ->
+            Log.d(TAG, "$message chunk=${index + 1}: $chunk")
+        }
+    }
 }
+
+private const val TAG = "ExamStartViewModel"
+private const val LOG_CHUNK_SIZE = 3500
 
 data class ExamStartSessionUiEvent(
     val session: StartExamSessionResponse,
     val omrCodes: LockModeOmrCodes,
-    val remainingSeconds: Int
+    val remainingSeconds: Int,
+    val questionCount: Int
 )
 
 data class ExamResumeUiEvent(

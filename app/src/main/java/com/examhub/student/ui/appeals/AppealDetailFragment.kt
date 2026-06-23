@@ -13,6 +13,7 @@ import com.examhub.student.util.extension.toLocalDisplayDateTime
 import com.examhub.student.util.extension.applySystemWindowInsets
 import com.examhub.student.util.extension.collectOnStarted
 import com.examhub.student.util.extension.toFriendlyAppealStatus
+import com.examhub.student.util.extension.replaceTechnicalLabels
 import com.google.android.material.snackbar.Snackbar
 import kotlinx.coroutines.launch
 import org.koin.androidx.viewmodel.ext.android.viewModel
@@ -44,7 +45,7 @@ class AppealDetailFragment : Fragment() {
             }
             launch {
                 viewModel.message.collect { message ->
-                    Snackbar.make(binding.root, message, Snackbar.LENGTH_LONG).show()
+                    Snackbar.make(binding.root, message.replaceTechnicalLabels(), Snackbar.LENGTH_LONG).show()
                 }
             }
         }

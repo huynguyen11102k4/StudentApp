@@ -15,6 +15,7 @@ import com.examhub.student.repository.ExamRepository
 import com.examhub.student.service.ActiveExamSessionStore
 import com.examhub.student.model.response.submission.StudentSubmitResponse
 import com.examhub.student.data.local.model.FreezeResult
+import com.examhub.student.service.NetworkUtils
 import com.examhub.student.service.OfflineSubmissionManager
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -24,6 +25,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import java.util.Locale
 
 class SmartReviewViewModel(
@@ -244,7 +246,10 @@ class SmartReviewViewModel(
 
     private suspend fun canSubmitCurrentExam(): Boolean {
         if (currentExamId.isBlank()) return false
-        val result = examRepository.getExamDetail(currentExamId).first { it !is ApiResult.Loading }
+        if (!NetworkUtils.isNetworkAvailable(context)) return true
+        val result = withTimeoutOrNull(SUBMIT_PREFLIGHT_TIMEOUT_MS) {
+            examRepository.getExamDetail(currentExamId).first { it !is ApiResult.Loading }
+        } ?: return true
         return when (result) {
             is ApiResult.Success -> result.data.status.equals("ACTIVE", ignoreCase = true)
             is ApiResult.Error -> true
@@ -356,3 +361,5 @@ data class ReviewUiState(
     val hasOmrResult: Boolean = false,
     val hasOmrWarning: Boolean = false
 )
+
+private const val SUBMIT_PREFLIGHT_TIMEOUT_MS = 5_000L

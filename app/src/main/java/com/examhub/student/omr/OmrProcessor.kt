@@ -375,12 +375,15 @@ class OmrProcessor(
                 val layout = zone.optJSONObject("layout")
                 val startNumber = zone.optInt("start_number", zone.optInt("startNumber", 1))
                 val endNumber = zone.optInt("end_number", zone.optInt("endNumber", startNumber + 19))
+                val rows = layout?.optNullableInt("rows")
+                    ?: zone.optNullableInt("rows")
+                    ?: (endNumber - startNumber + 1).coerceAtLeast(0)
                 put(JSONObject().apply {
                     put("zone_id", zone.optString("zone_id", zone.optString("zoneId", "answer_zone_${i + 1}")))
                     put("type", zone.optString("type", "multiple_choice_grid"))
                     put("bounding_box", normalizeBoundingBox(boundingBox))
                     put("layout", JSONObject().apply {
-                        put("rows", layout?.optInt("rows") ?: (endNumber - startNumber + 1).coerceAtLeast(1))
+                        put("rows", rows)
                         put("options", layout?.optInt("options") ?: zone.optInt("options_per_question", zone.optInt("optionsPerQuestion", 4)))
                         put("has_start_number", layout?.optBoolean("has_start_number", layout.optBoolean("hasStartNumber", true)) ?: true)
                         put("has_end_number", layout?.optBoolean("has_end_number", layout.optBoolean("hasEndNumber", false)) ?: false)
@@ -421,6 +424,10 @@ class OmrProcessor(
 
     private fun JSONObject.optNullableDouble(name: String): Double? {
         return if (has(name) && !isNull(name)) optDouble(name) else null
+    }
+
+    private fun JSONObject.optNullableInt(name: String): Int? {
+        return if (has(name) && !isNull(name)) optInt(name) else null
     }
 
     private fun defaultAnchorPointsJson(): JSONArray {

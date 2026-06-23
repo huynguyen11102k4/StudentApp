@@ -4,6 +4,7 @@ import android.app.Application
 import android.content.Context
 import androidx.room.Room
 import com.examhub.student.data.local.StudentAppDatabase
+import com.examhub.student.data.local.StudentDatabaseMigrations
 import com.examhub.student.data.local.entity.ActiveExamSessionEntity
 import com.examhub.student.data.local.model.SubmissionSyncStatus
 import com.examhub.student.data.local.submission.QueuedSubmissionEntity
@@ -13,6 +14,9 @@ import com.examhub.student.data.model.SchoolClass
 import com.examhub.student.model.response.profile.StudentProfileResponse
 import com.examhub.student.model.response.profile.UserResponse
 import com.google.gson.Gson
+import androidx.sqlite.db.SupportSQLiteDatabase
+import androidx.sqlite.db.SupportSQLiteOpenHelper
+import androidx.sqlite.db.framework.FrameworkSQLiteOpenHelperFactory
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
@@ -59,12 +63,24 @@ class OfflineCacheManagerRoomTest {
     fun offlineExamIsReadyAfterTemplateIsCached() {
         assertFalse(cache.isOfflineReady(EXAM_ID))
         cache.saveTemplate(EXAM_ID, """{"gridConfig":{"answer_zones":[]}}""")
-        assertFalse(cache.isOfflineReady(EXAM_ID))
-        cache.saveQuestionMetadata(EXAM_ID, """[{"question_number":1}]""")
+        assertTrue(cache.isOfflineReady(EXAM_ID))
         cache.markOfflineReady(EXAM_ID)
 
         assertTrue(cache.isOfflineReady(EXAM_ID))
         assertEquals(listOf(EXAM_ID), cache.getOfflineExamIds())
+    }
+
+    @Test
+    fun cachedExamBasicsBecomeOfflineReadyWithTemplateOnly() {
+        cache.saveExamBasics(listOf(exam()))
+
+        assertFalse(cache.getCachedExamBasic(EXAM_ID)?.isOfflineReady ?: true)
+        assertTrue(cache.getOfflineReadyExamBasics().isEmpty())
+
+        cache.saveTemplate(EXAM_ID, """{"gridConfig":{"answer_zones":[]}}""")
+
+        assertTrue(cache.getCachedExamBasic(EXAM_ID)?.isOfflineReady ?: false)
+        assertEquals(listOf(EXAM_ID), cache.getOfflineReadyExamBasics().map { it.id })
     }
 
     @Test
@@ -207,12 +223,83 @@ class OfflineCacheManagerRoomTest {
     }
 
     @Test
+    fun migrationOneToTwoKeepsQueuedSubmissionsAndAddsServerMetadataColumns() {
+        database.close()
+        val dbName = "migration-1-2-test.db"
+        context.deleteDatabase(dbName)
+        val helper = FrameworkSQLiteOpenHelperFactory().create(
+            SupportSQLiteOpenHelper.Configuration.builder(context)
+                .name(dbName)
+                .callback(object : SupportSQLiteOpenHelper.Callback(1) {
+                    override fun onCreate(db: SupportSQLiteDatabase) {
+                        db.execSQL(
+                            """
+                            CREATE TABLE IF NOT EXISTS queued_submissions (
+                                clientSubmissionId TEXT NOT NULL,
+                                sessionId TEXT NOT NULL,
+                                examId TEXT NOT NULL,
+                                deviceId TEXT NOT NULL,
+                                capturedAt TEXT NOT NULL,
+                                encryptedPayload TEXT NOT NULL,
+                                rawImagePath TEXT,
+                                dewarpedImagePath TEXT,
+                                processedImagePath TEXT,
+                                status TEXT NOT NULL,
+                                createdAtMillis INTEGER NOT NULL,
+                                updatedAtMillis INTEGER NOT NULL,
+                                lastErrorCode TEXT,
+                                lastErrorMessage TEXT,
+                                PRIMARY KEY(clientSubmissionId)
+                            )
+                            """.trimIndent()
+                        )
+                    }
+
+                    override fun onUpgrade(db: SupportSQLiteDatabase, oldVersion: Int, newVersion: Int) = Unit
+                })
+                .build()
+        )
+        val db = helper.writableDatabase
+        db.execSQL(
+            """
+            INSERT INTO queued_submissions (
+                clientSubmissionId, sessionId, examId, deviceId, capturedAt, encryptedPayload,
+                rawImagePath, dewarpedImagePath, processedImagePath, status, createdAtMillis,
+                updatedAtMillis, lastErrorCode, lastErrorMessage
+            ) VALUES (
+                'client-before-upgrade', 'session-1', '$EXAM_ID', 'device-1',
+                '2026-06-13T00:00:00.000Z', 'encrypted', NULL, NULL, NULL,
+                'PENDING_SYNC', 1, 1, NULL, NULL
+            )
+            """.trimIndent()
+        )
+
+        StudentDatabaseMigrations.MIGRATION_1_2.migrate(db)
+
+        db.query("SELECT * FROM queued_submissions WHERE clientSubmissionId = 'client-before-upgrade'")
+            .use { cursor ->
+                assertTrue(cursor.moveToFirst())
+                assertEquals("PENDING_SYNC", cursor.getString(cursor.getColumnIndexOrThrow("status")))
+                assertTrue(cursor.getColumnIndex("serverSubmissionId") >= 0)
+                assertTrue(cursor.getColumnIndex("resultId") >= 0)
+                assertTrue(cursor.getColumnIndex("serverStatus") >= 0)
+                assertTrue(cursor.isNull(cursor.getColumnIndexOrThrow("resultId")))
+                assertTrue(cursor.isNull(cursor.getColumnIndexOrThrow("serverStatus")))
+            }
+        helper.close()
+        context.deleteDatabase(dbName)
+
+        database = Room.inMemoryDatabaseBuilder(context, StudentAppDatabase::class.java)
+            .allowMainThreadQueries()
+            .build()
+        cache = OfflineCacheManager(context, database, gson)
+    }
+
+    @Test
     fun clearOfflineDownloadsKeepsActiveExamAndPendingSubmission() = runBlocking {
         cache.saveTemplate("active-exam", """{"template":true}""")
-        cache.saveQuestionMetadata("active-exam", "[]")
         cache.markOfflineReady("active-exam")
         cache.saveTemplate("downloaded-exam", """{"template":true}""")
-        cache.saveQuestionMetadata("downloaded-exam", "[]")
         cache.markOfflineReady("downloaded-exam")
         database.studentCacheDao().upsertActiveSession(
             ActiveExamSessionEntity(
@@ -238,7 +325,6 @@ class OfflineCacheManagerRoomTest {
         cache.saveClassBasics(listOf(schoolClass()))
         cache.saveNotifications(listOf(notification()))
         cache.saveTemplate(EXAM_ID, """{"template":true}""")
-        cache.saveQuestionMetadata(EXAM_ID, "[]")
         cache.markOfflineReady(EXAM_ID)
         database.queuedSubmissionDao().insert(pendingSubmission("pending-2"))
 
@@ -252,13 +338,22 @@ class OfflineCacheManagerRoomTest {
     }
 
     @Test
-    fun dismissNotificationsClearsVisibleNotificationCache() {
-        cache.saveNotifications(listOf(notification()))
+    fun dismissNotificationsOnlyRemovesSelectedNotificationsFromCache() {
+        cache.saveNotifications(
+            listOf(
+                notification("notification-1", isRead = false),
+                notification("notification-2", isRead = true),
+                notification("notification-3", isRead = false)
+            )
+        )
 
-        cache.dismissNotifications(listOf("notification-1"))
+        cache.dismissNotifications(listOf("notification-1", "notification-2"))
 
-        assertTrue(cache.getCachedNotifications().isEmpty())
-        assertEquals(listOf("notification-1"), cache.getDismissedNotificationIds())
+        assertEquals(listOf("notification-3"), cache.getCachedNotifications().map { it.id })
+        assertEquals(
+            setOf("notification-1", "notification-2"),
+            cache.getDismissedNotificationIds().toSet()
+        )
     }
 
     private fun pendingSubmission(id: String) = QueuedSubmissionEntity(
@@ -296,14 +391,14 @@ class OfflineCacheManagerRoomTest {
         studentCount = 1
     )
 
-    private fun notification() = AppNotification(
-        id = "notification-1",
+    private fun notification(id: String = "notification-1", isRead: Boolean = false) = AppNotification(
+        id = id,
         type = "EXAM",
         title = "Title",
         content = "Content",
         link = null,
         appealId = null,
-        isRead = false,
+        isRead = isRead,
         createdAt = "2026-06-13T00:00:00Z"
     )
 

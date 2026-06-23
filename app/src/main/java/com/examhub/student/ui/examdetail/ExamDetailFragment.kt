@@ -12,6 +12,7 @@ import com.examhub.student.databinding.FragmentExamDetailBinding
 import com.examhub.student.util.extension.applySystemWindowInsets
 import com.examhub.student.util.extension.collectOnStarted
 import com.examhub.student.util.extension.showShimmer
+import com.examhub.student.util.extension.replaceTechnicalLabels
 import kotlinx.coroutines.launch
 import org.koin.androidx.viewmodel.ext.android.viewModel
 
@@ -168,7 +169,7 @@ class ExamDetailFragment : Fragment() {
             }
             launch {
                 viewModel.toastMessage.collect {
-                    Snackbar.make(binding.root, it, Snackbar.LENGTH_SHORT).show()
+                    Snackbar.make(binding.root, it.replaceTechnicalLabels(), Snackbar.LENGTH_SHORT).show()
                 }
             }
             launch {
