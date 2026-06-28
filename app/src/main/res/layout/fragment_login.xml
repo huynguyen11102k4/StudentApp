@@ -169,4 +169,19 @@
 
         </androidx.constraintlayout.widget.ConstraintLayout>
     </ScrollView>
+
+    <ImageButton
+        android:id="@+id/btnBackendSettings"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_marginEnd="@dimen/spacing_16"
+        android:layout_marginBottom="@dimen/spacing_16"
+        android:background="@drawable/bg_icon_container_secondary"
+        android:contentDescription="@string/settings_backend_url"
+        android:elevation="@dimen/elevation_level2"
+        android:padding="@dimen/spacing_12"
+        android:src="@drawable/ic_settings"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:tint="@color/primary" />
 </androidx.constraintlayout.widget.ConstraintLayout>

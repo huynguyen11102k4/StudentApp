@@ -71,18 +71,23 @@ class SmartReviewFragment : Fragment() {
             }
             launch {
                 viewModel.savedSuccess.collect { submission ->
+                    val response = submission.response ?: return@collect
                     Snackbar.make(binding.root, R.string.smart_review_submitted, Snackbar.LENGTH_SHORT).show()
                     val bundle = Bundle().apply {
                         putString("examId", viewModel.reviewState.value.examId)
-                        putString("sheetId", submission.resultId.orEmpty())
-                        putString("submissionId", submission.submissionId)
+                        putString("sheetId", response.resultId.orEmpty())
+                        putString("submissionId", response.submissionId)
+                        putString("clientSubmissionId", submission.clientSubmissionId)
                     }
                     findNavController().navigate(R.id.action_smart_review_to_submission_end, bundle)
                 }
             }
             launch {
                 viewModel.blankSubmissionFinished.collect { submission ->
-                    navigateToSubmissionEnd(submission?.resultId)
+                    navigateToSubmissionEnd(
+                        resultId = submission.response?.resultId,
+                        clientSubmissionId = submission.clientSubmissionId
+                    )
                 }
             }
             launch {

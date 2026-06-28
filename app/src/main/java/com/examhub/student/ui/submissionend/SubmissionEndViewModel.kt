@@ -9,6 +9,7 @@ import com.examhub.student.repository.ResultsRepository
 import com.examhub.student.service.OfflineSubmissionManager
 import com.examhub.student.data.local.model.SubmissionSyncStatus
 import com.examhub.student.data.local.submission.QueuedSubmissionEntity
+import com.examhub.student.util.extension.toLocalDisplayDateTime
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -102,15 +103,19 @@ class SubmissionEndViewModel(
 
     private fun QueuedSubmissionEntity?.toUiState(): SubmissionEndUiState {
         if (this == null) return SubmissionEndUiState(statusRes = R.string.submission_status_saved)
+        val capturedText = capturedAt.toLocalDisplayDateTime(capturedAt)
         return when (status) {
             SubmissionSyncStatus.PENDING_SYNC.name -> SubmissionEndUiState(
-                statusRes = R.string.submission_status_waiting_network
+                statusRes = R.string.submission_status_waiting_network,
+                capturedAtText = capturedText
             )
             SubmissionSyncStatus.UPLOADING_IMAGES.name -> SubmissionEndUiState(
-                statusRes = R.string.submission_status_uploading
+                statusRes = R.string.submission_status_uploading,
+                capturedAtText = capturedText
             )
             SubmissionSyncStatus.SYNCING.name -> SubmissionEndUiState(
-                statusRes = R.string.submission_status_syncing
+                statusRes = R.string.submission_status_syncing,
+                capturedAtText = capturedText
             )
             SubmissionSyncStatus.SYNCED.name -> {
                 val resolvedResultId = resultId.orEmpty()
@@ -121,18 +126,24 @@ class SubmissionEndViewModel(
                         R.string.submission_status_synced
                     },
                     resultId = resolvedResultId,
-                    isWaitingForGrading = resolvedResultId.isBlank()
+                    isWaitingForGrading = resolvedResultId.isBlank(),
+                    capturedAtText = capturedText
                 )
             }
             SubmissionSyncStatus.FAILED_CAPTURE_AFTER_DEADLINE.name -> SubmissionEndUiState(
                 statusRes = R.string.submission_status_after_deadline,
-                isTerminalFailure = true
+                isTerminalFailure = true,
+                capturedAtText = capturedText
             )
             SubmissionSyncStatus.FAILED_TERMINAL.name -> SubmissionEndUiState(
                 statusRes = terminalErrorResource(lastErrorCode),
-                isTerminalFailure = true
+                isTerminalFailure = true,
+                capturedAtText = capturedText
             )
-            else -> SubmissionEndUiState(statusRes = R.string.submission_status_saved)
+            else -> SubmissionEndUiState(
+                statusRes = R.string.submission_status_saved,
+                capturedAtText = capturedText
+            )
         }
     }
 
@@ -152,5 +163,6 @@ data class SubmissionEndUiState(
     val statusRes: Int? = null,
     val resultId: String = "",
     val isWaitingForGrading: Boolean = false,
-    val isTerminalFailure: Boolean = false
+    val isTerminalFailure: Boolean = false,
+    val capturedAtText: String = ""
 )

@@ -7,6 +7,7 @@
 #include "include/omr_processor.h"
 #include "include/layout_calculator.h"
 #include "include/marker_detector.h"
+#include <algorithm>
 
 #define LOG_TAG "OMR_Native"
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__)
@@ -399,6 +400,7 @@ Java_com_examhub_student_omr_nativebridge_NativeLib_processOmr(
         jboolean preMarker,
         jboolean postWarp,
         jboolean morphCleanup,
+        jint requiredMarkers,
         jboolean autoAdaptive
 ) {
     LOGI("processOmr called");
@@ -439,10 +441,11 @@ Java_com_examhub_student_omr_nativebridge_NativeLib_processOmr(
     options.preprocess_markers   = (preMarker == JNI_TRUE);
     options.preprocess_post_warp = (postWarp == JNI_TRUE);
     options.morph_cleanup        = (morphCleanup == JNI_TRUE);
+    options.required_markers     = std::max(4, std::min(12, static_cast<int>(requiredMarkers)));
     options.auto_adaptive        = (autoAdaptive == JNI_TRUE);
 
     LOGI(
-        "OMR_JNI options templateBytes=%zu answerKeyBytes=%zu scoring=%d debug=%d auto=%d adaptive=%d block=%d C=%.1f preMarker=%d postWarp=%d morph=%d density=%.2f diff=%.2f",
+        "OMR_JNI options templateBytes=%zu answerKeyBytes=%zu scoring=%d debug=%d auto=%d adaptive=%d block=%d C=%.1f preMarker=%d postWarp=%d morph=%d requiredMarkers=%d density=%.2f diff=%.2f",
         templateJsonStr.size(),
         answerKeyStr.size(),
         options.enable_scoring,
@@ -454,6 +457,7 @@ Java_com_examhub_student_omr_nativebridge_NativeLib_processOmr(
         options.preprocess_markers,
         options.preprocess_post_warp,
         options.morph_cleanup,
+        options.required_markers,
         options.density_threshold,
         options.diff_threshold
     );

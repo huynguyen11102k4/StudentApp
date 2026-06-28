@@ -122,6 +122,16 @@
     <string name="settings_storage_cleanup_title">Clear storage</string>
     <string name="settings_storage_cleanup_message">Remove downloaded OMR templates and local exam data. Class and exam lists remain cached for quick viewing.</string>
     <string name="settings_storage_cleanup_confirm">Clear OMR templates</string>
+    <string name="settings_backend_url">Dev backend</string>
+    <string name="settings_backend_url_default">Using default build config</string>
+    <string name="settings_backend_url_hint">http://192.168.0.196:3001/api/v1/</string>
+    <string name="settings_backend_url_reset">Default</string>
+    <string name="settings_backend_url_saved">Backend URL updated</string>
+    <string name="settings_backend_url_saved_cleared">Backend URL updated. Local login, profile, session, and cache data were cleared; please sign in again.</string>
+    <string name="settings_backend_url_unchanged">Already using this backend URL</string>
+    <string name="settings_backend_url_reset_done">Backend reset to default</string>
+    <string name="settings_backend_url_reset_cleared">Backend reset to default. Local login, profile, session, and cache data were cleared; please sign in again.</string>
+    <string name="settings_backend_url_invalid">Invalid backend URL</string>
     <string name="settings_change_password">Change password</string>
     <string name="settings_change_password_desc">Update your login password</string>
     <string name="settings_current_password_hint">Current password</string>
@@ -396,7 +406,6 @@
     <string name="camera_ar_flash_off">Flash: Off</string>
     <string name="camera_ar_flash_on">Flash: On</string>
     <string name="camera_ar_flash_auto">Flash: Auto</string>
-    <string name="camera_ar_gallery">Gallery</string>
     <string name="camera_ar_capture">Manual capture</string>
     <string name="camera_ar_close">Close camera</string>
     <string name="camera_ar_marker_hint">Align the sheet in the frame. The app will capture when all markers are detected.</string>
@@ -408,10 +417,7 @@
     <string name="camera_ar_capture_failed">Capture failed. Please try again.</string>
     <string name="camera_ar_camera_not_ready">Camera is not ready. Please try again.</string>
     <string name="camera_ar_need_all_markers">All markers must be detected before capture</string>
-    <string name="camera_ar_gallery_read_failed">Unable to read image from gallery</string>
-    <string name="camera_ar_gallery_open_failed">Unable to open selected image</string>
-    <string name="camera_ar_gallery_decode_failed">Unable to decode selected image</string>
-    <string name="camera_ar_invalid_image">The selected image is invalid</string>
+    <string name="camera_ar_need_manual_markers">At least 10/12 markers are required for manual capture</string>
     <string name="exam_list_empty_title">No matching exams</string>
     <string name="exam_list_empty_subtitle">Try changing the filter or wait for exams to be opened for your class</string>
     <string name="exam_list_type_filter">Filter exam type</string>

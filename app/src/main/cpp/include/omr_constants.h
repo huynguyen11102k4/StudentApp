@@ -197,6 +197,9 @@ struct OmrOptions {
     /** Morphological close+open+Otsu after adaptive threshold. */
     bool morph_cleanup          = false;
 
+    /** Minimum unique anchor markers required before running dewarp. */
+    int required_markers        = 12;
+
     // ─── Auto-adaptive mode ───────────────────────────────
     /** When true: app auto-decides all preprocessing flags
      *  based on laplacian variance and mean brightness.

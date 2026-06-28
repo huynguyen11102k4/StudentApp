@@ -52,6 +52,16 @@
             android:textColor="@color/primary"
             android:visibility="gone" />
 
+        <TextView
+            android:id="@+id/tvCapturedAt"
+            style="@style/Text_Body_Small"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/spacing_8"
+            android:gravity="center"
+            android:textColor="@color/text_secondary"
+            android:visibility="gone" />
+
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnResults"
             style="@style/Student.PrimaryButton"

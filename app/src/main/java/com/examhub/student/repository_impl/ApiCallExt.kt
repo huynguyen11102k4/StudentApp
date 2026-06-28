@@ -142,7 +142,11 @@ private fun parseApiException(gson: Gson, response: Response<*>): ApiException {
 private fun Throwable.toApiException(): ApiException {
     if (this is ApiException) return this
     return when (this) {
-        is IOException -> ApiException("NETWORK_ERROR", message ?: "Network error", causeThrowable = this)
+        is IOException -> ApiException(
+            "NETWORK_ERROR",
+            OmrApplication.appContext.getString(R.string.common_no_internet),
+            causeThrowable = this
+        )
         is JsonParseException -> ApiException(
             "PARSE_ERROR",
             OmrApplication.appContext.getString(R.string.api_invalid_server_format),

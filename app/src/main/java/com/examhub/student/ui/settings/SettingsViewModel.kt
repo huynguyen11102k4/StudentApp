@@ -7,6 +7,8 @@ import com.examhub.student.model.ApiResult
 import com.examhub.student.model.request.auth.ChangePasswordRequest
 import com.examhub.student.model.response.profile.UserResponse
 import com.examhub.student.repository.AuthRepository
+import com.examhub.student.service.BackendUrlManager
+import com.examhub.student.service.BackendUrlUpdateResult
 import com.examhub.student.service.FcmTokenRegistrar
 import com.examhub.student.service.NotificationPreferenceManager
 import com.examhub.student.service.OfflineCacheManager
@@ -24,6 +26,7 @@ class SettingsViewModel(
     private val offlineCacheManager: OfflineCacheManager,
     private val notificationPreferenceManager: NotificationPreferenceManager,
     private val fcmTokenRegistrar: FcmTokenRegistrar,
+    private val backendUrlManager: BackendUrlManager,
     private val resources: ResourceProvider
 ) : ViewModel() {
 
@@ -48,8 +51,15 @@ class SettingsViewModel(
     private val _notificationsEnabled = MutableStateFlow(notificationPreferenceManager.isEnabled())
     val notificationsEnabled: StateFlow<Boolean> = _notificationsEnabled.asStateFlow()
 
+    private val _backendBaseUrl = MutableStateFlow(backendUrlManager.currentBaseUrl())
+    val backendBaseUrl: StateFlow<String> = _backendBaseUrl.asStateFlow()
+
+    private val _hasBackendOverride = MutableStateFlow(backendUrlManager.overrideBaseUrl() != null)
+    val hasBackendOverride: StateFlow<Boolean> = _hasBackendOverride.asStateFlow()
+
     fun loadSettings() {
         _offlineExamCount.value = offlineCacheManager.getOfflineExamIds().size
+        refreshBackendUrlState()
         viewModelScope.launch {
             authRepository.getMe().collect { result ->
                 if (result is ApiResult.Success) _profile.value = result.data
@@ -60,6 +70,47 @@ class SettingsViewModel(
                 if (result is ApiResult.Success) _sessionCount.value = result.data.size
             }
         }
+    }
+
+    fun saveBackendUrl(rawUrl: String) {
+        when (backendUrlManager.saveOverride(rawUrl)) {
+            BackendUrlUpdateResult.Changed -> {
+                refreshBackendUrlState()
+                _profile.value = null
+                _sessionCount.value = 0
+                _offlineExamCount.value = offlineCacheManager.getOfflineExamIds().size
+                _errorMessage.tryEmit(resources.getString(R.string.settings_backend_url_saved_cleared))
+            }
+            BackendUrlUpdateResult.Unchanged -> {
+                refreshBackendUrlState()
+                _errorMessage.tryEmit(resources.getString(R.string.settings_backend_url_unchanged))
+            }
+            BackendUrlUpdateResult.Invalid -> {
+                _errorMessage.tryEmit(resources.getString(R.string.settings_backend_url_invalid))
+            }
+        }
+    }
+
+    fun resetBackendUrl() {
+        when (backendUrlManager.clearOverride()) {
+            BackendUrlUpdateResult.Changed -> {
+                refreshBackendUrlState()
+                _profile.value = null
+                _sessionCount.value = 0
+                _offlineExamCount.value = offlineCacheManager.getOfflineExamIds().size
+                _errorMessage.tryEmit(resources.getString(R.string.settings_backend_url_reset_cleared))
+            }
+            BackendUrlUpdateResult.Unchanged -> {
+                refreshBackendUrlState()
+                _errorMessage.tryEmit(resources.getString(R.string.settings_backend_url_reset_done))
+            }
+            BackendUrlUpdateResult.Invalid -> Unit
+        }
+    }
+
+    private fun refreshBackendUrlState() {
+        _backendBaseUrl.value = backendUrlManager.currentBaseUrl()
+        _hasBackendOverride.value = backendUrlManager.overrideBaseUrl() != null
     }
 
     fun clearOfflineDownloads() {

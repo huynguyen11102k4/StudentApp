@@ -19,3 +19,8 @@ sealed interface FreezeResult {
         val code: String
     ) : FreezeResult
 }
+
+data class SubmissionFinishResult(
+    val response: StudentSubmitResponse?,
+    val clientSubmissionId: String = ""
+)

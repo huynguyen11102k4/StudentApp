@@ -13,8 +13,8 @@ import com.examhub.student.data.model.Answer
 import com.examhub.student.omr.OmrReviewStore
 import com.examhub.student.repository.ExamRepository
 import com.examhub.student.service.ActiveExamSessionStore
-import com.examhub.student.model.response.submission.StudentSubmitResponse
 import com.examhub.student.data.local.model.FreezeResult
+import com.examhub.student.data.local.model.SubmissionFinishResult
 import com.examhub.student.service.NetworkUtils
 import com.examhub.student.service.OfflineSubmissionManager
 import kotlinx.coroutines.flow.first
@@ -39,10 +39,10 @@ class SmartReviewViewModel(
     private val _filteredAnswers = MutableStateFlow<List<Answer>>(emptyList())
     val filteredAnswers: StateFlow<List<Answer>> = _filteredAnswers.asStateFlow()
 
-    private val _savedSuccess = MutableSharedFlow<StudentSubmitResponse>(extraBufferCapacity = 1)
-    val savedSuccess: SharedFlow<StudentSubmitResponse> = _savedSuccess.asSharedFlow()
-    private val _blankSubmissionFinished = MutableSharedFlow<StudentSubmitResponse?>(extraBufferCapacity = 1)
-    val blankSubmissionFinished: SharedFlow<StudentSubmitResponse?> = _blankSubmissionFinished.asSharedFlow()
+    private val _savedSuccess = MutableSharedFlow<SubmissionFinishResult>(extraBufferCapacity = 1)
+    val savedSuccess: SharedFlow<SubmissionFinishResult> = _savedSuccess.asSharedFlow()
+    private val _blankSubmissionFinished = MutableSharedFlow<SubmissionFinishResult>(extraBufferCapacity = 1)
+    val blankSubmissionFinished: SharedFlow<SubmissionFinishResult> = _blankSubmissionFinished.asSharedFlow()
     private val _submissionFrozen = MutableSharedFlow<SubmissionFreezeUi>(extraBufferCapacity = 1)
     val submissionFrozen: SharedFlow<SubmissionFreezeUi> = _submissionFrozen.asSharedFlow()
 
@@ -191,7 +191,7 @@ class SmartReviewViewModel(
             activeSessionStore.clearBySessionId(sessionId)
             when (result) {
                 is FreezeResult.Synced -> {
-                    _savedSuccess.tryEmit(result.response)
+                    _savedSuccess.tryEmit(SubmissionFinishResult(result.response, result.clientSubmissionId))
                 }
                 is FreezeResult.Pending -> {
                     _submissionFrozen.tryEmit(SubmissionFreezeUi(result.clientSubmissionId, false))
@@ -289,7 +289,7 @@ class SmartReviewViewModel(
         if (frozen) return
         val sessionId = currentSessionId.ifBlank { _reviewState.value.sessionId }
         if (sessionId.isBlank()) {
-            _blankSubmissionFinished.tryEmit(null)
+            _blankSubmissionFinished.tryEmit(SubmissionFinishResult(null))
             return
         }
         val resolvedExamId = currentExamId.ifBlank { examId }
@@ -331,7 +331,9 @@ class SmartReviewViewModel(
 
             _isLoading.value = false
             when (result) {
-                is FreezeResult.Synced -> _blankSubmissionFinished.tryEmit(result.response)
+                is FreezeResult.Synced -> _blankSubmissionFinished.tryEmit(
+                    SubmissionFinishResult(result.response, result.clientSubmissionId)
+                )
                 is FreezeResult.Pending -> _submissionFrozen.tryEmit(SubmissionFreezeUi(result.clientSubmissionId, false))
                 is FreezeResult.TerminalFailure -> _submissionFrozen.tryEmit(SubmissionFreezeUi(result.clientSubmissionId, true))
             }

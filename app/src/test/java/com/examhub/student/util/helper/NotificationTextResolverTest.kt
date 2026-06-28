@@ -24,20 +24,25 @@ class NotificationTextResolverTest {
 
     @Test
     fun defaultTextCoversNewNotificationTypes() {
-        assertEquals(
-            "Exam graded",
-            NotificationTextResolver.resolve(
-                NotificationTextResolver.Payload(type = "exam-graded"),
-                fakeStrings
-            ).title
+        val examStarted = NotificationTextResolver.resolve(
+            NotificationTextResolver.Payload(type = "exam-started"),
+            fakeStrings
         )
-        assertEquals(
-            "Appeal responded",
-            NotificationTextResolver.resolve(
-                NotificationTextResolver.Payload(type = "appeal-responded"),
-                fakeStrings
-            ).title
+        val examGraded = NotificationTextResolver.resolve(
+            NotificationTextResolver.Payload(type = "exam-graded"),
+            fakeStrings
         )
+        val appealResponded = NotificationTextResolver.resolve(
+            NotificationTextResolver.Payload(type = "appeal-responded"),
+            fakeStrings
+        )
+
+        assertEquals("Exam started", examStarted.title)
+        assertEquals("Exam \"%1\$s\" for %2\$s has started.", examStarted.body)
+        assertEquals("Exam graded", examGraded.title)
+        assertEquals("Your exam sheet has been graded. Total score: %1\$s", examGraded.body)
+        assertEquals("Appeal responded", appealResponded.title)
+        assertEquals("The teacher has responded to your appeal for exam %1\$s.", appealResponded.body)
     }
 
     private val fakeStrings = object : NotificationTextResolver.Strings {
@@ -65,7 +70,7 @@ class NotificationTextResolverTest {
 
         override fun defaultBody(type: String): String =
             when (NotificationTextResolver.normalizeType(type)) {
-                "exam_started" -> "An exam has started."
+                "exam_started" -> strings.getValue("notif_body_exam_started")
                 "exam_graded" -> strings.getValue("notif_body_exam_graded")
                 "appeal_responded" -> strings.getValue("notif_body_appeal_responded")
                 else -> "You have a new notification."

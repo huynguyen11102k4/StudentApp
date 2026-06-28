@@ -13,10 +13,10 @@ import com.examhub.student.model.request.submission.IdZoneResultRequest
 import com.examhub.student.model.request.submission.StudentAnswerRequest
 import com.examhub.student.model.request.submission.StudentSubmitRequest
 import com.examhub.student.model.response.profile.UserResponse
-import com.examhub.student.model.response.submission.StudentSubmitResponse
 import com.examhub.student.repository.LockModeRepository
 import com.examhub.student.service.ActiveExamSessionStore
 import com.examhub.student.data.local.model.FreezeResult
+import com.examhub.student.data.local.model.SubmissionFinishResult
 import com.examhub.student.service.NetworkStatusProvider
 import com.examhub.student.service.OfflineSubmissionManager
 import com.examhub.student.service.OfflineCacheManager
@@ -50,8 +50,8 @@ class LockModeViewModel(
     val remainingSeconds: StateFlow<Int> = _remainingSeconds.asStateFlow()
     private val _timeExpired = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     val timeExpired: SharedFlow<Unit> = _timeExpired.asSharedFlow()
-    private val _blankSubmissionFinished = MutableSharedFlow<StudentSubmitResponse?>(extraBufferCapacity = 1)
-    val blankSubmissionFinished: SharedFlow<StudentSubmitResponse?> = _blankSubmissionFinished.asSharedFlow()
+    private val _blankSubmissionFinished = MutableSharedFlow<SubmissionFinishResult>(extraBufferCapacity = 1)
+    val blankSubmissionFinished: SharedFlow<SubmissionFinishResult> = _blankSubmissionFinished.asSharedFlow()
     private val _blankSubmissionFrozen = MutableSharedFlow<String>(extraBufferCapacity = 1)
     val blankSubmissionFrozen: SharedFlow<String> = _blankSubmissionFrozen.asSharedFlow()
     private val _omrCodes = MutableStateFlow(LockModeOmrCodes())
@@ -208,7 +208,7 @@ class LockModeViewModel(
     fun submitBlankOnTimeout() {
         val id = sessionId.takeIf { it.isNotBlank() } ?: return
         if (blankSubmitted) {
-            _blankSubmissionFinished.tryEmit(null)
+            _blankSubmissionFinished.tryEmit(SubmissionFinishResult(null))
             return
         }
         blankSubmitted = true
@@ -254,7 +254,9 @@ class LockModeViewModel(
             activeSessionStore.clear(examId)
             activeSessionStore.clearBySessionId(id)
             when (result) {
-                is FreezeResult.Synced -> _blankSubmissionFinished.tryEmit(result.response)
+                is FreezeResult.Synced -> _blankSubmissionFinished.tryEmit(
+                    SubmissionFinishResult(result.response, result.clientSubmissionId)
+                )
                 is FreezeResult.Pending -> _blankSubmissionFrozen.tryEmit(result.clientSubmissionId)
                 is FreezeResult.TerminalFailure -> _blankSubmissionFrozen.tryEmit(result.clientSubmissionId)
             }

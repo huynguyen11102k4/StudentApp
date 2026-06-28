@@ -1,21 +1,15 @@
 package com.examhub.student.ui.cameraar
 
 import android.Manifest
-import android.content.Context
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.graphics.drawable.GradientDrawable
-import android.graphics.ImageDecoder
-import android.net.Uri
-import android.os.Build
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.annotation.RequiresApi
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
@@ -32,12 +26,9 @@ import com.examhub.student.util.extension.replaceTechnicalLabels
 import com.examhub.student.util.helper.protectScreenFromCapture
 import com.examhub.student.ui.lockmode.LockFlowMonitorController
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import org.koin.android.ext.android.inject
 
 class CameraARFragment : Fragment() {
@@ -51,10 +42,12 @@ class CameraARFragment : Fragment() {
     private var sessionTimeoutJob: Job? = null
     private var lockFlowMonitor: LockFlowMonitorController? = null
     private var captureInFlight = false
-    private val pickImageLauncher =
-        registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
-            uri?.let { handleGalleryImage(it) }
-        }
+    private var pendingRequiredMarkers = AUTO_REQUIRED_MARKERS
+
+    private companion object {
+        const val AUTO_REQUIRED_MARKERS = 12
+        const val MANUAL_REQUIRED_MARKERS = 10
+    }
 
     // Permission launcher
     private val requestPermissionLauncher =
@@ -154,6 +147,7 @@ class CameraARFragment : Fragment() {
             onAutoCaptureReady = {
                 if (_binding != null && !viewModel.isProcessing.value && !captureInFlight) {
                     captureInFlight = true
+                    pendingRequiredMarkers = AUTO_REQUIRED_MARKERS
                     viewModel.onAutoCaptureStarting()
                     showCaptureLoading(true)
                     true
@@ -186,24 +180,20 @@ class CameraARFragment : Fragment() {
         binding.fabCapture.setOnClickListener {
             requestCameraCapture(showNotReadyMessage = true)
         }
-
-        binding.btnGallery.setOnClickListener {
-            if (viewModel.isProcessing.value || captureInFlight) return@setOnClickListener
-            pickImageLauncher.launch("image/*")
-        }
     }
 
     private fun requestCameraCapture(showNotReadyMessage: Boolean) {
         if (viewModel.isProcessing.value || captureInFlight) return
-        val markersReady = viewModel.allMarkersDetected.value && cameraManager?.hasRecentFullMarkerFrame() == true
+        val markersReady = cameraManager?.hasRecentMarkerFrame(MANUAL_REQUIRED_MARKERS) == true
         if (!markersReady) {
             showCaptureLoading(false)
             if (showNotReadyMessage) {
-                Toast.makeText(requireContext(), R.string.camera_ar_need_all_markers, Toast.LENGTH_SHORT).show()
+                Toast.makeText(requireContext(), R.string.camera_ar_need_manual_markers, Toast.LENGTH_SHORT).show()
             }
             return
         }
-        val started = cameraManager?.capturePhoto() == true
+        pendingRequiredMarkers = MANUAL_REQUIRED_MARKERS
+        val started = cameraManager?.capturePhoto(requiredMarkers = MANUAL_REQUIRED_MARKERS) == true
         if (!started) {
             showCaptureLoading(false)
             if (showNotReadyMessage) {
@@ -233,7 +223,7 @@ class CameraARFragment : Fragment() {
             viewModel.onFlashModeUpdated(flashMode)
             updateFlashIcon(flashMode)
             showCaptureLoading(true)
-            viewModel.onImageCaptured(bitmap)
+            viewModel.onImageCaptured(bitmap, pendingRequiredMarkers)
         }
     }
 
@@ -251,97 +241,6 @@ class CameraARFragment : Fragment() {
         ).show()
     }
 
-    private fun handleGalleryImage(uri: Uri) {
-        if (viewModel.isProcessing.value || captureInFlight) return
-        captureInFlight = true
-        showCaptureLoading(true)
-        val appContext = requireContext().applicationContext
-        viewLifecycleOwner.lifecycleScope.launch {
-            val bitmap = try {
-                withContext(Dispatchers.IO) { decodeGalleryBitmap(appContext, uri) }
-            } catch (cancelled: CancellationException) {
-                throw cancelled
-            } catch (error: Throwable) {
-                captureInFlight = false
-                if (_binding != null) {
-                    showCaptureLoading(false)
-                    Toast.makeText(
-                        requireContext(),
-                        error.message ?: getString(R.string.camera_ar_gallery_read_failed),
-                        Toast.LENGTH_SHORT
-                    ).show()
-                }
-                return@launch
-            }
-            if (_binding == null) {
-                bitmap.recycle()
-                captureInFlight = false
-                return@launch
-            }
-            processCapturedBitmap(bitmap)
-        }
-    }
-
-    private fun decodeGalleryBitmap(context: Context, uri: Uri): Bitmap {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-            return decodeGalleryBitmapWithImageDecoder(context, uri)
-        }
-
-        val resolver = context.contentResolver
-        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-        resolver.openInputStream(uri)?.use { input ->
-            BitmapFactory.decodeStream(input, null, bounds)
-        } ?: error(context.getString(R.string.camera_ar_gallery_open_failed))
-
-        if (bounds.outWidth <= 0 || bounds.outHeight <= 0) {
-            error(context.getString(R.string.camera_ar_invalid_image))
-        }
-
-        val maxDimension = 4096
-        var sampleSize = 1
-        while (bounds.outWidth / sampleSize > maxDimension || bounds.outHeight / sampleSize > maxDimension) {
-            sampleSize *= 2
-        }
-
-        val options = BitmapFactory.Options().apply {
-            inSampleSize = sampleSize
-            inPreferredConfig = Bitmap.Config.ARGB_8888
-        }
-
-        return resolver.openInputStream(uri)?.use { input ->
-            BitmapFactory.decodeStream(input, null, options)
-        } ?: error(context.getString(R.string.camera_ar_gallery_decode_failed))
-    }
-
-    @RequiresApi(Build.VERSION_CODES.P)
-    private fun decodeGalleryBitmapWithImageDecoder(context: Context, uri: Uri): Bitmap {
-        val source = ImageDecoder.createSource(context.contentResolver, uri)
-        return ImageDecoder.decodeBitmap(source) { decoder, info, _ ->
-            val maxDimension = 4096
-            val width = info.size.width
-            val height = info.size.height
-            if (width <= 0 || height <= 0) {
-                error(context.getString(R.string.camera_ar_invalid_image))
-            }
-
-            val scale = minOf(1f, maxDimension.toFloat() / maxOf(width, height).toFloat())
-            if (scale < 1f) {
-                decoder.setTargetSize(
-                    (width * scale).toInt().coerceAtLeast(1),
-                    (height * scale).toInt().coerceAtLeast(1)
-                )
-            }
-            decoder.allocator = ImageDecoder.ALLOCATOR_SOFTWARE
-            decoder.isMutableRequired = false
-        }.let { bitmap ->
-            if (bitmap.config == Bitmap.Config.ARGB_8888) {
-                bitmap
-            } else {
-                bitmap.copy(Bitmap.Config.ARGB_8888, false).also { bitmap.recycle() }
-            }
-        }
-    }
-
     private fun updateFlashIcon(mode: String) {
         binding.btnFlash.setImageResource(
             when (mode) {
@@ -355,7 +254,6 @@ class CameraARFragment : Fragment() {
     private fun showCaptureLoading(show: Boolean) {
         binding.progressOverlay.visibility = if (show) View.VISIBLE else View.GONE
         binding.fabCapture.isEnabled = !show
-        binding.btnGallery.isEnabled = !show
         binding.btnFlash.isEnabled = !show && viewModel.flashAvailable.value
         binding.btnClose.isEnabled = !show
     }
@@ -420,7 +318,11 @@ class CameraARFragment : Fragment() {
             }
             launch {
                 viewModel.blankSubmissionFinished.collect { submission ->
-                    navigateToSubmissionEnd(submission?.resultId, submission?.submissionId)
+                    navigateToSubmissionEnd(
+                        submission.response?.resultId,
+                        submission.response?.submissionId,
+                        submission.clientSubmissionId
+                    )
                 }
             }
             launch {

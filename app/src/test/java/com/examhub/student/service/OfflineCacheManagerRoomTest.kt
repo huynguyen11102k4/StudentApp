@@ -6,6 +6,8 @@ import androidx.room.Room
 import com.examhub.student.data.local.StudentAppDatabase
 import com.examhub.student.data.local.StudentDatabaseMigrations
 import com.examhub.student.data.local.entity.ActiveExamSessionEntity
+import com.examhub.student.data.local.entity.CacheMetadataEntity
+import com.examhub.student.data.local.entity.QueuedViolationEntity
 import com.examhub.student.data.local.model.SubmissionSyncStatus
 import com.examhub.student.data.local.submission.QueuedSubmissionEntity
 import com.examhub.student.data.model.AppNotification
@@ -23,6 +25,7 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -326,6 +329,17 @@ class OfflineCacheManagerRoomTest {
         cache.saveNotifications(listOf(notification()))
         cache.saveTemplate(EXAM_ID, """{"template":true}""")
         cache.markOfflineReady(EXAM_ID)
+        database.studentCacheDao().upsertMetadata(
+            CacheMetadataEntity("offline_permit:session-1", "encrypted-permit", 1)
+        )
+        database.studentCacheDao().upsertViolation(
+            QueuedViolationEntity(
+                id = "violation-1",
+                sessionId = "session-1",
+                encryptedJson = "encrypted-violation",
+                queuedAt = 1
+            )
+        )
         database.queuedSubmissionDao().insert(pendingSubmission("pending-2"))
 
         cache.clearUserScopedLists()
@@ -334,7 +348,43 @@ class OfflineCacheManagerRoomTest {
         assertTrue(cache.getCachedClassBasics().isEmpty())
         assertTrue(cache.getCachedNotifications().isEmpty())
         assertFalse(cache.isOfflineReady(EXAM_ID))
+        assertNull(database.studentCacheDao().getMetadata("offline_permit:session-1"))
+        assertEquals(0, database.studentCacheDao().violationCount())
         assertNotNull(database.queuedSubmissionDao().get("pending-2"))
+    }
+
+    @Test
+    fun replacingClassBasicsDropsDeletedClassesAndKeepsOfflineMetadata() {
+        cache.saveClassBasics(
+            listOf(
+                schoolClass(id = "class-1", name = "Old class", hasOfflineData = true),
+                schoolClass(id = "class-2", name = "Deleted class", hasOfflineData = true)
+            )
+        )
+
+        cache.saveClassBasics(
+            listOf(
+                schoolClass(id = "class-1", name = "Fresh class"),
+                schoolClass(id = "class-3", name = "New class")
+            ),
+            replaceExisting = true
+        )
+
+        val classes = cache.getCachedClassBasics()
+
+        assertEquals(listOf("class-1", "class-3"), classes.map { it.id })
+        assertEquals("Fresh class", classes.first { it.id == "class-1" }.name)
+        assertTrue(classes.first { it.id == "class-1" }.hasOfflineData)
+        assertFalse(classes.first { it.id == "class-3" }.hasOfflineData)
+    }
+
+    @Test
+    fun replacingClassBasicsWithEmptySnapshotClearsCachedClasses() {
+        cache.saveClassBasics(listOf(schoolClass(id = "class-1")))
+
+        cache.saveClassBasics(emptyList(), replaceExisting = true)
+
+        assertTrue(cache.getCachedClassBasics().isEmpty())
     }
 
     @Test
@@ -383,12 +433,17 @@ class OfflineCacheManagerRoomTest {
         totalStudents = 1
     )
 
-    private fun schoolClass() = SchoolClass(
-        id = "class-1",
-        name = "Class",
+    private fun schoolClass(
+        id: String = "class-1",
+        name: String = "Class",
+        hasOfflineData: Boolean = false
+    ) = SchoolClass(
+        id = id,
+        name = name,
         subject = "Math",
         joinCode = "JOIN",
-        studentCount = 1
+        studentCount = 1,
+        hasOfflineData = hasOfflineData
     )
 
     private fun notification(id: String = "notification-1", isRead: Boolean = false) = AppNotification(

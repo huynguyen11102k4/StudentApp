@@ -29,13 +29,16 @@ class OmrProcessor(
     private companion object {
         val NOT_ENOUGH_MARKERS =
             Regex("""Not enough markers found,\s*Only found:\s*(\d+)""", RegexOption.IGNORE_CASE)
+        val NOT_ENOUGH_MARKERS_RATIO =
+            Regex("""Not enough markers found:\s*(\d+)\s*/\s*(\d+)""", RegexOption.IGNORE_CASE)
         val MISSING_CORNER_MARKERS =
             Regex("""Missing required corner markers:\s*\[([^\]]*)]""", RegexOption.IGNORE_CASE)
     }
 
     suspend fun process(
         bitmap: Bitmap,
-        examId: String
+        examId: String,
+        requiredMarkers: Int = 12
     ): OmrProcessingResult = withContext(Dispatchers.Default) {
         require(examId.isNotBlank()) { context.getString(R.string.omr_missing_exam_id) }
 
@@ -51,7 +54,8 @@ class OmrProcessor(
                 "hasAnchors=${normalizedTemplateJson.contains("anchor_points")} " +
                 "hasIdZone=${normalizedTemplateJson.contains("id_zones")} " +
                 "hasAnswerZones=${normalizedTemplateJson.contains("answer_zones")} " +
-                "studentIdentifierMode=${studentIdentifierMode.apiValue}"
+                "studentIdentifierMode=${studentIdentifierMode.apiValue} " +
+                "requiredMarkers=$requiredMarkers"
         )
 
         val output = OmrEngine.process(
@@ -60,7 +64,8 @@ class OmrProcessor(
             answerKeyJson = "",
             options = OmrEngineOptions.presetAuto.copy(
                 enableScoring = false,
-                enableDebugImage = true
+                enableDebugImage = true,
+                requiredMarkers = requiredMarkers
             )
         )
 
@@ -353,13 +358,7 @@ class OmrProcessor(
                     }
                 }
             } else {
-                JSONArray().apply {
-                    put(JSONObject().apply {
-                        put("type", "student_id")
-                        put("enabled", true)
-                        put("num_digits", rawIdZones.optInt("max_digits", rawIdZones.optInt("maxDigits", 8)))
-                    })
-                }
+                JSONArray()
             })
         }
     }
@@ -402,6 +401,13 @@ class OmrProcessor(
 
     private fun localizedOmrError(message: String, errorCode: String): String {
         val trimmed = message.trim()
+        NOT_ENOUGH_MARKERS_RATIO.find(trimmed)?.let { match ->
+            val found = match.groupValues.getOrNull(1)?.toIntOrNull()
+            val required = match.groupValues.getOrNull(2)?.toIntOrNull()
+            if (found != null && required != null) {
+                return context.getString(R.string.omr_error_not_enough_markers, found, required)
+            }
+        }
         NOT_ENOUGH_MARKERS.find(trimmed)?.groupValues?.getOrNull(1)?.toIntOrNull()?.let { found ->
             return context.getString(R.string.omr_error_not_enough_markers, found, 4)
         }

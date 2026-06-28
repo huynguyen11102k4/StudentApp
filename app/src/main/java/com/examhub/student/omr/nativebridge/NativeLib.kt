@@ -69,6 +69,7 @@ class NativeLib {
             preMarker: Boolean = false,
             postWarp: Boolean = false,
             morphCleanup: Boolean = false,
+            requiredMarkers: Int = 12,
             autoAdaptive: Boolean = true   // ← NEW: mặc định true
         ): String
 

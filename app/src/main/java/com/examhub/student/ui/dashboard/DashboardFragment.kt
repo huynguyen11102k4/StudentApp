@@ -9,16 +9,17 @@ import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.engine.DiskCacheStrategy
-import com.examhub.student.BuildConfig
 import com.examhub.student.R
 import com.examhub.student.databinding.FragmentDashboardBinding
 import com.examhub.student.model.response.profile.UserResponse
+import com.examhub.student.service.BackendUrlManager
 import com.examhub.student.util.extension.add3DTouch
 import com.examhub.student.util.extension.applySystemWindowInsets
 import com.examhub.student.util.extension.collectOnStarted
 import com.examhub.student.util.extension.showShimmer
 import com.examhub.student.util.extension.replaceTechnicalLabels
 import kotlinx.coroutines.launch
+import org.koin.android.ext.android.inject
 import org.koin.androidx.viewmodel.ext.android.viewModel
 
 class DashboardFragment : Fragment() {
@@ -26,6 +27,7 @@ class DashboardFragment : Fragment() {
     private var _binding: FragmentDashboardBinding? = null
     private val binding get() = _binding!!
     private val viewModel: DashboardViewModel by viewModel()
+    private val backendUrlManager: BackendUrlManager by inject()
     private lateinit var recentExamsAdapter: RecentExamAdapter
     private var recentExamCount = 0
 
@@ -186,7 +188,7 @@ class DashboardFragment : Fragment() {
 
     private fun resolveAvatarUrl(url: String): String {
         if (url.startsWith("http://") || url.startsWith("https://")) return url
-        val apiBase = BuildConfig.API_BASE_URL.trimEnd('/')
+        val apiBase = backendUrlManager.currentBaseUrl().trimEnd('/')
         val origin = apiBase.substringBefore("/api/v1")
         return origin + if (url.startsWith("/")) url else "/$url"
     }

@@ -2,21 +2,29 @@ package com.examhub.student.ui.login
 
 import android.app.Activity
 import android.os.Bundle
+import android.text.InputType
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.LinearLayout
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
+import org.koin.android.ext.android.inject
 import org.koin.androidx.viewmodel.ext.android.viewModel
 import androidx.navigation.fragment.findNavController
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInClient
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.common.api.ApiException
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
+import com.google.android.material.textfield.TextInputEditText
+import com.google.android.material.textfield.TextInputLayout
 import com.examhub.student.R
 import com.examhub.student.databinding.FragmentLoginBinding
+import com.examhub.student.service.BackendUrlManager
+import com.examhub.student.service.BackendUrlUpdateResult
 import com.examhub.student.util.extension.add3DTouch
 import com.examhub.student.util.extension.collectOnStarted
 import com.examhub.student.util.extension.replaceTechnicalLabels
@@ -32,6 +40,7 @@ class LoginFragment : Fragment() {
     private var _binding: FragmentLoginBinding? = null
     private val binding get() = _binding!!
     private val viewModel: LoginViewModel by viewModel()
+    private val backendUrlManager: BackendUrlManager by inject()
     private var googleSignInClient: GoogleSignInClient? = null
 
     private val googleSignInLauncher =
@@ -133,6 +142,51 @@ class LoginFragment : Fragment() {
         binding.btnGoogleSignIn.setOnClickListener {
             startGoogleSignIn()
         }
+
+        binding.btnBackendSettings.setOnClickListener {
+            showBackendUrlDialog()
+        }
+    }
+
+    private fun showBackendUrlDialog() {
+        val input = TextInputEditText(requireContext()).apply {
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI
+            setSingleLine(true)
+            setText(backendUrlManager.currentBaseUrl())
+            setSelection(text?.length ?: 0)
+        }
+        val layout = TextInputLayout(requireContext()).apply {
+            hint = getString(R.string.settings_backend_url_hint)
+            addView(input)
+        }
+        val container = LinearLayout(requireContext()).apply {
+            orientation = LinearLayout.VERTICAL
+            val horizontalPadding = resources.getDimensionPixelSize(R.dimen.spacing_24)
+            setPadding(horizontalPadding, 0, horizontalPadding, 0)
+            addView(layout)
+        }
+
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.settings_backend_url)
+            .setView(container)
+            .setNegativeButton(R.string.common_cancel, null)
+            .setNeutralButton(R.string.settings_backend_url_reset) { _, _ ->
+                val messageRes = when (backendUrlManager.clearOverride()) {
+                    BackendUrlUpdateResult.Changed -> R.string.settings_backend_url_reset_cleared
+                    BackendUrlUpdateResult.Unchanged -> R.string.settings_backend_url_reset_done
+                    BackendUrlUpdateResult.Invalid -> R.string.settings_backend_url_invalid
+                }
+                Snackbar.make(binding.root, messageRes, Snackbar.LENGTH_SHORT).show()
+            }
+            .setPositiveButton(R.string.common_confirm) { _, _ ->
+                val messageRes = when (backendUrlManager.saveOverride(input.text?.toString().orEmpty())) {
+                    BackendUrlUpdateResult.Changed -> R.string.settings_backend_url_saved_cleared
+                    BackendUrlUpdateResult.Unchanged -> R.string.settings_backend_url_unchanged
+                    BackendUrlUpdateResult.Invalid -> R.string.settings_backend_url_invalid
+                }
+                Snackbar.make(binding.root, messageRes, Snackbar.LENGTH_SHORT).show()
+            }
+            .show()
     }
 
     private fun startGoogleSignIn() {

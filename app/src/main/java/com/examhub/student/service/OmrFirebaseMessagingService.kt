@@ -147,11 +147,11 @@ class OmrFirebaseMessagingService : FirebaseMessagingService() {
 
     private fun defaultBodyFor(type: String): String {
         return when (NotificationTextResolver.normalizeType(type)) {
-            "exam_started" -> getString(R.string.notifications_exam_opened_default_body)
+            "exam_started" -> getString(R.string.notif_body_exam_started)
             "exam_opened" -> getString(R.string.notifications_exam_opened_default_body)
             "exam_closed" -> getString(R.string.notifications_exam_closed_default_body)
-            "exam_graded" -> getString(R.string.notifications_grade_new_sentence)
-            "appeal_responded" -> getString(R.string.notifications_subtitle)
+            "exam_graded" -> getString(R.string.notif_body_exam_graded)
+            "appeal_responded" -> getString(R.string.notif_body_appeal_responded)
             "submission_pending" -> getString(R.string.notifications_submission_pending_default_body)
             else -> getString(R.string.notifications_subtitle)
         }

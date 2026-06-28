@@ -11,7 +11,8 @@ data class OmrEngineOptions(
     val preprocessMarkers: Boolean = false,
     val preprocessPostWarp: Boolean = false,
     val morphCleanup: Boolean = false,
-    val autoAdaptive: Boolean = true
+    val autoAdaptive: Boolean = true,
+    val requiredMarkers: Int = 12
 ) {
     companion object {
         val presetFast = OmrEngineOptions(autoAdaptive = false)

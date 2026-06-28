@@ -64,7 +64,8 @@ class CameraManager(
     @Volatile private var isTakingPicture = false
     private var stableFullMarkerFrames = 0
     private var lastAnalysisAt = 0L
-    private var lastFullMarkerAt = 0L
+    @Volatile private var lastMarkerCount = 0
+    @Volatile private var lastMarkerAt = 0L
     private var lastAutoCaptureAt = 0L
     private var arucoDetector: ArucoDetector? = null
     @Volatile private var isShutdown = false
@@ -127,12 +128,12 @@ class CameraManager(
         }
     }
 
-    fun capturePhoto(): Boolean {
-        return captureHighResolutionPhoto(requireMarkerReadiness = true)
+    fun capturePhoto(requiredMarkers: Int = EXPECTED_MARKERS): Boolean {
+        return captureHighResolutionPhoto(requiredMarkers = requiredMarkers)
     }
 
-    private fun captureHighResolutionPhoto(requireMarkerReadiness: Boolean): Boolean {
-        if (requireMarkerReadiness && !hasRecentFullMarkerFrame()) return false
+    private fun captureHighResolutionPhoto(requiredMarkers: Int): Boolean {
+        if (!hasRecentMarkerFrame(requiredMarkers)) return false
         val capture = imageCapture ?: return false
         if (isTakingPicture) return false
         isTakingPicture = true
@@ -196,7 +197,13 @@ class CameraManager(
     }
 
     fun hasRecentFullMarkerFrame(): Boolean {
-        return System.currentTimeMillis() - lastFullMarkerAt <= FULL_MARKER_FRAME_MAX_AGE_MS
+        return hasRecentMarkerFrame(EXPECTED_MARKERS)
+    }
+
+    fun hasRecentMarkerFrame(requiredMarkers: Int): Boolean {
+        val required = requiredMarkers.coerceIn(1, EXPECTED_MARKERS)
+        val recentEnough = System.currentTimeMillis() - lastMarkerAt <= FULL_MARKER_FRAME_MAX_AGE_MS
+        return recentEnough && lastMarkerCount >= required
     }
 
     private fun analyzeMarkers(image: ImageProxy) {
@@ -213,13 +220,14 @@ class CameraManager(
             try {
                 detector.detectMarkers(gray, corners, ids, rejected)
                 val detected = countUniqueMarkerIds(ids)
+                lastMarkerCount = detected
+                lastMarkerAt = now
                 ContextCompat.getMainExecutor(previewView.context).execute {
                     onMarkersDetected(detected, EXPECTED_MARKERS)
                 }
 
                 if (detected >= EXPECTED_MARKERS) {
                     stableFullMarkerFrames += 1
-                    lastFullMarkerAt = now
                 } else {
                     stableFullMarkerFrames = 0
                 }
@@ -232,7 +240,7 @@ class CameraManager(
                     lastAutoCaptureAt = now
                     ContextCompat.getMainExecutor(previewView.context).execute {
                         val accepted = onAutoCaptureReady()
-                        if (accepted && !captureHighResolutionPhoto(requireMarkerReadiness = true)) {
+                        if (accepted && !captureHighResolutionPhoto(requiredMarkers = EXPECTED_MARKERS)) {
                             onCaptureFailed(IllegalStateException(previewView.context.getString(R.string.camera_ar_capture_read_failed)))
                         }
                     }

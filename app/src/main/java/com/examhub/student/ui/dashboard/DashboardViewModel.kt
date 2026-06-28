@@ -68,26 +68,29 @@ class DashboardViewModel(
         }
 
         viewModelScope.launch {
-            classRepository.getClasses(status = "active").collect { result ->
+            classRepository.getClasses(status = "active", limit = "100").collect { result ->
                 if (result is ApiResult.Success) {
                     val classes = result.data.data
                     _classCount.value = result.data.meta?.total ?: classes.size
-                    offlineCacheManager.saveClassBasics(classes.map { cls ->
-                        val info = cls.classInfo
-                        val studentCount = cls.studentCount ?: info?.studentCount ?: 0
-                        SchoolClass(
-                            id = cls.classId.ifBlank { info?.id ?: cls.id },
-                            name = info?.className.orEmpty(),
-                            subject = info?.subject ?: listOf(info?.grade, info?.schoolYear)
-                                .filterNotNull()
-                                .filter { it.isNotBlank() }
-                                .joinToString(" - "),
-                            classCode = cls.resolvedInternalClassCode(),
-                            joinCode = info?.joinCode.orEmpty(),
-                            studentCount = studentCount,
-                            hasOfflineData = false
-                        )
-                    })
+                    offlineCacheManager.saveClassBasics(
+                        classes.map { cls ->
+                            val info = cls.classInfo
+                            val studentCount = cls.studentCount ?: info?.studentCount ?: 0
+                            SchoolClass(
+                                id = cls.classId.ifBlank { info?.id ?: cls.id },
+                                name = info?.className.orEmpty(),
+                                subject = info?.subject ?: listOf(info?.grade, info?.schoolYear)
+                                    .filterNotNull()
+                                    .filter { it.isNotBlank() }
+                                    .joinToString(" - "),
+                                classCode = cls.resolvedInternalClassCode(),
+                                joinCode = info?.joinCode.orEmpty(),
+                                studentCount = studentCount,
+                                hasOfflineData = false
+                            )
+                        },
+                        replaceExisting = true
+                    )
                 }
             }
         }

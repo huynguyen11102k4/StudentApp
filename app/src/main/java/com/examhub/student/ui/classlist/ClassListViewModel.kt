@@ -17,6 +17,7 @@ import com.examhub.student.util.helper.ResourceProvider
 import com.examhub.student.util.paging.PageChunk
 import com.examhub.student.util.paging.RepositoryPagingSource
 import com.examhub.student.util.paging.requirePage
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -42,28 +43,41 @@ class ClassListViewModel(
                 config = PagingConfig(pageSize = 20, prefetchDistance = 5, enablePlaceholders = false),
                 pagingSourceFactory = {
                     RepositoryPagingSource { page, limit ->
-                        val response = classRepository.getClasses(
-                            page = page.toString(),
-                            limit = limit.toString(),
-                            status = "active",
-                            search = query.takeIf(String::isNotBlank)
-                        ).requirePage()
-                        val items = response.data.map { cls ->
-                            val info = cls.classInfo
-                            SchoolClass(
-                                id = cls.classId.ifBlank { info?.id ?: cls.id },
-                                name = info?.className.orEmpty(),
-                                subject = info?.subject ?: listOf(info?.grade, info?.schoolYear)
-                                    .filterNotNull().filter(String::isNotBlank).joinToString(" - "),
-                                classCode = info?.classCode.orEmpty(),
-                                joinCode = info?.joinCode.orEmpty(),
-                                studentCount = cls.studentCount ?: info?.studentCount ?: 0,
-                                status = cls.status,
-                                hasOfflineData = false
+                        runCatching {
+                            val response = classRepository.getClasses(
+                                page = page.toString(),
+                                limit = limit.toString(),
+                                status = "active",
+                                search = query.takeIf(String::isNotBlank)
+                            ).requirePage()
+                            val items = response.data.map { cls ->
+                                val info = cls.classInfo
+                                SchoolClass(
+                                    id = cls.classId.ifBlank { info?.id ?: cls.id },
+                                    name = info?.className.orEmpty(),
+                                    subject = info?.subject ?: listOf(info?.grade, info?.schoolYear)
+                                        .filterNotNull().filter(String::isNotBlank).joinToString(" - "),
+                                    classCode = info?.classCode.orEmpty(),
+                                    joinCode = info?.joinCode.orEmpty(),
+                                    studentCount = cls.studentCount ?: info?.studentCount ?: 0,
+                                    status = cls.status,
+                                    hasOfflineData = false
+                                )
+                            }
+                            offlineCacheManager.saveClassBasics(
+                                items,
+                                replaceExisting = page == 1 && query.isBlank()
                             )
+                            PageChunk(
+                                items,
+                                response.meta?.page ?: page,
+                                response.meta?.limit ?: limit,
+                                response.meta?.total ?: items.size
+                            )
+                        }.getOrElse { error ->
+                            if (error is CancellationException) throw error
+                            cachedClassPage(query, page, limit)
                         }
-                        offlineCacheManager.saveClassBasics(items)
-                        PageChunk(items, response.meta?.page ?: page, response.meta?.limit ?: limit, response.meta?.total ?: items.size)
                     }
                 }
             ).flow
@@ -123,5 +137,23 @@ class ClassListViewModel(
                 if (result is ApiResult.Success) _defaultStudentCode.value = result.data.student?.studentCode.orEmpty()
             }
         }
+    }
+
+    private fun cachedClassPage(query: String, page: Int, limit: Int): PageChunk<SchoolClass> {
+        val normalizedQuery = query.trim()
+        val filtered = offlineCacheManager.getCachedClassBasics().filter { cls ->
+            normalizedQuery.isBlank() ||
+                cls.name.contains(normalizedQuery, ignoreCase = true) ||
+                cls.subject.contains(normalizedQuery, ignoreCase = true) ||
+                cls.classCode.contains(normalizedQuery, ignoreCase = true) ||
+                cls.joinCode.contains(normalizedQuery, ignoreCase = true)
+        }
+        val fromIndex = ((page - 1) * limit).coerceAtLeast(0)
+        val pageItems = if (fromIndex >= filtered.size) {
+            emptyList()
+        } else {
+            filtered.drop(fromIndex).take(limit)
+        }
+        return PageChunk(pageItems, page, limit, filtered.size)
     }
 }

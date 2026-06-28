@@ -76,6 +76,12 @@ class SubmissionEndFragment : Fragment() {
                 viewModel.submissionState.collect { state ->
                     binding.tvSyncStatus.visibility = if (state.statusRes == null) View.GONE else View.VISIBLE
                     state.statusRes?.let(binding.tvSyncStatus::setText)
+                    binding.tvCapturedAt.visibility =
+                        if (state.capturedAtText.isBlank()) View.GONE else View.VISIBLE
+                    binding.tvCapturedAt.text = getString(
+                        R.string.submission_end_captured_at_format,
+                        state.capturedAtText
+                    )
                     binding.tvSyncStatus.setTextColor(
                         androidx.core.content.ContextCompat.getColor(
                             requireContext(),

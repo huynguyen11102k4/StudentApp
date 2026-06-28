@@ -55,6 +55,7 @@ class OmrEngine {
                 options.preprocessMarkers,
                 options.preprocessPostWarp,
                 options.morphCleanup,
+                options.requiredMarkers,
                 options.autoAdaptive
             )
 

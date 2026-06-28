@@ -63,6 +63,9 @@ interface StudentCacheDao {
     @Query("DELETE FROM cache_metadata WHERE `key` = :key")
     fun deleteMetadata(key: String)
 
+    @Query("DELETE FROM cache_metadata WHERE SUBSTR(`key`, 1, LENGTH(:keyPrefix)) = :keyPrefix")
+    fun deleteMetadataWithPrefix(keyPrefix: String)
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     fun upsertActiveSession(entity: ActiveExamSessionEntity)
 
@@ -92,6 +95,9 @@ interface StudentCacheDao {
 
     @Query("DELETE FROM queued_violations WHERE id = :id")
     fun deleteViolation(id: String)
+
+    @Query("DELETE FROM queued_violations")
+    fun deleteAllViolations()
 
     @Query("""
         DELETE FROM queued_violations

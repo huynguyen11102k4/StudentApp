@@ -345,14 +345,17 @@ OmrResult OmrProcessor::processWithConfig(
     MarkerDetector markerDetector;
     std::vector<DetectedMarker> detectedMarkers = markerDetector.detectMarkers(grayForMarkers);
     size_t uniqueMarkerCount = countUniqueDetectedMarkerIds(detectedMarkers);
-    LOGI("OMR_PIPELINE marker detection completed count=%zu unique=%zu expected=%zu",
-         detectedMarkers.size(), uniqueMarkerCount, anchorPoints.size());
+    size_t requiredMarkerCount = static_cast<size_t>(
+        std::max(4, std::min(options_.required_markers, static_cast<int>(anchorPoints.size())))
+    );
+    LOGI("OMR_PIPELINE marker detection completed count=%zu unique=%zu expected=%zu required=%zu",
+         detectedMarkers.size(), uniqueMarkerCount, anchorPoints.size(), requiredMarkerCount);
 
-    if (uniqueMarkerCount < anchorPoints.size()) {
+    if (uniqueMarkerCount < requiredMarkerCount) {
         result.error_code = "MARKER_NOT_FOUND";
         result.error_message = "Not enough markers found: " +
                                std::to_string(uniqueMarkerCount) + "/" +
-                               std::to_string(anchorPoints.size());
+                               std::to_string(requiredMarkerCount);
         return result;
     }
 

@@ -17,7 +17,6 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
-import com.examhub.student.BuildConfig
 import com.examhub.student.R
 import com.examhub.student.databinding.FragmentSettingsBinding
 import com.examhub.student.service.LanguagePreferenceManager
@@ -66,6 +65,9 @@ class SettingsFragment : Fragment() {
                 }
                 .setNegativeButton(R.string.common_cancel, null)
                 .show()
+        }
+        binding.itemBackendUrl.setOnClickListener {
+            showBackendUrlDialog()
         }
         binding.switchNotifications.setOnCheckedChangeListener { _, isChecked ->
             viewModel.setNotificationsEnabled(isChecked)
@@ -139,6 +141,11 @@ class SettingsFragment : Fragment() {
                 }
             }
             launch {
+                viewModel.backendBaseUrl.collect { url ->
+                    binding.tvBackendUrlValue.text = url
+                }
+            }
+            launch {
                 viewModel.errorMessage.collect {
                     Snackbar.make(binding.root, it.replaceTechnicalLabels(), Snackbar.LENGTH_SHORT).show()
                 }
@@ -182,6 +189,37 @@ class SettingsFragment : Fragment() {
             LanguagePreferenceManager.LANGUAGE_EN -> getString(R.string.settings_language_english)
             else -> getString(R.string.settings_language_vietnamese)
         }
+    }
+
+    private fun showBackendUrlDialog() {
+        val input = TextInputEditText(requireContext()).apply {
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI
+            setSingleLine(true)
+            setText(viewModel.backendBaseUrl.value)
+            setSelection(text?.length ?: 0)
+        }
+        val layout = TextInputLayout(requireContext()).apply {
+            hint = getString(R.string.settings_backend_url_hint)
+            addView(input)
+        }
+        val container = LinearLayout(requireContext()).apply {
+            orientation = LinearLayout.VERTICAL
+            val horizontalPadding = resources.getDimensionPixelSize(R.dimen.spacing_24)
+            setPadding(horizontalPadding, 0, horizontalPadding, 0)
+            addView(layout)
+        }
+
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.settings_backend_url)
+            .setView(container)
+            .setNegativeButton(R.string.common_cancel, null)
+            .setNeutralButton(R.string.settings_backend_url_reset) { _, _ ->
+                viewModel.resetBackendUrl()
+            }
+            .setPositiveButton(R.string.common_confirm) { _, _ ->
+                viewModel.saveBackendUrl(input.text?.toString().orEmpty())
+            }
+            .show()
     }
 
     private fun showChangePasswordDialog() {
@@ -297,7 +335,7 @@ class SettingsFragment : Fragment() {
 
     private fun resolveAvatarUrl(url: String): String {
         if (url.startsWith("http://") || url.startsWith("https://")) return url
-        val apiBase = BuildConfig.API_BASE_URL.trimEnd('/')
+        val apiBase = viewModel.backendBaseUrl.value.trimEnd('/')
         val origin = apiBase.substringBefore("/api/v1")
         return origin + if (url.startsWith("/")) url else "/$url"
     }

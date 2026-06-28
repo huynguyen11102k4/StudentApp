@@ -243,7 +243,6 @@
     <string name="camera_ar_flash_off">Flash: Tắt</string>
     <string name="camera_ar_flash_on">Flash: Bật</string>
     <string name="camera_ar_flash_auto">Flash: Tự động</string>
-    <string name="camera_ar_gallery">Thư viện</string>
     <string name="camera_ar_capture">Chụp thủ công</string>
     <string name="camera_ar_close">Đóng camera</string>
     <string name="camera_ar_marker_hint">Căn phiếu trong khung, app sẽ tự chụp khi đủ marker</string>
@@ -255,10 +254,7 @@
     <string name="camera_ar_capture_failed">Chụp ảnh thất bại, vui lòng thử lại</string>
     <string name="camera_ar_camera_not_ready">Camera chưa sẵn sàng, vui lòng thử lại</string>
     <string name="camera_ar_need_all_markers">Cần nhận đủ marker trước khi chụp</string>
-    <string name="camera_ar_gallery_read_failed">Không thể đọc ảnh từ thư viện</string>
-    <string name="camera_ar_gallery_open_failed">Không thể mở ảnh đã chọn</string>
-    <string name="camera_ar_gallery_decode_failed">Không thể giải mã ảnh đã chọn</string>
-    <string name="camera_ar_invalid_image">Ảnh đã chọn không hợp lệ</string>
+    <string name="camera_ar_need_manual_markers">Cần nhận diện ít nhất 10/12 marker để chụp tay</string>
 
     <!-- Exam List Screen -->
     <string name="exam_list_default_title">Danh sách kỳ thi</string>
@@ -384,6 +380,16 @@
     <string name="settings_storage_cleanup_title">Dọn dẹp bộ nhớ</string>
     <string name="settings_storage_cleanup_message">Xóa mẫu OMR và dữ liệu bài làm đã tải về máy. Danh sách lớp/kỳ thi đã lưu vẫn được giữ để xem nhanh.</string>
     <string name="settings_storage_cleanup_confirm">Xóa mẫu OMR</string>
+    <string name="settings_backend_url">Backend dev</string>
+    <string name="settings_backend_url_default">Dùng cấu hình mặc định</string>
+    <string name="settings_backend_url_hint">http://192.168.0.196:3001/api/v1/</string>
+    <string name="settings_backend_url_reset">Mặc định</string>
+    <string name="settings_backend_url_saved">Đã cập nhật backend URL</string>
+    <string name="settings_backend_url_saved_cleared">Đã cập nhật backend URL. Dữ liệu đăng nhập, hồ sơ, phiên và cache trên máy đã được xóa; vui lòng đăng nhập lại.</string>
+    <string name="settings_backend_url_unchanged">Bạn đang dùng backend URL này</string>
+    <string name="settings_backend_url_reset_done">Đã quay về backend mặc định</string>
+    <string name="settings_backend_url_reset_cleared">Đã quay về backend mặc định. Dữ liệu đăng nhập, hồ sơ, phiên và cache trên máy đã được xóa; vui lòng đăng nhập lại.</string>
+    <string name="settings_backend_url_invalid">Backend URL không hợp lệ</string>
     <string name="settings_notifications">Thông báo</string>
     <string name="settings_notifications_desc">Nhận nhắc nhở kỳ thi, kết quả và phản hồi khiếu nại</string>
     <string name="settings_notifications_enabled">Đã bật thông báo</string>

@@ -49,18 +49,19 @@
     <string name="smart_review_missing_exam">Thiếu thông tin kỳ thi để mở camera</string>
 
     <string name="submission_end_title">Đã nộp bài</string>
-    <string name="submission_end_description">Bài làm của bạn đã được gửi. Kết quả sẽ xuất hiện khi hệ thống xử lý xong.</string>
+    <string name="submission_end_description">Bài làm của bạn đã được ghi nhận. Kết quả sẽ xuất hiện khi hệ thống xử lý xong.</string>
+    <string name="submission_end_captured_at_format">Ghi nhận lúc %1$s</string>
     <string name="submission_end_results">Xem kết quả</string>
     <string name="submission_end_check_result">Kiểm tra kết quả</string>
     <string name="submission_end_home">Về trang chủ</string>
     <string name="submission_end_content_description">Đã nộp bài</string>
-    <string name="submission_status_saved">Đã lưu bài trên thiết bị</string>
-    <string name="submission_status_waiting_network">Bài thi đã được lưu và sẽ được đồng bộ khi có mạng</string>
-    <string name="submission_status_uploading">Đang tải ảnh lên</string>
-    <string name="submission_status_syncing">Đang đồng bộ bài</string>
-    <string name="submission_status_synced">Đã nộp thành công</string>
-    <string name="submission_status_waiting_grading">Đã đồng bộ, bài đang chờ chấm</string>
-    <string name="submission_status_after_deadline">Không thể đồng bộ vì bài được lưu sau giờ</string>
+    <string name="submission_status_saved">Bài làm đã được ghi nhận trên thiết bị</string>
+    <string name="submission_status_waiting_network">Bài làm đã được ghi nhận trên thiết bị và sẽ đồng bộ khi có mạng</string>
+    <string name="submission_status_uploading">Bài làm đã được ghi nhận trên thiết bị, đang tải ảnh lên</string>
+    <string name="submission_status_syncing">Bài làm đã được ghi nhận trên thiết bị, đang đồng bộ</string>
+    <string name="submission_status_synced">Bài làm đã được đồng bộ thành công</string>
+    <string name="submission_status_waiting_grading">Bài làm đã được đồng bộ, đang chờ chấm</string>
+    <string name="submission_status_after_deadline">Bài làm đã được ghi nhận trên thiết bị sau hạn nộp nên chưa thể đồng bộ</string>
     <string name="submission_status_failed">Không thể đồng bộ bài nộp</string>
     <string name="submission_status_invalid_permit">Không thể đồng bộ vì giấy phép nộp offline không hợp lệ hoặc đã hết hạn</string>
     <string name="submission_status_permit_mismatch">Giấy phép nộp offline không khớp với học sinh, phiên thi hoặc thiết bị</string>

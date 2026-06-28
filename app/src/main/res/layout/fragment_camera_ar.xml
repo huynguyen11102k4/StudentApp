@@ -78,61 +78,35 @@
             android:textColor="@color/white" />
     </LinearLayout>
 
-    <com.google.android.material.card.MaterialCardView
-        android:id="@+id/bottomControlsCard"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/fabCapture"
+        style="@style/Widget.Material3.FloatingActionButton.Large.Primary"
+        android:layout_width="@dimen/camera_capture_button_size"
+        android:layout_height="@dimen/camera_capture_button_size"
         android:layout_marginBottom="@dimen/spacing_32"
-        app:cardBackgroundColor="@color/camera_controls_bg"
-        app:cardCornerRadius="@dimen/student_card_radius_xlarge"
-        app:cardElevation="@dimen/elevation_level3"
-        app:contentPadding="@dimen/spacing_12"
+        android:contentDescription="@string/camera_ar_capture"
+        android:src="@drawable/ic_camera"
+        app:backgroundTint="@color/primary"
+        app:fabCustomSize="@dimen/camera_capture_button_size"
+        app:maxImageSize="@dimen/camera_capture_icon_size"
+        app:tint="@color/on_primary"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:strokeWidth="0dp">
+        app:layout_constraintStart_toStartOf="parent" />
 
-        <LinearLayout
-            android:id="@+id/bottomControls"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:gravity="center"
-            android:orientation="horizontal">
-
-            <ImageButton
-                android:id="@+id/btnGallery"
-                android:layout_width="@dimen/spacing_56"
-                android:layout_height="@dimen/spacing_56"
-                android:background="@drawable/bg_icon_container_secondary"
-                android:contentDescription="@string/camera_ar_gallery"
-                android:padding="@dimen/spacing_12"
-                android:src="@drawable/ic_gallery"
-                app:tint="@color/tertiary" />
-
-            <com.google.android.material.floatingactionbutton.FloatingActionButton
-                android:id="@+id/fabCapture"
-                style="@style/Widget.Material3.FloatingActionButton.Large.Primary"
-                android:layout_width="@dimen/camera_capture_button_size"
-                android:layout_height="@dimen/camera_capture_button_size"
-                android:layout_marginHorizontal="@dimen/spacing_24"
-                android:contentDescription="@string/camera_ar_capture"
-                android:src="@drawable/ic_camera"
-                app:backgroundTint="@color/primary"
-                app:fabCustomSize="@dimen/camera_capture_button_size"
-                app:maxImageSize="@dimen/camera_capture_icon_size"
-                app:tint="@color/on_primary" />
-
-            <ImageButton
-                android:id="@+id/btnFlash"
-                android:layout_width="@dimen/spacing_56"
-                android:layout_height="@dimen/spacing_56"
-                android:background="@drawable/bg_icon_container_primary"
-                android:contentDescription="@string/camera_ar_flash_off"
-                android:padding="@dimen/spacing_12"
-                android:src="@drawable/ic_flash_off"
-                app:tint="@color/primary" />
-        </LinearLayout>
-    </com.google.android.material.card.MaterialCardView>
+    <ImageButton
+        android:id="@+id/btnFlash"
+        android:layout_width="@dimen/spacing_56"
+        android:layout_height="@dimen/spacing_56"
+        android:layout_marginStart="@dimen/spacing_24"
+        android:background="@drawable/bg_icon_container_primary"
+        android:contentDescription="@string/camera_ar_flash_off"
+        android:padding="@dimen/spacing_12"
+        android:src="@drawable/ic_flash_off"
+        app:tint="@color/primary"
+        app:layout_constraintBottom_toBottomOf="@id/fabCapture"
+        app:layout_constraintStart_toEndOf="@id/fabCapture"
+        app:layout_constraintTop_toTopOf="@id/fabCapture" />
 
     <FrameLayout
         android:id="@+id/progressOverlay"

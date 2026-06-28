@@ -84,7 +84,11 @@ class LockModeFragment : Fragment() {
             }
             launch {
                 viewModel.blankSubmissionFinished.collect { submission ->
-                    navigateToSubmissionEnd(submission?.resultId, submission?.submissionId)
+                    navigateToSubmissionEnd(
+                        submission.response?.resultId,
+                        submission.response?.submissionId,
+                        submission.clientSubmissionId
+                    )
                 }
             }
             launch {

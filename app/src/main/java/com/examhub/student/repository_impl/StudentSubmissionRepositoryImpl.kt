@@ -1,6 +1,8 @@
 package com.examhub.student.repository_impl
 
 import com.google.gson.Gson
+import com.examhub.student.OmrApplication
+import com.examhub.student.R
 import com.examhub.student.model.ApiException
 import com.examhub.student.model.ApiResult
 import com.examhub.student.model.request.submission.PresignSubmissionImageRequest
@@ -64,7 +66,7 @@ class StudentSubmissionRepositoryImpl(
                 ApiResult.Error(
                     ApiException(
                         code = "NETWORK_ERROR",
-                        message = error.message ?: "Network error while uploading image",
+                        message = OmrApplication.appContext.getString(R.string.common_no_internet),
                         causeThrowable = error
                     )
                 )

@@ -13,13 +13,13 @@ import com.examhub.student.model.request.lock.LockViolationRequest
 import com.examhub.student.model.request.submission.IdZoneResultRequest
 import com.examhub.student.model.request.submission.StudentAnswerRequest
 import com.examhub.student.model.request.submission.StudentSubmitRequest
-import com.examhub.student.model.response.submission.StudentSubmitResponse
 import com.examhub.student.omr.OmrProcessor
 import com.examhub.student.omr.OmrReviewStore
 import com.examhub.student.omr.core.MarkerDetectionException
 import com.examhub.student.repository.LockModeRepository
 import com.examhub.student.service.ActiveExamSessionStore
 import com.examhub.student.data.local.model.FreezeResult
+import com.examhub.student.data.local.model.SubmissionFinishResult
 import com.examhub.student.service.NetworkStatusProvider
 import com.examhub.student.service.OfflineSubmissionManager
 import kotlinx.coroutines.Dispatchers
@@ -76,8 +76,8 @@ class CameraARViewModel(
 
     private val _navigateToReview = Channel<Unit>(Channel.BUFFERED)
     val navigateToReview = _navigateToReview.receiveAsFlow()
-    private val _blankSubmissionFinished = MutableSharedFlow<StudentSubmitResponse?>(extraBufferCapacity = 1)
-    val blankSubmissionFinished: SharedFlow<StudentSubmitResponse?> = _blankSubmissionFinished.asSharedFlow()
+    private val _blankSubmissionFinished = MutableSharedFlow<SubmissionFinishResult>(extraBufferCapacity = 1)
+    val blankSubmissionFinished: SharedFlow<SubmissionFinishResult> = _blankSubmissionFinished.asSharedFlow()
     private val _blankSubmissionFrozen = MutableSharedFlow<String>(extraBufferCapacity = 1)
     val blankSubmissionFrozen: SharedFlow<String> = _blankSubmissionFrozen.asSharedFlow()
 
@@ -135,7 +135,7 @@ class CameraARViewModel(
         _markerStatusText.value = context.getString(R.string.camera_ar_status_auto_capture)
     }
 
-    fun onImageCaptured(bitmap: Bitmap) {
+    fun onImageCaptured(bitmap: Bitmap, requiredMarkers: Int = 12) {
         if (_isProcessing.value) {
             bitmap.recycle()
             return
@@ -153,7 +153,7 @@ class CameraARViewModel(
             try {
                 runCatching {
                     withContext(Dispatchers.Default) {
-                        omrProcessor.process(bitmap, currentExamId)
+                        omrProcessor.process(bitmap, currentExamId, requiredMarkers)
                     }
                 }.onSuccess { result ->
                     val rawImageBase64 = encodeJpegBase64(bitmap)
@@ -301,7 +301,9 @@ class CameraARViewModel(
             activeSessionStore.clear(examId)
             activeSessionStore.clearBySessionId(sessionId)
             when (result) {
-                is FreezeResult.Synced -> _blankSubmissionFinished.tryEmit(result.response)
+                is FreezeResult.Synced -> _blankSubmissionFinished.tryEmit(
+                    SubmissionFinishResult(result.response, result.clientSubmissionId)
+                )
                 is FreezeResult.Pending -> _blankSubmissionFrozen.tryEmit(result.clientSubmissionId)
                 is FreezeResult.TerminalFailure -> _blankSubmissionFrozen.tryEmit(result.clientSubmissionId)
             }

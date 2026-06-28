@@ -23,10 +23,10 @@ import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.common.api.ApiException
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
-import com.examhub.student.BuildConfig
 import com.examhub.student.R
 import com.examhub.student.databinding.FragmentProfileBinding
 import com.examhub.student.model.response.profile.UserResponse
+import com.examhub.student.service.BackendUrlManager
 import com.examhub.student.util.extension.applySystemWindowInsets
 import com.examhub.student.util.extension.collectOnStarted
 import com.examhub.student.util.extension.replaceTechnicalLabels
@@ -37,6 +37,7 @@ import kotlinx.coroutines.launch
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.asRequestBody
+import org.koin.android.ext.android.inject
 import org.koin.androidx.viewmodel.ext.android.viewModel
 import java.io.File
 import java.util.Calendar
@@ -52,6 +53,7 @@ class ProfileFragment : Fragment() {
     private var _binding: FragmentProfileBinding? = null
     private val binding get() = _binding!!
     private val viewModel: ProfileViewModel by viewModel()
+    private val backendUrlManager: BackendUrlManager by inject()
     private var googleSignInClient: GoogleSignInClient? = null
     private var pendingAvatarPart: MultipartBody.Part? = null
     private var pendingAvatarFile: File? = null
@@ -364,7 +366,7 @@ class ProfileFragment : Fragment() {
 
     private fun resolveAvatarUrl(url: String): String {
         if (url.startsWith("http://") || url.startsWith("https://")) return url
-        val apiBase = BuildConfig.API_BASE_URL.trimEnd('/')
+        val apiBase = backendUrlManager.currentBaseUrl().trimEnd('/')
         val origin = apiBase.substringBefore("/api/v1")
         return origin + if (url.startsWith("/")) url else "/$url"
     }

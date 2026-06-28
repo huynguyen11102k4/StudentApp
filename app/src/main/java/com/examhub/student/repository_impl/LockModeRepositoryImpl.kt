@@ -81,7 +81,7 @@ class LockModeRepositoryImpl(
             ApiResult.Error(
                 ApiException(
                     code = "NETWORK_ERROR",
-                    message = error.message ?: string(R.string.common_no_internet),
+                    message = string(R.string.common_no_internet),
                     causeThrowable = error
                 )
             )

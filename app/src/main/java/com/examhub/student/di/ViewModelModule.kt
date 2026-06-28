@@ -62,7 +62,7 @@ object ViewModelModule {
         viewModel { AppealDetailViewModel(get(), get()) }
 
         // Others (no repository dependencies)
-        viewModel { SettingsViewModel(get(), get(), get(), get(), get()) }
+        viewModel { SettingsViewModel(get(), get(), get(), get(), get(), get()) }
         viewModel { CameraARViewModel(get(), get(), get(), get(), get(), get()) }
     }
 }

@@ -5,6 +5,8 @@ import com.google.gson.GsonBuilder
 import com.examhub.student.BuildConfig
 import com.examhub.student.service.AuthInterceptor
 import com.examhub.student.service.AuthApiService
+import com.examhub.student.service.BackendUrlInterceptor
+import com.examhub.student.service.BackendUrlManager
 import com.examhub.student.service.ClassApiService
 import com.examhub.student.service.ETagCacheInterceptor
 import com.examhub.student.service.ETagCacheManager
@@ -64,9 +66,11 @@ object NetworkModule {
         single { FcmTokenRegistrar(get(), get(), get(), androidContext()) }
         single { ETagCacheManager(androidContext(), get()) }
         single { OfflineCacheManager(androidContext(), get(), get()) }
+        single { BackendUrlManager(androidContext(), get(), get()) }
         single { ActiveExamSessionStore(androidContext(), get(), get(), get()) }
         single { ViolationQueueManager(androidContext(), get(), get(), get()) }
         single { AuthInterceptor(get()) }
+        single { BackendUrlInterceptor(get()) }
         single { UnauthorizedInterceptor(get()) }
         single { ETagCacheInterceptor(get()) }
         single(named("deviceIdInterceptor")) {
@@ -96,6 +100,7 @@ object NetworkModule {
 
         single(named("refreshOkHttp")) {
             OkHttpClient.Builder()
+                .addInterceptor(get<BackendUrlInterceptor>())
                 .addInterceptor(get<Interceptor>(named("deviceIdInterceptor")))
                 .addInterceptor(get<HttpLoggingInterceptor>())
                 .connectTimeout(30, TimeUnit.SECONDS)
@@ -106,6 +111,7 @@ object NetworkModule {
 
         single(named("storageUploadOkHttp")) {
             OkHttpClient.Builder()
+                .addInterceptor(get<BackendUrlInterceptor>())
                 .addInterceptor(get<HttpLoggingInterceptor>())
                 .connectTimeout(30, TimeUnit.SECONDS)
                 .readTimeout(60, TimeUnit.SECONDS)
@@ -129,6 +135,7 @@ object NetworkModule {
 
         single {
             OkHttpClient.Builder()
+                .addInterceptor(get<BackendUrlInterceptor>())
                 .addInterceptor(get<Interceptor>(named("deviceIdInterceptor")))
                 .addInterceptor(get<AuthInterceptor>())
                 .addInterceptor(get<ETagCacheInterceptor>())

@@ -114,17 +114,24 @@ class OfflineCacheManager(
             .map { it.copy(isOfflineReady = true) }
     }
 
-    fun saveClassBasics(classes: List<SchoolClass>) {
-        if (classes.isEmpty()) return
+    fun saveClassBasics(classes: List<SchoolClass>, replaceExisting: Boolean = false) {
+        if (classes.isEmpty() && !replaceExisting) return
         synchronized(mutationLock) {
             dbCall {
                 database.runInTransaction {
-                    val merged = readJsonNamespace<SchoolClass>(NAMESPACE_CLASSES)
-                        .associateBy { it.id }
-                        .toMutableMap()
-                    classes.forEach { merged[it.id] = it }
+                    val previous = readJsonNamespace<SchoolClass>(NAMESPACE_CLASSES).associateBy { it.id }
+                    val items = classes.map { item ->
+                        item.copy(hasOfflineData = previous[item.id]?.hasOfflineData ?: item.hasOfflineData)
+                    }
+                    val merged = if (replaceExisting) {
+                        items
+                    } else {
+                        previous.toMutableMap().apply {
+                            items.forEach { this[it.id] = it }
+                        }.values.toList()
+                    }
                     dao.deleteJsonNamespace(NAMESPACE_CLASSES)
-                    dao.upsertJson(merged.values.mapIndexed { index, item ->
+                    dao.upsertJson(merged.mapIndexed { index, item ->
                         jsonEntity(NAMESPACE_CLASSES, item.id, gson.toJson(item), index.toLong())
                     })
                 }
@@ -230,6 +237,8 @@ class OfflineCacheManager(
                 dao.deleteAllActiveSessions()
                 dao.deleteAllEtags()
                 dao.deleteAllStudentIdentities()
+                dao.deleteAllViolations()
+                dao.deleteMetadataWithPrefix(OFFLINE_PERMIT_METADATA_PREFIX)
                 saveMetadataInDao(KEY_DISMISSED_NOTIFICATION_IDS, "[]")
             }
         }
@@ -366,6 +375,7 @@ class OfflineCacheManager(
         const val NAMESPACE_AUTH_CACHE = "auth_cache"
         const val KEY_DISMISSED_NOTIFICATION_IDS = "dismissed_notification_ids"
         const val KEY_LEGACY_IMPORT_COMPLETE = "legacy_offline_cache_import_complete"
+        const val OFFLINE_PERMIT_METADATA_PREFIX = "offline_permit:"
 
         const val LEGACY_OFFLINE_IDS = "offline_exam_ids"
         const val LEGACY_EXAM_BASICS = "exam_basics"

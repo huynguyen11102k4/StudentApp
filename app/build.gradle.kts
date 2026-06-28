@@ -4,6 +4,9 @@ plugins {
     alias(libs.plugins.ksp)
 }
 
+val debugApiBaseUrl = "http://10.0.2.2:3001/api/v1/"
+val releaseApiBaseUrl = "https://example.invalid/api/v1/"
+
 ksp {
     arg("room.schemaLocation", "$projectDir/schemas")
 }
@@ -22,7 +25,6 @@ android {
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"
-        buildConfigField("String", "API_BASE_URL", "\"http://192.168.0.196:3001/api/v1/\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         externalNativeBuild {
@@ -33,7 +35,11 @@ android {
     }
 
     buildTypes {
+        debug {
+            buildConfigField("String", "API_BASE_URL", "\"$debugApiBaseUrl\"")
+        }
         release {
+            buildConfigField("String", "API_BASE_URL", "\"$releaseApiBaseUrl\"")
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
