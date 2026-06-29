@@ -24,11 +24,8 @@ local.properties
 /app/.cxx/
 /app/.externalNativeBuild/
 
-# Project exclude paths
-/opencv/build/
-/opencv/.cxx/
-/opencv/.externalNativeBuild/
-/opencv/build/intermediates/javac/debug/compileDebugJavaWithJavac/classes/
+# Local OpenCV module
+/opencv/
 
 /docs
 
