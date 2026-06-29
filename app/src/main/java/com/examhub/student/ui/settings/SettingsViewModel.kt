@@ -36,6 +36,9 @@ class SettingsViewModel(
     private val _errorMessage = MutableSharedFlow<String>(extraBufferCapacity = 1)
     val errorMessage: SharedFlow<String> = _errorMessage.asSharedFlow()
 
+    private val _backendChangedMessage = MutableSharedFlow<String>(extraBufferCapacity = 1)
+    val backendChangedMessage: SharedFlow<String> = _backendChangedMessage.asSharedFlow()
+
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
@@ -79,7 +82,7 @@ class SettingsViewModel(
                 _profile.value = null
                 _sessionCount.value = 0
                 _offlineExamCount.value = offlineCacheManager.getOfflineExamIds().size
-                _errorMessage.tryEmit(resources.getString(R.string.settings_backend_url_saved_cleared))
+                _backendChangedMessage.tryEmit(resources.getString(R.string.settings_backend_url_saved_cleared))
             }
             BackendUrlUpdateResult.Unchanged -> {
                 refreshBackendUrlState()
@@ -98,7 +101,7 @@ class SettingsViewModel(
                 _profile.value = null
                 _sessionCount.value = 0
                 _offlineExamCount.value = offlineCacheManager.getOfflineExamIds().size
-                _errorMessage.tryEmit(resources.getString(R.string.settings_backend_url_reset_cleared))
+                _backendChangedMessage.tryEmit(resources.getString(R.string.settings_backend_url_reset_cleared))
             }
             BackendUrlUpdateResult.Unchanged -> {
                 refreshBackendUrlState()
@@ -123,10 +126,9 @@ class SettingsViewModel(
     }
 
     fun setNotificationsEnabled(enabled: Boolean) {
-        notificationPreferenceManager.setEnabled(enabled)
+        fcmTokenRegistrar.setNotificationsEnabled(enabled, viewModelScope)
         _notificationsEnabled.value = enabled
         if (enabled) {
-            fcmTokenRegistrar.syncCurrentToken(viewModelScope)
             _errorMessage.tryEmit(resources.getString(R.string.settings_notifications_enabled))
         } else {
             _errorMessage.tryEmit(resources.getString(R.string.settings_notifications_disabled))

@@ -29,7 +29,7 @@
     <string name="auth_error_google_account_mismatch">Hãy đăng nhập bằng đúng tài khoản Google đã liên kết trước đó.</string>
     <string name="auth_error_account_inactive">Tài khoản học sinh chưa được kích hoạt.</string>
     <string name="auth_error_invalid_credentials">Email hoặc mật khẩu không chính xác.</string>
-    <string name="auth_error_google_not_linked">Tài khoản này chưa liên kết Google. Hãy đăng nhập bằng mật khẩu, sau đó liên kết Google trong hồ sơ.</string>
+    <string name="auth_error_google_not_linked">Tài khoản chưa liên kết Google, vui lòng đăng nhập bằng mật khẩu rồi liên kết lại trong Cài đặt.</string>
     <string name="auth_error_network">Không thể kết nối máy chủ. Vui lòng kiểm tra mạng và thử lại.</string>
 
     <!-- Register Screen -->
@@ -52,6 +52,7 @@
     <string name="register_validation_email_required">Vui lòng nhập email</string>
     <string name="register_validation_password_short">Mật khẩu phải có ít nhất 6 ký tự</string>
     <string name="register_validation_password_mismatch">Mật khẩu không khớp</string>
+    <string name="register_validation_student_code_digits">Mã học sinh chỉ được chứa chữ số</string>
     <string name="register_success">Đăng ký thành công</string>
     <string name="register_success_login">Đăng ký thành công. Vui lòng đăng nhập.</string>
     <string name="register_failed">Đăng ký thất bại</string>
@@ -385,15 +386,16 @@
     <string name="settings_backend_url_hint">http://192.168.0.196:3001/api/v1/</string>
     <string name="settings_backend_url_reset">Mặc định</string>
     <string name="settings_backend_url_saved">Đã cập nhật backend URL</string>
-    <string name="settings_backend_url_saved_cleared">Đã cập nhật backend URL. Dữ liệu đăng nhập, hồ sơ, phiên và cache trên máy đã được xóa; vui lòng đăng nhập lại.</string>
+    <string name="settings_backend_url_saved_cleared">Backend URL đã thay đổi. Phiên đăng nhập, hồ sơ, thiết bị và dữ liệu tài khoản cục bộ cũ đã được xoá để tránh dùng nhầm dữ liệu giữa các môi trường. Vui lòng đăng nhập lại.</string>
     <string name="settings_backend_url_unchanged">Bạn đang dùng backend URL này</string>
     <string name="settings_backend_url_reset_done">Đã quay về backend mặc định</string>
-    <string name="settings_backend_url_reset_cleared">Đã quay về backend mặc định. Dữ liệu đăng nhập, hồ sơ, phiên và cache trên máy đã được xóa; vui lòng đăng nhập lại.</string>
+    <string name="settings_backend_url_reset_cleared">Backend URL đã thay đổi. Phiên đăng nhập, hồ sơ, thiết bị và dữ liệu tài khoản cục bộ cũ đã được xoá để tránh dùng nhầm dữ liệu giữa các môi trường. Vui lòng đăng nhập lại.</string>
+    <string name="settings_backend_url_changed_title">Backend URL đã thay đổi</string>
     <string name="settings_backend_url_invalid">Backend URL không hợp lệ</string>
-    <string name="settings_notifications">Thông báo</string>
-    <string name="settings_notifications_desc">Nhận nhắc nhở kỳ thi, kết quả và phản hồi khiếu nại</string>
-    <string name="settings_notifications_enabled">Đã bật thông báo</string>
-    <string name="settings_notifications_disabled">Đã tắt thông báo</string>
+    <string name="settings_notifications">Thông báo chung</string>
+    <string name="settings_notifications_desc">Tắt để không nhận bất kỳ thông báo nào; bật để nhận lại tất cả thông báo</string>
+    <string name="settings_notifications_enabled">Đã bật tất cả thông báo</string>
+    <string name="settings_notifications_disabled">Đã tắt tất cả thông báo</string>
     <string name="settings_change_password">Đổi mật khẩu</string>
     <string name="settings_change_password_desc">Cập nhật mật khẩu đăng nhập</string>
     <string name="settings_current_password_hint">Mật khẩu hiện tại</string>

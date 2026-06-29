@@ -18,6 +18,7 @@ import com.examhub.student.util.extension.applySystemWindowInsets
 import com.examhub.student.util.extension.collectOnStarted
 import com.examhub.student.util.extension.showShimmer
 import com.examhub.student.util.extension.replaceTechnicalLabels
+import com.examhub.student.util.helper.UploadUrlResolver
 import kotlinx.coroutines.launch
 import org.koin.android.ext.android.inject
 import org.koin.androidx.viewmodel.ext.android.viewModel
@@ -167,7 +168,7 @@ class DashboardFragment : Fragment() {
             ?: getString(R.string.dashboard_title_student)
         binding.tvStudentInitials.text = initials(displayName)
 
-        val avatarUrl = profile.avatarUrl?.takeIf { it.isNotBlank() }?.let(::resolveAvatarUrl)
+        val avatarUrl = UploadUrlResolver.resolveUploadUrl(profile.avatarUrl, backendUrlManager.currentBaseUrl())
         if (avatarUrl == null) {
             binding.ivStudentAvatar.visibility = View.GONE
             binding.tvStudentInitials.visibility = View.VISIBLE
@@ -184,13 +185,6 @@ class DashboardFragment : Fragment() {
             .circleCrop()
             .error(R.drawable.bg_avatar)
             .into(binding.ivStudentAvatar)
-    }
-
-    private fun resolveAvatarUrl(url: String): String {
-        if (url.startsWith("http://") || url.startsWith("https://")) return url
-        val apiBase = backendUrlManager.currentBaseUrl().trimEnd('/')
-        val origin = apiBase.substringBefore("/api/v1")
-        return origin + if (url.startsWith("/")) url else "/$url"
     }
 
     private fun initials(name: String): String {

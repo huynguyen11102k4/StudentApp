@@ -160,6 +160,59 @@ class OfflineCacheManager(
         }
     }
 
+    fun saveNotificationSnapshotPage(
+        notifications: List<AppNotification>,
+        page: Int,
+        total: Int
+    ) {
+        synchronized(mutationLock) {
+            dbCall {
+                database.runInTransaction {
+                    val dismissed = dismissedNotificationIdsInDao().toSet()
+                    val visibleNotifications = notifications.filterNot { it.id in dismissed }
+                    val previousIds: List<String> = if (page == 1) {
+                        emptyList()
+                    } else {
+                        parseJson(dao.getMetadata(KEY_NOTIFICATION_SNAPSHOT_IDS), emptyList())
+                    }
+                    val snapshotIds = (previousIds + notifications.map { it.id })
+                        .map(String::trim)
+                        .filter(String::isNotBlank)
+                        .distinct()
+
+                    if (page == 1 && total == 0) {
+                        dao.deleteJsonNamespace(NAMESPACE_NOTIFICATIONS)
+                        saveMetadataInDao(KEY_NOTIFICATION_SNAPSHOT_IDS, "[]")
+                        saveMetadataInDao(KEY_NOTIFICATION_SNAPSHOT_TOTAL, "0")
+                        return@runInTransaction
+                    }
+
+                    visibleNotifications.forEachIndexed { index, item ->
+                        dao.upsertJson(
+                            jsonEntity(
+                                NAMESPACE_NOTIFICATIONS,
+                                item.id,
+                                gson.toJson(item),
+                                (((page - 1).coerceAtLeast(0)) * NOTIFICATION_PAGE_ORDER_WINDOW + index).toLong()
+                            )
+                        )
+                    }
+
+                    saveMetadataInDao(KEY_NOTIFICATION_SNAPSHOT_IDS, gson.toJson(snapshotIds))
+                    saveMetadataInDao(KEY_NOTIFICATION_SNAPSHOT_TOTAL, total.toString())
+
+                    if (total <= snapshotIds.size) {
+                        if (snapshotIds.isEmpty()) {
+                            dao.deleteJsonNamespace(NAMESPACE_NOTIFICATIONS)
+                        } else {
+                            dao.deleteJsonNotIn(NAMESPACE_NOTIFICATIONS, snapshotIds)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     fun getCachedNotifications(): List<AppNotification> {
         val dismissed = getDismissedNotificationIds().toSet()
         return dbCall {
@@ -184,9 +237,7 @@ class OfflineCacheManager(
     }
 
     fun getDismissedNotificationIds(): List<String> = dbCall {
-        dao.getMetadata(KEY_DISMISSED_NOTIFICATION_IDS)?.let {
-            parseJson(it, emptyList())
-        } ?: emptyList()
+        dismissedNotificationIdsInDao()
     }
 
     fun saveStudentIdentity(user: UserResponse) {
@@ -331,6 +382,11 @@ class OfflineCacheManager(
         dao.upsertMetadata(CacheMetadataEntity(key, value, now()))
     }
 
+    private fun dismissedNotificationIdsInDao(): List<String> =
+        dao.getMetadata(KEY_DISMISSED_NOTIFICATION_IDS)?.let {
+            parseJson(it, emptyList())
+        } ?: emptyList()
+
     private inline fun <reified T> readJsonNamespace(namespace: String): List<T> =
         dao.getJsonNamespace(namespace).mapNotNull { parseJson<T>(it.json) }
 
@@ -374,8 +430,11 @@ class OfflineCacheManager(
         const val NAMESPACE_NOTIFICATIONS = "notifications"
         const val NAMESPACE_AUTH_CACHE = "auth_cache"
         const val KEY_DISMISSED_NOTIFICATION_IDS = "dismissed_notification_ids"
+        const val KEY_NOTIFICATION_SNAPSHOT_IDS = "notification_snapshot_ids"
+        const val KEY_NOTIFICATION_SNAPSHOT_TOTAL = "notification_snapshot_total"
         const val KEY_LEGACY_IMPORT_COMPLETE = "legacy_offline_cache_import_complete"
         const val OFFLINE_PERMIT_METADATA_PREFIX = "offline_permit:"
+        const val NOTIFICATION_PAGE_ORDER_WINDOW = 10_000
 
         const val LEGACY_OFFLINE_IDS = "offline_exam_ids"
         const val LEGACY_EXAM_BASICS = "exam_basics"

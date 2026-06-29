@@ -106,10 +106,10 @@
     <string name="settings_data_group">Data</string>
     <string name="settings_storage">Data &amp; Storage</string>
     <string name="settings_storage_desc">Manage local storage and cache</string>
-    <string name="settings_notifications">Notifications</string>
-    <string name="settings_notifications_desc">Receive exam reminders, results, and appeal updates</string>
-    <string name="settings_notifications_enabled">Notifications enabled</string>
-    <string name="settings_notifications_disabled">Notifications disabled</string>
+    <string name="settings_notifications">All notifications</string>
+    <string name="settings_notifications_desc">Turn off to receive no notifications; turn on to receive all notifications again</string>
+    <string name="settings_notifications_enabled">All notifications enabled</string>
+    <string name="settings_notifications_disabled">All notifications disabled</string>
     <string name="settings_other_group">Other</string>
     <string name="settings_help">Help</string>
     <string name="settings_help_desc">Guides and contact</string>
@@ -127,10 +127,11 @@
     <string name="settings_backend_url_hint">http://192.168.0.196:3001/api/v1/</string>
     <string name="settings_backend_url_reset">Default</string>
     <string name="settings_backend_url_saved">Backend URL updated</string>
-    <string name="settings_backend_url_saved_cleared">Backend URL updated. Local login, profile, session, and cache data were cleared; please sign in again.</string>
+    <string name="settings_backend_url_saved_cleared">Backend URL changed. The old login session, profile, device, and local account data were cleared to avoid mixing data between environments. Please sign in again.</string>
     <string name="settings_backend_url_unchanged">Already using this backend URL</string>
     <string name="settings_backend_url_reset_done">Backend reset to default</string>
-    <string name="settings_backend_url_reset_cleared">Backend reset to default. Local login, profile, session, and cache data were cleared; please sign in again.</string>
+    <string name="settings_backend_url_reset_cleared">Backend URL changed. The old login session, profile, device, and local account data were cleared to avoid mixing data between environments. Please sign in again.</string>
+    <string name="settings_backend_url_changed_title">Backend URL changed</string>
     <string name="settings_backend_url_invalid">Invalid backend URL</string>
     <string name="settings_change_password">Change password</string>
     <string name="settings_change_password_desc">Update your login password</string>
@@ -263,7 +264,7 @@
     <string name="auth_error_google_account_mismatch">Sign in with the Google account that was linked previously.</string>
     <string name="auth_error_account_inactive">This student account has not been activated.</string>
     <string name="auth_error_invalid_credentials">The email or password is incorrect.</string>
-    <string name="auth_error_google_not_linked">This account is not linked to Google. Sign in with your password, then link Google from your profile.</string>
+    <string name="auth_error_google_not_linked">This account is not linked to Google. Sign in with your password, then link Google again in Settings.</string>
     <string name="auth_error_network">Unable to reach the server. Check your connection and try again.</string>
     <string name="register_title">Create an account</string>
     <string name="register_subtitle">Create a student account to join classes and take exams</string>
@@ -284,6 +285,7 @@
     <string name="register_validation_email_required">Enter your email address</string>
     <string name="register_validation_password_short">Password must contain at least 6 characters</string>
     <string name="register_validation_password_mismatch">Passwords do not match</string>
+    <string name="register_validation_student_code_digits">Student code can contain digits only</string>
     <string name="register_success">Account created</string>
     <string name="register_success_login">Account created. Please sign in.</string>
     <string name="register_failed">Unable to create account</string>

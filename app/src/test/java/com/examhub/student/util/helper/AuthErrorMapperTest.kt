@@ -16,6 +16,20 @@ class AuthErrorMapperTest {
     }
 
     @Test
+    fun backendGoogleNotLinkedCodeWinsOverNotFoundStatus() {
+        assertEquals(
+            GoogleLoginFailure.ACCOUNT_NOT_LINKED,
+            AuthErrorMapper.googleLoginFailure(
+                ApiException(
+                    "GOOGLE_ACCOUNT_NOT_LINKED",
+                    "Tài khoản chưa liên kết Google, vui lòng đăng nhập bằng mật khẩu rồi liên kết lại trong Cài đặt.",
+                    404
+                )
+            )
+        )
+    }
+
+    @Test
     fun linkGoogleRequiredDoesNotNavigateToRegistration() {
         assertEquals(
             GoogleLoginFailure.ACCOUNT_NOT_LINKED,

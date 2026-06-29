@@ -24,6 +24,7 @@ import com.examhub.student.service.ThemePreferenceManager
 import com.examhub.student.util.extension.applySystemWindowInsets
 import com.examhub.student.util.extension.collectOnStarted
 import com.examhub.student.util.extension.replaceTechnicalLabels
+import com.examhub.student.util.helper.UploadUrlResolver
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
@@ -151,6 +152,11 @@ class SettingsFragment : Fragment() {
                 }
             }
             launch {
+                viewModel.backendChangedMessage.collect { message ->
+                    showBackendChangedDialog(message)
+                }
+            }
+            launch {
                 viewModel.isLoading.collect { loading ->
                     binding.btnLogout.isEnabled = !loading
                     binding.itemChangePassword.isEnabled = !loading
@@ -158,6 +164,17 @@ class SettingsFragment : Fragment() {
             }
         }
         viewModel.loadSettings()
+    }
+
+    private fun showBackendChangedDialog(message: String) {
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.settings_backend_url_changed_title)
+            .setMessage(message.replaceTechnicalLabels())
+            .setPositiveButton(R.string.common_confirm) { _, _ ->
+                findNavController().navigate(R.id.action_settings_to_login)
+            }
+            .setCancelable(false)
+            .show()
     }
 
     private fun showLanguageDialog() {
@@ -314,7 +331,7 @@ class SettingsFragment : Fragment() {
     }
 
     private fun bindAvatar(avatarUrl: String?) {
-        val resolvedUrl = avatarUrl?.takeIf { it.isNotBlank() }?.let(::resolveAvatarUrl)
+        val resolvedUrl = UploadUrlResolver.resolveUploadUrl(avatarUrl, viewModel.backendBaseUrl.value)
         if (resolvedUrl == null) {
             binding.ivProfileAvatar.visibility = View.GONE
             binding.tvProfileInitials.visibility = View.VISIBLE
@@ -331,13 +348,6 @@ class SettingsFragment : Fragment() {
             .centerCrop()
             .error(R.drawable.bg_avatar)
             .into(binding.ivProfileAvatar)
-    }
-
-    private fun resolveAvatarUrl(url: String): String {
-        if (url.startsWith("http://") || url.startsWith("https://")) return url
-        val apiBase = viewModel.backendBaseUrl.value.trimEnd('/')
-        val origin = apiBase.substringBefore("/api/v1")
-        return origin + if (url.startsWith("/")) url else "/$url"
     }
 
     private fun initials(name: String): String {

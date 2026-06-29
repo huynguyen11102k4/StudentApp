@@ -43,9 +43,18 @@ class NotificationsViewModel(
                         unreadOnly = if (selected == NotificationFilter.UNREAD) true else null
                     ).requirePage()
                     val items = response.data.map(::toUiModel)
-                    offlineCacheManager.saveNotifications(items)
+                    val total = response.meta?.total ?: items.size
+                    if (selected == NotificationFilter.UNREAD) {
+                        offlineCacheManager.saveNotifications(items)
+                    } else {
+                        offlineCacheManager.saveNotificationSnapshotPage(
+                            notifications = items,
+                            page = response.meta?.page ?: page,
+                            total = total
+                        )
+                    }
                     _unreadCount.value = response.meta?.unreadCount ?: _unreadCount.value
-                    PageChunk(items, response.meta?.page ?: page, response.meta?.limit ?: limit, response.meta?.total ?: items.size)
+                    PageChunk(items, response.meta?.page ?: page, response.meta?.limit ?: limit, total)
                 }
             }
         ).flow.map { pagingData ->

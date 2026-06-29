@@ -15,6 +15,8 @@ import com.examhub.student.data.model.Exam
 import com.examhub.student.data.model.SchoolClass
 import com.examhub.student.model.response.profile.StudentProfileResponse
 import com.examhub.student.model.response.profile.UserResponse
+import com.examhub.student.security.EncryptedSubmissionFileStore
+import com.examhub.student.security.KeystoreCrypto
 import com.google.gson.Gson
 import androidx.sqlite.db.SupportSQLiteDatabase
 import androidx.sqlite.db.SupportSQLiteOpenHelper
@@ -354,6 +356,36 @@ class OfflineCacheManagerRoomTest {
     }
 
     @Test
+    fun backendSwitchCleanupRemovesQueuedSubmissionsAndServerBoundState() = runBlocking {
+        cache.saveExamBasics(listOf(exam()))
+        cache.saveNotifications(listOf(notification()))
+        cache.saveTemplate(EXAM_ID, """{"template":true}""")
+        database.studentCacheDao().upsertMetadata(
+            CacheMetadataEntity("offline_permit:session-1", "encrypted-permit", 1)
+        )
+        database.queuedSubmissionDao().insert(pendingSubmission("pending-backend"))
+
+        val crypto = KeystoreCrypto()
+        val tokenManager = TokenManager(context, crypto, database)
+        val backendUrlManager = BackendUrlManager(
+            context = context,
+            tokenManager = tokenManager,
+            offlineCacheManager = cache,
+            queuedSubmissionDao = database.queuedSubmissionDao(),
+            submissionFileStore = EncryptedSubmissionFileStore(context, crypto)
+        )
+
+        val result = backendUrlManager.saveOverride("http://127.0.0.1:3999")
+
+        assertEquals(BackendUrlUpdateResult.Changed, result)
+        assertTrue(cache.getCachedExamBasics().isEmpty())
+        assertTrue(cache.getCachedNotifications().isEmpty())
+        assertFalse(cache.isOfflineReady(EXAM_ID))
+        assertNull(database.studentCacheDao().getMetadata("offline_permit:session-1"))
+        assertNull(database.queuedSubmissionDao().get("pending-backend"))
+    }
+
+    @Test
     fun replacingClassBasicsDropsDeletedClassesAndKeepsOfflineMetadata() {
         cache.saveClassBasics(
             listOf(
@@ -404,6 +436,50 @@ class OfflineCacheManagerRoomTest {
             setOf("notification-1", "notification-2"),
             cache.getDismissedNotificationIds().toSet()
         )
+    }
+
+    @Test
+    fun notificationSnapshotDropsServerDeletedNotificationsWhenAllPagesLoaded() {
+        cache.saveNotifications(
+            listOf(
+                notification("notification-1", isRead = false),
+                notification("notification-2", isRead = true),
+                notification("notification-stale", isRead = false)
+            )
+        )
+
+        cache.saveNotificationSnapshotPage(
+            notifications = listOf(notification("notification-1", isRead = true)),
+            page = 1,
+            total = 2
+        )
+        assertEquals(
+            setOf("notification-1", "notification-2", "notification-stale"),
+            cache.getCachedNotifications().map { it.id }.toSet()
+        )
+
+        cache.saveNotificationSnapshotPage(
+            notifications = listOf(notification("notification-2", isRead = true)),
+            page = 2,
+            total = 2
+        )
+
+        assertEquals(
+            listOf("notification-1", "notification-2"),
+            cache.getCachedNotifications().map { it.id }
+        )
+        assertTrue(cache.getCachedNotifications().all { it.isRead })
+    }
+
+    @Test
+    fun emptyNotificationSnapshotClearsCachedNotificationsButKeepsDismissedIds() {
+        cache.saveNotifications(listOf(notification("notification-1")))
+        cache.dismissNotifications(listOf("notification-dismissed"))
+
+        cache.saveNotificationSnapshotPage(emptyList(), page = 1, total = 0)
+
+        assertTrue(cache.getCachedNotifications().isEmpty())
+        assertEquals(listOf("notification-dismissed"), cache.getDismissedNotificationIds())
     }
 
     private fun pendingSubmission(id: String) = QueuedSubmissionEntity(

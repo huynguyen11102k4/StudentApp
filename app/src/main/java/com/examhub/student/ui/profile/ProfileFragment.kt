@@ -31,6 +31,7 @@ import com.examhub.student.util.extension.applySystemWindowInsets
 import com.examhub.student.util.extension.collectOnStarted
 import com.examhub.student.util.extension.replaceTechnicalLabels
 import com.examhub.student.util.extension.showShimmer
+import com.examhub.student.util.helper.UploadUrlResolver
 import android.text.Editable
 import android.text.TextWatcher
 import kotlinx.coroutines.launch
@@ -335,7 +336,7 @@ class ProfileFragment : Fragment() {
     }
 
     private fun bindAvatar(avatarUrl: String?) {
-        val resolvedUrl = avatarUrl?.takeIf { it.isNotBlank() }?.let(::resolveAvatarUrl)
+        val resolvedUrl = UploadUrlResolver.resolveUploadUrl(avatarUrl, backendUrlManager.currentBaseUrl())
         if (resolvedUrl == null) {
             binding.ivProfileAvatar.visibility = View.GONE
             binding.tvProfileInitials.visibility = View.VISIBLE
@@ -362,13 +363,6 @@ class ProfileFragment : Fragment() {
             .centerCrop()
             .error(R.drawable.bg_avatar)
             .into(binding.ivProfileAvatar)
-    }
-
-    private fun resolveAvatarUrl(url: String): String {
-        if (url.startsWith("http://") || url.startsWith("https://")) return url
-        val apiBase = backendUrlManager.currentBaseUrl().trimEnd('/')
-        val origin = apiBase.substringBefore("/api/v1")
-        return origin + if (url.startsWith("/")) url else "/$url"
     }
 
     private fun showAvatarSourceDialog() {

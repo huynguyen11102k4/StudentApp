@@ -491,11 +491,6 @@
                             android:text="@string/settings_notifications"
                             style="@style/Text_Body_Large" />
 
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="@string/settings_notifications_desc"
-                            style="@style/Text_Body_Small" />
                     </LinearLayout>
 
                     <com.google.android.material.materialswitch.MaterialSwitch
@@ -503,72 +498,6 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:checked="true" />
-                </LinearLayout>
-            </LinearLayout>
-
-            <!-- Group 3: Other -->
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="@dimen/spacing_24"
-                android:layout_marginTop="@dimen/spacing_24"
-                android:layout_marginBottom="@dimen/spacing_12"
-                android:text="@string/settings_other_group"
-                style="@style/Text_Title_Small" />
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:background="@drawable/bg_student_login_card"
-                android:elevation="@dimen/elevation_level2"
-                android:paddingVertical="@dimen/spacing_4"
-                android:layout_marginHorizontal="@dimen/spacing_16">
-
-                <LinearLayout
-                    android:id="@+id/itemHelp"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal"
-                    android:padding="@dimen/spacing_16"
-                    android:background="?android:attr/selectableItemBackground">
-
-                    <ImageView
-                        android:layout_width="@dimen/avatar_size_medium"
-                        android:layout_height="@dimen/avatar_size_medium"
-                        android:background="@drawable/bg_icon_container_tertiary"
-                        android:padding="@dimen/spacing_8"
-                        android:src="@drawable/ic_notification"
-                        app:tint="@color/primary" />
-
-                    <LinearLayout
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="@dimen/spacing_16"
-                        android:layout_weight="1"
-                        android:orientation="vertical">
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="@string/settings_help"
-                            style="@style/Text_Body_Large" />
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="@string/settings_help_desc"
-                            style="@style/Text_Body_Small" />
-                    </LinearLayout>
-
-                    <ImageView
-                        android:layout_width="@dimen/icon_size_large"
-                        android:layout_height="@dimen/icon_size_large"
-                        android:src="@drawable/ic_chevron_right"
-                        app:tint="@color/text_secondary" />
                 </LinearLayout>
             </LinearLayout>
 

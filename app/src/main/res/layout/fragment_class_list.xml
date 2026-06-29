@@ -132,10 +132,11 @@
         android:layout_margin="@dimen/fab_margin"
         android:contentDescription="@string/student_join_class_action"
         android:text="@string/student_join_class_action"
+        android:textColor="@color/on_primary"
         app:backgroundTint="@color/primary"
         app:icon="@drawable/ic_plus"
         app:iconTint="@color/on_primary"
-        app:tint="@color/on_primary" />
+        app:tint="@color/on_primary"/>
 
     <com.google.android.material.progressindicator.CircularProgressIndicator
         android:id="@+id/progressBar"

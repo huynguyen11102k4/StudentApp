@@ -26,4 +26,9 @@ class EncryptedSubmissionFileStore(
     fun deleteSubmission(clientSubmissionId: String) {
         File(root, clientSubmissionId).deleteRecursively()
     }
+
+    fun deleteAll() {
+        root.deleteRecursively()
+        root.mkdirs()
+    }
 }

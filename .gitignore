@@ -19,3 +19,5 @@ local.properties
 /opencv/build/intermediates/javac/debug/compileDebugJavaWithJavac/classes/
 
 /docs
+
+*.drawio

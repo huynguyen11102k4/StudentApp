@@ -66,7 +66,7 @@ object NetworkModule {
         single { FcmTokenRegistrar(get(), get(), get(), androidContext()) }
         single { ETagCacheManager(androidContext(), get()) }
         single { OfflineCacheManager(androidContext(), get(), get()) }
-        single { BackendUrlManager(androidContext(), get(), get()) }
+        single { BackendUrlManager(androidContext(), get(), get(), get(), get()) }
         single { ActiveExamSessionStore(androidContext(), get(), get(), get()) }
         single { ViolationQueueManager(androidContext(), get(), get(), get()) }
         single { AuthInterceptor(get()) }

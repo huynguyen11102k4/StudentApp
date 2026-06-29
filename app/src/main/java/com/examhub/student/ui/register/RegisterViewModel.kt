@@ -83,6 +83,10 @@ class RegisterViewModel(
             _errorMessage.tryEmit(resources.getString(R.string.register_validation_password_mismatch))
             return
         }
+        if (trimmedStudentCode.isNotBlank() && !trimmedStudentCode.all(Char::isDigit)) {
+            _errorMessage.tryEmit(resources.getString(R.string.register_validation_student_code_digits))
+            return
+        }
 
         viewModelScope.launch {
             authRepository.registerStudent(

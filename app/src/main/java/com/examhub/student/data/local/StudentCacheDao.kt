@@ -54,6 +54,9 @@ interface StudentCacheDao {
     @Query("DELETE FROM json_cache WHERE namespace = :namespace AND recordKey IN (:recordKeys)")
     fun deleteJson(namespace: String, recordKeys: List<String>)
 
+    @Query("DELETE FROM json_cache WHERE namespace = :namespace AND recordKey NOT IN (:recordKeys)")
+    fun deleteJsonNotIn(namespace: String, recordKeys: List<String>)
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     fun upsertMetadata(entity: CacheMetadataEntity)
 

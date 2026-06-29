@@ -64,15 +64,16 @@ class ClassListViewModel(
                                     hasOfflineData = false
                                 )
                             }
+                            val total = response.meta?.total ?: items.size
                             offlineCacheManager.saveClassBasics(
                                 items,
-                                replaceExisting = page == 1 && query.isBlank()
+                                replaceExisting = page == 1 && query.isBlank() && total <= items.size
                             )
                             PageChunk(
                                 items,
                                 response.meta?.page ?: page,
                                 response.meta?.limit ?: limit,
-                                response.meta?.total ?: items.size
+                                total
                             )
                         }.getOrElse { error ->
                             if (error is CancellationException) throw error

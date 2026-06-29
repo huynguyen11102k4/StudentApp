@@ -110,7 +110,10 @@ class NotificationsFragment : Fragment() {
                 findNavController().navigate(R.id.resultDetailFragment, bundle)
             }
             is NotificationNavigationHelper.Destination.ExamDetail -> {
-                val bundle = Bundle().apply { putString("examId", destination.examId) }
+                val bundle = Bundle().apply {
+                    putString("examId", destination.examId)
+                    putBoolean("openedFromNotification", true)
+                }
                 findNavController().navigate(R.id.examDetailFragment, bundle)
             }
             NotificationNavigationHelper.Destination.AppealsList -> {

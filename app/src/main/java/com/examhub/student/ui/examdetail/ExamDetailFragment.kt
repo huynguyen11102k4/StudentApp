@@ -22,6 +22,7 @@ class ExamDetailFragment : Fragment() {
     private val binding get() = _binding!!
     private val viewModel: ExamDetailViewModel by viewModel()
     private val examId: String get() = arguments?.getString("examId").orEmpty()
+    private val openedFromNotification: Boolean get() = arguments?.getBoolean("openedFromNotification") == true
     private var hasExamContent = false
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
@@ -70,7 +71,7 @@ class ExamDetailFragment : Fragment() {
         }
 
         observeViewModel()
-        viewModel.loadExam(examId)
+        viewModel.loadExam(examId, openedFromNotification)
     }
 
     private fun observeViewModel() {
@@ -137,6 +138,7 @@ class ExamDetailFragment : Fragment() {
             launch {
                 viewModel.canViewResult.collect { canViewResult ->
                     binding.btnViewResult.visibility = if (canViewResult) View.VISIBLE else View.GONE
+                    updateButtonVisibilities(canViewResult = canViewResult)
                 }
             }
             launch {
@@ -197,16 +199,28 @@ class ExamDetailFragment : Fragment() {
                     }
                 }
             }
+            launch {
+                viewModel.openResult.collect { resultId ->
+                    findNavController().navigate(
+                        R.id.resultDetailFragment,
+                        Bundle().apply {
+                            putString("sheetId", resultId)
+                            putString("examStatus", viewModel.status.value)
+                        }
+                    )
+                }
+            }
         }
     }
 
     private fun updateButtonVisibilities(
         resultOnly: Boolean = viewModel.resultOnly.value,
         isOfflineReady: Boolean = viewModel.isOfflineReady.value,
-        isExamExpired: Boolean = viewModel.isExamExpired.value
+        isExamExpired: Boolean = viewModel.isExamExpired.value,
+        canViewResult: Boolean = viewModel.canViewResult.value
     ) {
-        val hideStartScanning = resultOnly || isExamExpired
-        val hideOfflineAlert = resultOnly || isOfflineReady || isExamExpired
+        val hideStartScanning = resultOnly || isExamExpired || canViewResult
+        val hideOfflineAlert = resultOnly || isOfflineReady || isExamExpired || canViewResult
 
         binding.btnStartScanning.visibility = if (hideStartScanning) View.GONE else View.VISIBLE
         binding.cardOfflineAlert.visibility = if (hideOfflineAlert) View.GONE else View.VISIBLE

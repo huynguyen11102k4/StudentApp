@@ -249,7 +249,10 @@ class MainActivity : AppCompatActivity() {
             is NotificationNavigationHelper.Destination.ExamDetail -> {
                 navController.navigate(
                     R.id.examDetailFragment,
-                    bundleOf("examId" to destination.examId),
+                    bundleOf(
+                        "examId" to destination.examId,
+                        "openedFromNotification" to true
+                    ),
                     navOptions { launchSingleTop = true }
                 )
             }

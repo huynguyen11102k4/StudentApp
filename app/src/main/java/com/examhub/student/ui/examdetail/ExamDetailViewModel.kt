@@ -101,6 +101,8 @@ class ExamDetailViewModel(
     val toastMessage: SharedFlow<String> = _toastMessage.asSharedFlow()
     private val _sessionStarted = MutableSharedFlow<ExamDetailSessionUiEvent>(extraBufferCapacity = 1)
     val sessionStarted: SharedFlow<ExamDetailSessionUiEvent> = _sessionStarted.asSharedFlow()
+    private val _openResult = MutableSharedFlow<String>(extraBufferCapacity = 1)
+    val openResult: SharedFlow<String> = _openResult.asSharedFlow()
 
     private var currentExamId: String = ""
     private var currentExamStatus: String = ""
@@ -108,9 +110,13 @@ class ExamDetailViewModel(
     private var serverCanStartSession: Boolean = false
     private var currentStartTime: String? = null
     private var currentEndTime: String? = null
+    private var autoOpenResultFromNotification = false
+    private var hasAutoOpenedResult = false
 
-    fun loadExam(examId: String) {
+    fun loadExam(examId: String, openedFromNotification: Boolean = false) {
         currentExamId = examId
+        autoOpenResultFromNotification = openedFromNotification
+        hasAutoOpenedResult = false
         _isOfflineReady.value = offlineCacheManager.isOfflineReady(examId)
         viewModelScope.launch {
             examRepository.getExamDetail(examId).collect { result ->
@@ -158,6 +164,7 @@ class ExamDetailViewModel(
         _progressText.value = context.getString(R.string.exam_detail_ready_to_submit)
         refreshExamWindowNotice()
         refreshCanStartExam()
+        maybeOpenResultFromNotification()
         _isExamExpired.value = currentExamStatus.equals("END", ignoreCase = true) ||
             (currentExamStatus.equals("ACTIVE", ignoreCase = true) && isAfterEndTime(currentEndTime))
         offlineCacheManager.saveExamClassCode(exam.id, exam.classInfo?.classCode)
@@ -397,6 +404,7 @@ class ExamDetailViewModel(
         _isOfflineReady.value = offlineCacheManager.isOfflineReady(exam.id)
         refreshExamWindowNotice()
         refreshCanStartExam()
+        maybeOpenResultFromNotification()
         _isExamExpired.value = currentExamStatus.equals("END", ignoreCase = true) ||
             (currentExamStatus.equals("ACTIVE", ignoreCase = true) && isAfterEndTime(currentEndTime))
     }
@@ -404,8 +412,19 @@ class ExamDetailViewModel(
     private fun refreshCanStartExam() {
         _canStartExam.value = currentGradingType.equals("STUDENT_SUBMISSION", ignoreCase = true) &&
             serverCanStartSession &&
+            !_canViewResult.value &&
+            _resultId.value.isBlank() &&
             _isOfflineReady.value &&
             isWithinExamWindow(currentStartTime, currentEndTime)
+    }
+
+    private fun maybeOpenResultFromNotification() {
+        val resultId = _resultId.value
+        if (!autoOpenResultFromNotification || hasAutoOpenedResult || resultId.isBlank() || !_canViewResult.value) {
+            return
+        }
+        hasAutoOpenedResult = true
+        _openResult.tryEmit(resultId)
     }
 
     private fun refreshExamWindowNotice() {

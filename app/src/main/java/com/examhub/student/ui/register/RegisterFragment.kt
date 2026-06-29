@@ -199,6 +199,7 @@ class RegisterFragment : Fragment() {
         listOf(
             binding.etFullName,
             binding.etEmail,
+            binding.etStudentCode,
             binding.etPassword,
             binding.etConfirmPassword
         ).forEach { editText ->
@@ -210,6 +211,7 @@ class RegisterFragment : Fragment() {
         val isGoogleRegistration = googleIdToken.isNotBlank()
         val fullName = binding.etFullName.text?.toString().orEmpty().trim()
         val email = binding.etEmail.text?.toString().orEmpty().trim()
+        val studentCode = binding.etStudentCode.text?.toString().orEmpty().trim()
         val password = binding.etPassword.text?.toString().orEmpty()
         val confirmPassword = binding.etConfirmPassword.text?.toString().orEmpty()
 
@@ -221,6 +223,10 @@ class RegisterFragment : Fragment() {
         if (email.isBlank() || !Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
             valid = false
             if (showErrors) binding.tilEmail.error = getString(R.string.login_validation_email_invalid)
+        }
+        if (studentCode.isNotBlank() && !studentCode.all(Char::isDigit)) {
+            valid = false
+            if (showErrors) binding.tilStudentCode.error = getString(R.string.register_validation_student_code_digits)
         }
         if (!isGoogleRegistration && password.length < 6) {
             valid = false
@@ -236,6 +242,7 @@ class RegisterFragment : Fragment() {
     private fun clearFieldErrors() {
         binding.tilFullName.error = null
         binding.tilEmail.error = null
+        binding.tilStudentCode.error = null
         binding.tilPassword.error = null
         binding.tilConfirmPassword.error = null
     }

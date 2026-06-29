@@ -5,9 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.examhub.student.R
 import com.examhub.student.data.model.Exam
-import com.examhub.student.data.model.SchoolClass
 import com.examhub.student.model.ApiResult
-import com.examhub.student.model.response.classroom.MobileClassResponse
 import com.examhub.student.model.response.exam.MobileExamSummaryResponse
 import com.examhub.student.model.response.profile.UserResponse
 import com.examhub.student.repository.AuthRepository
@@ -72,25 +70,6 @@ class DashboardViewModel(
                 if (result is ApiResult.Success) {
                     val classes = result.data.data
                     _classCount.value = result.data.meta?.total ?: classes.size
-                    offlineCacheManager.saveClassBasics(
-                        classes.map { cls ->
-                            val info = cls.classInfo
-                            val studentCount = cls.studentCount ?: info?.studentCount ?: 0
-                            SchoolClass(
-                                id = cls.classId.ifBlank { info?.id ?: cls.id },
-                                name = info?.className.orEmpty(),
-                                subject = info?.subject ?: listOf(info?.grade, info?.schoolYear)
-                                    .filterNotNull()
-                                    .filter { it.isNotBlank() }
-                                    .joinToString(" - "),
-                                classCode = cls.resolvedInternalClassCode(),
-                                joinCode = info?.joinCode.orEmpty(),
-                                studentCount = studentCount,
-                                hasOfflineData = false
-                            )
-                        },
-                        replaceExisting = true
-                    )
                 }
             }
         }
@@ -159,10 +138,6 @@ class DashboardViewModel(
 
     fun syncNow() {
         loadDashboard()
-    }
-
-    private fun com.examhub.student.model.response.classroom.MobileClassResponse.resolvedInternalClassCode(): String {
-        return classInfo?.classCode.orEmpty()
     }
 
     private suspend fun loadResultSummaries(): List<com.examhub.student.model.response.result.StudentResultSummaryResponse> {

@@ -117,6 +117,7 @@
         android:label="@string/exam_detail_title"
         tools:layout="@layout/fragment_exam_detail">
         <argument android:name="examId" app:argType="string" />
+        <argument android:name="openedFromNotification" app:argType="boolean" android:defaultValue="false" />
         <action android:id="@+id/action_exam_detail_to_camera_ar" app:destination="@id/cameraARFragment" />
         <action android:id="@+id/action_exam_detail_to_exam_start" app:destination="@id/examStartFragment" />
         <action android:id="@+id/action_exam_detail_to_appeals_list" app:destination="@id/appealsListFragment" />

@@ -2,7 +2,10 @@ package com.examhub.student.ui.forgotpassword
 
 import android.content.res.ColorStateList
 import android.os.Bundle
+import android.text.Editable
 import android.text.InputType
+import android.text.TextWatcher
+import android.view.KeyEvent
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -25,6 +28,7 @@ class ForgotPasswordFragment : Fragment() {
     private val binding get() = _binding!!
     private val viewModel: ForgotPasswordViewModel by viewModel()
     private val otpEditTexts = mutableListOf<EditText>()
+    private var editingOtp = false
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentForgotPasswordBinding.inflate(inflater, container, false)
@@ -40,7 +44,7 @@ class ForgotPasswordFragment : Fragment() {
     }
 
     private fun setupOTPFields() {
-        for (i in 0 until 6) {
+        repeat(6) { index ->
             val editText = EditText(requireContext()).apply {
                 inputType = InputType.TYPE_CLASS_NUMBER
                 textSize = 18f
@@ -52,11 +56,50 @@ class ForgotPasswordFragment : Fragment() {
                     marginEnd = dpToPx(8)
                 }
                 setBackgroundResource(R.drawable.bg_input_field)
+                setTextColor(requireContext().getColor(R.color.text_primary))
+                setHintTextColor(requireContext().getColor(R.color.text_hint))
                 maxLines = 1
+            }
+            editText.addTextChangedListener(object : TextWatcher {
+                override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
+                override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) = Unit
+
+                override fun afterTextChanged(s: Editable?) {
+                    if (editingOtp) return
+                    val digits = s?.filter(Char::isDigit)?.toString().orEmpty()
+                    editingOtp = true
+                    fillOtpDigits(index, digits)
+                    editingOtp = false
+                }
+            })
+            editText.setOnKeyListener { _, keyCode, event ->
+                if (keyCode == KeyEvent.KEYCODE_DEL &&
+                    event.action == KeyEvent.ACTION_DOWN &&
+                    editText.text.isNullOrEmpty() &&
+                    index > 0
+                ) {
+                    otpEditTexts[index - 1].requestFocus()
+                    otpEditTexts[index - 1].text?.clear()
+                    true
+                } else {
+                    false
+                }
             }
             binding.otpContainer.addView(editText)
             otpEditTexts.add(editText)
         }
+    }
+
+    private fun fillOtpDigits(startIndex: Int, digits: String) {
+        if (digits.isEmpty()) return
+        val chars = digits.take(otpEditTexts.size - startIndex)
+        chars.forEachIndexed { offset, char ->
+            val field = otpEditTexts[startIndex + offset]
+            field.setText(char.toString())
+            field.setSelection(field.text?.length ?: 0)
+        }
+        val nextIndex = (startIndex + chars.length).coerceAtMost(otpEditTexts.lastIndex)
+        otpEditTexts[nextIndex].requestFocus()
     }
 
     private fun setupClickListeners() {
@@ -138,5 +181,6 @@ class ForgotPasswordFragment : Fragment() {
         super.onDestroyView()
         viewModel.resetFlow()
         _binding = null
+        otpEditTexts.clear()
     }
 }
