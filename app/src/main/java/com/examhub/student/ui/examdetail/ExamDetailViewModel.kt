@@ -289,11 +289,27 @@ class ExamDetailViewModel(
         offlineCacheManager.saveTemplate(
             currentExamId,
             gson.toJson(
-                buildMap<String, Any?> {
-                    put("gridConfig", gridConfig)
-                    session.studentCodeType?.takeIf { it.isNotBlank() }?.let {
-                        put("student_code_type", it)
-                    }
+            buildMap<String, Any?> {
+                put("gridConfig", gridConfig)
+                session.studentIdentifierClassCode
+                    ?.takeIf { it.isNotBlank() }
+                    ?.let { put("class_code", it) }
+                    ?: session.examClassCode
+                        ?.takeIf { it.isNotBlank() }
+                        ?.let { put("class_code", it) }
+                session.studentIdentifierClassCode?.takeIf { it.isNotBlank() }?.let { classCode ->
+                    put(
+                        "student_identifier",
+                        mapOf(
+                            "mode" to session.studentCodeType,
+                            "code" to session.studentIdentifierCode,
+                            "class_code" to classCode
+                        )
+                    )
+                }
+                session.studentCodeType?.takeIf { it.isNotBlank() }?.let {
+                    put("student_code_type", it)
+                }
                 }
             )
         )
@@ -503,6 +519,9 @@ class ExamDetailViewModel(
         return buildMap {
             gridConfig?.let { put("gridConfig", it) }
             anchorPoints?.let { put("anchor_points", it) }
+            classCode?.takeIf { it.isNotBlank() }?.let { put("class_code", it) }
+            classInfo?.let { put("class", it) }
+            studentIdentifier?.let { put("student_identifier", it) }
             studentCodeType?.takeIf { it.isNotBlank() }?.let {
                 put("student_code_type", it)
             }

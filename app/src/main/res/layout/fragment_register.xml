@@ -114,6 +114,16 @@
                     android:paddingEnd="@dimen/spacing_16" />
             </com.google.android.material.textfield.TextInputLayout>
 
+            <TextView
+                android:id="@+id/tvStudentCodeOnceWarning"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/spacing_6"
+                android:lineSpacingExtra="2dp"
+                android:text="@string/register_student_code_once_warning"
+                android:textColor="@color/register_text_secondary"
+                android:textSize="12sp" />
+
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/tilDateOfBirth"
                 style="@style/Register.InputLayout"

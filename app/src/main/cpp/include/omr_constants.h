@@ -43,9 +43,9 @@ constexpr float ANSWER_NUMBER_COL_MAX   = 30.0f;
 constexpr float ANSWER_NUMBER_MAX_RATIO = 0.32f;
 
 // ─── READING THRESHOLDS ─────────────────────────────────────
-constexpr float DENSITY_THRESHOLD = 0.40f;
+constexpr float DENSITY_THRESHOLD = 0.35f;
 constexpr float DIFF_THRESHOLD    = 0.20f;  // Flag ambiguity
-constexpr float BUBBLE_READ_CORE_RATIO = 0.58f;  // Ignore printed ring / warp seams
+constexpr float BUBBLE_READ_CORE_RATIO = 0.65f;  // Ignore printed ring / warp seams
 constexpr int   BUBBLE_READ_MIN_CORE_RADIUS = 3;
 
 // ─── ADAPTIVE THRESHOLD ─────────────────────────────────────
@@ -54,7 +54,7 @@ constexpr int   BUBBLE_READ_MIN_CORE_RADIUS = 3;
 // bubble density reading. This handles uneven lighting better
 // than the fixed 128 grayscale cutoff.
 constexpr int   ADAPTIVE_BLOCK_SIZE = 31;    // Must be odd; larger → more stable in low-light
-constexpr float ADAPTIVE_C          = 8.0f;  // Subtracted from mean; higher → less sensitive
+constexpr float ADAPTIVE_C          = 5.0f;  // Subtracted from mean; higher → less sensitive
 
 // ─── PRE-MARKER PREPROCESSING ───────────────────────────────
 // Bilateral filter + CLAHE before marker detection.
@@ -97,6 +97,7 @@ constexpr float LAPLACIAN_GOOD     = 200.0f;  // Above this: scan quality, no pr
 constexpr float BRIGHTNESS_GOOD    = 150.0f;  // Above this: well-lit
 constexpr float LAPLACIAN_VERY_BLUR = 50.0f;  // Below this: very blurry, full preprocessing
 constexpr float BRIGHTNESS_VERY_DARK = 80.0f; // Below this: very dark, needs large adaptive block
+constexpr float BRIGHTNESS_VERY_BRIGHT = 175.0f; // Above this: glare/overexposure can wash out pencil marks
 constexpr int   ADAPTIVE_BLOCK_LARGE = 51;    // Larger block for low-quality images
 
 // ─── DEBUG IMAGE ────────────────────────────────────────────

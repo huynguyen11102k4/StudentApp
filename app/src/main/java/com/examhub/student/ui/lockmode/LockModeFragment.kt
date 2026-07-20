@@ -23,6 +23,7 @@ class LockModeFragment : Fragment() {
     private val binding get() = _binding!!
     private val viewModel: LockModeViewModel by viewModel()
     private var monitor: LockModeMonitor? = null
+    private var finishingExpiredSession = false
 
     private val examId: String get() = arguments?.getString("examId").orEmpty()
     private val sessionId: String get() = arguments?.getString("sessionId").orEmpty()
@@ -64,6 +65,9 @@ class LockModeFragment : Fragment() {
                 studentCodeMode = arguments?.getString("studentCodeMode").orEmpty()
             )
         )
+        if (viewModel.remainingSeconds.value <= 0 && viewModel.currentSessionId.value.isNotBlank()) {
+            binding.root.post { finishExpiredSession() }
+        }
 
         collectOnStarted {
             launch {
@@ -84,16 +88,24 @@ class LockModeFragment : Fragment() {
             }
             launch {
                 viewModel.blankSubmissionFinished.collect { submission ->
-                    navigateToSubmissionEnd(
-                        submission.response?.resultId,
-                        submission.response?.submissionId,
-                        submission.clientSubmissionId
-                    )
+                    if (finishingExpiredSession) {
+                        navigateHomeClearingExamFlow()
+                    } else {
+                        navigateToSubmissionEnd(
+                            submission.response?.resultId,
+                            submission.response?.submissionId,
+                            submission.clientSubmissionId
+                        )
+                    }
                 }
             }
             launch {
                 viewModel.blankSubmissionFrozen.collect { clientSubmissionId ->
-                    navigateToSubmissionEnd(null, null, clientSubmissionId)
+                    if (finishingExpiredSession) {
+                        navigateHomeClearingExamFlow()
+                    } else {
+                        navigateToSubmissionEnd(null, null, clientSubmissionId)
+                    }
                 }
             }
         }
@@ -146,6 +158,8 @@ class LockModeFragment : Fragment() {
     }
 
     private fun finishExpiredSession() {
+        if (finishingExpiredSession) return
+        finishingExpiredSession = true
         binding.btnOpenCamera.isEnabled = false
         viewModel.submitBlankOnTimeout()
         viewModel.stopSessionWork()
@@ -169,6 +183,23 @@ class LockModeFragment : Fragment() {
             },
             navOptions {
                 popUpTo(R.id.lockModeFragment) { inclusive = true }
+            }
+        )
+    }
+
+    private fun navigateHomeClearingExamFlow() {
+        if (_binding == null) return
+        (requireActivity() as? MainActivity)?.exitKioskMode()
+        val navController = findNavController()
+        if (navController.popBackStack(R.id.dashboardFragment, false)) return
+        navController.navigate(
+            R.id.dashboardFragment,
+            null,
+            navOptions {
+                launchSingleTop = true
+                popUpTo(R.id.nav_graph) {
+                    inclusive = false
+                }
             }
         )
     }

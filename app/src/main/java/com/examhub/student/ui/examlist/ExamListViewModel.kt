@@ -8,6 +8,9 @@ import androidx.paging.PagingData
 import androidx.paging.cachedIn
 import androidx.paging.filter
 import com.examhub.student.model.ApiResult
+import com.examhub.student.data.local.model.SubmissionSyncStatus
+import com.examhub.student.data.local.submission.QueuedSubmissionDao
+import com.examhub.student.data.local.submission.QueuedSubmissionEntity
 import com.examhub.student.data.model.Exam
 import com.examhub.student.repository.ExamRepository
 import com.examhub.student.repository.ResultsRepository
@@ -27,7 +30,8 @@ import kotlinx.coroutines.flow.first
 class ExamListViewModel(
     private val examRepository: ExamRepository,
     private val resultsRepository: ResultsRepository,
-    private val offlineCacheManager: OfflineCacheManager
+    private val offlineCacheManager: OfflineCacheManager,
+    private val queuedSubmissionDao: QueuedSubmissionDao
 ) : ViewModel() {
     private val search = MutableStateFlow("")
     private val filter = MutableStateFlow(ExamFilter.ALL)
@@ -51,9 +55,15 @@ class ExamListViewModel(
                             search = query.takeIf(String::isNotBlank)
                         ).requirePage()
                         val resultByExamId = loadResultByExamId()
+                        val localSubmissionByExamId = loadLocalSubmissionByExamId(
+                            response.data.map { it.id }
+                        )
                         val items = response.data.map { item ->
                             val resultSummary = resultByExamId[item.id]
+                            val localSubmission = localSubmissionByExamId[item.id]
                             val resultSheetId = item.resultId?.takeIf { it.isNotBlank() } ?: resultSummary?.id
+                                ?: localSubmission?.resultId?.takeIf { it.isNotBlank() }
+                            val hasLocalSubmission = localSubmission != null
                             offlineCacheManager.saveExamClassCode(item.id, item.classInfo?.classCode)
                             Exam(
                                 id = item.id,
@@ -68,14 +78,19 @@ class ExamListViewModel(
                                 isOfflineReady = offlineCacheManager.isOfflineReady(item.id),
                                 date = item.displayTime,
                                 resultSheetId = resultSheetId,
-                                hasSubmitted = !resultSheetId.isNullOrBlank() || item.hasSubmittedStatus(),
+                                hasSubmitted = hasLocalSubmission || !resultSheetId.isNullOrBlank() || item.hasSubmittedStatus(),
                                 gradingType = item.gradingType.orEmpty(),
-                                canStartSession = item.canStartSession == true && item.gradingType.isStudentSubmission(),
+                                canStartSession = item.canStartSession == true &&
+                                    item.gradingType.isStudentSubmission() &&
+                                    !hasLocalSubmission,
                                 canSubmit = item.canSubmit == true && item.gradingType.isStudentSubmission(),
                                 canViewResult = item.canViewResult == true &&
                                     !resultSheetId.isNullOrBlank() &&
-                                    resultSummary?.isPendingResult() != true,
-                                resultOnly = item.resultOnly == true || item.gradingType.isTeacherGrading()
+                                    resultSummary?.isPendingResult() != true &&
+                                    localSubmission?.isPendingOrFailed() != true,
+                                resultOnly = item.resultOnly == true || item.gradingType.isTeacherGrading(),
+                                localSubmissionId = localSubmission?.clientSubmissionId,
+                                localSubmissionStatus = localSubmission?.status
                             )
                         }
                         offlineCacheManager.saveExamBasics(items)
@@ -109,6 +124,13 @@ class ExamListViewModel(
         }
     }
 
+    private suspend fun loadLocalSubmissionByExamId(examIds: List<String>): Map<String, QueuedSubmissionEntity> {
+        if (examIds.isEmpty()) return emptyMap()
+        return queuedSubmissionDao.getByExamIdsAndStatuses(examIds, LOCAL_SUBMISSION_STATUSES)
+            .distinctBy { it.examId }
+            .associateBy { it.examId }
+    }
+
     private fun com.examhub.student.model.response.exam.MobileExamSummaryResponse.hasSubmittedStatus(): Boolean {
         val normalized = listOfNotNull(status, submissionStatus).joinToString(" ").uppercase()
         return attemptsUsed?.let { it > 0 } == true ||
@@ -126,6 +148,9 @@ class ExamListViewModel(
         return normalized.contains("PENDING") || normalized.contains("PROCESSING")
     }
 
+    private fun QueuedSubmissionEntity.isPendingOrFailed(): Boolean =
+        status != SubmissionSyncStatus.SYNCED.name
+
     private fun Exam.matches(value: ExamFilter): Boolean = when (value) {
         ExamFilter.ALL -> true
         ExamFilter.READY -> canStartSession && !hasSubmitted && !resultOnly
@@ -141,4 +166,15 @@ class ExamListViewModel(
         listOf("CLOSED", "END", "ENDED", "EXPIRED", "LOCKED").any { status.uppercase().contains(it) }
 
     enum class ExamFilter { ALL, READY, PROCESSING, CLOSED }
+
+    private companion object {
+        val LOCAL_SUBMISSION_STATUSES = listOf(
+            SubmissionSyncStatus.PENDING_SYNC.name,
+            SubmissionSyncStatus.UPLOADING_IMAGES.name,
+            SubmissionSyncStatus.SYNCING.name,
+            SubmissionSyncStatus.SYNCED.name,
+            SubmissionSyncStatus.FAILED_CAPTURE_AFTER_DEADLINE.name,
+            SubmissionSyncStatus.FAILED_TERMINAL.name
+        )
+    }
 }

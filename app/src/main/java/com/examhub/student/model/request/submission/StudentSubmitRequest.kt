@@ -7,6 +7,8 @@ data class StudentSubmitRequest(
     val clientSubmissionId: String,
     @SerializedName("offline_permit")
     val offlinePermit: String? = null,
+    @SerializedName("payload_sha256")
+    val payloadSha256: String? = null,
     @SerializedName("raw_image_url")
     val rawImageUrl: String? = null,
     @SerializedName("dewarped_image_url")

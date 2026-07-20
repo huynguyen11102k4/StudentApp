@@ -11,7 +11,6 @@ import com.examhub.student.model.ApiResult
 import com.examhub.student.model.request.lock.LockHeartbeatRequest
 import com.examhub.student.model.request.lock.LockViolationRequest
 import com.examhub.student.model.request.submission.IdZoneResultRequest
-import com.examhub.student.model.request.submission.StudentAnswerRequest
 import com.examhub.student.model.request.submission.StudentSubmitRequest
 import com.examhub.student.omr.OmrProcessor
 import com.examhub.student.omr.OmrReviewStore
@@ -100,6 +99,16 @@ class CameraARViewModel(
         currentSessionId = sessionId
         stopped = false
         startHeartbeatIfNeeded()
+    }
+
+    fun currentRemainingSeconds(fallbackInitial: Int, fallbackStartedAt: Long): Int {
+        activeSessionStore.getIncludingExpired(currentExamId)
+            ?.takeIf { currentSessionId.isBlank() || it.sessionId == currentSessionId }
+            ?.currentRemainingSeconds()
+            ?.let { return it }
+        if (fallbackStartedAt <= 0L) return fallbackInitial.coerceAtLeast(0)
+        val elapsed = ((System.currentTimeMillis() - fallbackStartedAt) / 1_000L).toInt()
+        return (fallbackInitial - elapsed).coerceAtLeast(0)
     }
 
     fun onFlashModeUpdated(mode: String) {
@@ -244,7 +253,9 @@ class CameraARViewModel(
                         appInForeground = true
                     )
                 ).collect { result ->
-                    if (result is ApiResult.Error) {
+                    if (result is ApiResult.Success) {
+                        saveCurrentSessionRemaining(result.data.remainingSeconds)
+                    } else if (result is ApiResult.Error) {
                         if (result.exception.isTerminalSessionStatusError()) {
                             stopSessionWork()
                             return@collect
@@ -254,6 +265,17 @@ class CameraARViewModel(
                 delay(30_000)
             }
         }
+    }
+
+    private fun saveCurrentSessionRemaining(remainingSeconds: Int) {
+        val active = activeSessionStore.getIncludingExpired(currentExamId) ?: return
+        if (active.sessionId != currentSessionId) return
+        activeSessionStore.save(
+            active.copy(
+                remainingSeconds = remainingSeconds,
+                savedAtMillis = System.currentTimeMillis()
+            )
+        )
     }
 
     fun stopSessionWork() {
@@ -285,9 +307,7 @@ class CameraARViewModel(
                         idOk = false,
                         idError = "time_expired_no_scan"
                     ),
-                    studentAnswers = (1..questionCount.coerceAtLeast(0)).map { questionNo ->
-                        StudentAnswerRequest(questionNumber = questionNo, answer = null)
-                    },
+                    studentAnswers = emptyList(),
                     capturedAt = capturedAt,
                     imageQualityScore = 0,
                     qualityFeedback = mapOf(

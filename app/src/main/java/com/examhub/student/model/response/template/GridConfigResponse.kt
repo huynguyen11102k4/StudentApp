@@ -4,6 +4,8 @@ import com.google.gson.JsonElement
 import com.google.gson.annotations.SerializedName
 
 data class GridConfigResponse(
+    @SerializedName("class_code")
+    val classCode: String? = null,
     @SerializedName(value = "fixed_zones", alternate = ["fixedZones"])
     val fixedZones: JsonElement? = null,
     @SerializedName(value = "id_zones", alternate = ["idZones"])

@@ -55,6 +55,7 @@ class ClassDetailFragment : Fragment() {
         collectOnStarted {
             launch { viewModel.classDetail.collect { it?.let(::bindClass) } }
             launch { viewModel.classExams.collect(::bindClassExams) }
+            launch { viewModel.classExamCount.collect { binding.tvExamCount.text = it.toString() } }
             launch { viewModel.isLoading.collect { binding.progressBar.visibility = if (it) View.VISIBLE else View.GONE } }
             launch { viewModel.message.collect { Snackbar.make(binding.root, it.replaceTechnicalLabels(), Snackbar.LENGTH_LONG).show() } }
             launch {
@@ -87,7 +88,6 @@ class ClassDetailFragment : Fragment() {
             getString(R.string.common_not_updated)
         }
         binding.tvStudentCount.text = studentCount(item).toString()
-        binding.tvExamCount.text = examCount(item).toString()
         val leaveRequested = item.status == "LEAVE_REQUESTED"
         binding.tvLeaveRequestedStatus.visibility = if (leaveRequested) View.VISIBLE else View.GONE
         binding.btnRequestLeave.isEnabled = !leaveRequested
@@ -147,15 +147,6 @@ class ClassDetailFragment : Fragment() {
             ?: info?.count?.studentClassesCamel
             ?: item.count?.studentClasses
             ?: item.count?.studentClassesCamel
-            ?: 0
-    }
-
-    private fun examCount(item: MobileClassResponse): Int {
-        val info = item.classInfo
-        return info?.examCount
-            ?: item.examCount
-            ?: info?.count?.exams
-            ?: item.count?.exams
             ?: 0
     }
 

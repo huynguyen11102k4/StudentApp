@@ -19,6 +19,8 @@ namespace omr {
 
 namespace {
 
+constexpr double TPS_STABLE_SMOOTHNESS = 0.80;
+
 const char* dewarpMethodName(DewarpMethod method) {
     switch (method) {
         case DewarpMethod::PERSPECTIVE: return "PERSPECTIVE";
@@ -27,6 +29,22 @@ const char* dewarpMethodName(DewarpMethod method) {
         case DewarpMethod::NONE:
         default: return "NONE";
     }
+}
+
+const char* euclideanCaseName(float maxError) {
+    if (maxError <= DEWARP_GOOD_PX) {
+        return "EUCLID_LE_15";
+    }
+    if (maxError < DEWARP_MODERATE_PX) {
+        return "EUCLID_15_TO_25";
+    }
+    return "EUCLID_GE_25";
+}
+
+bool idZoneRequiresStudentId(const IdZoneConfig& idZone) {
+    return std::any_of(idZone.items.begin(), idZone.items.end(), [](const IdZoneItem& item) {
+        return item.enabled && item.type == "student_id" && item.num_digits > 0;
+    });
 }
 
 bool answerKeyContainsMultipleCorrectAnswers(const std::map<int, std::string>& answerKey) {
@@ -471,13 +489,7 @@ OmrResult OmrProcessor::processWithConfig(
         return candidate;
     };
 
-    result.id_result = readIdCandidate(idReadGray, warpedBinary_);
-    LOGI("OMR_ID selected: SHARED_MAIN_WARP quality=%d strongDewarp=%d",
-         idReadQualityScore(result.id_result), strongDewarpUsed);
-
-    if (geometryDistortedForRead && !idZone.items.empty()) {
-        LOGI("OMR_ID geometry mode: shared main warp first, then one local ID-zone pass");
-
+    auto tryLocalIdZoneRead = [&](const char* reason, bool requireReadableStudent) {
         MarkerDetector idMarkerDetector;
         std::vector<int> usedIdMarkerIds;
         cv::Mat localIdWarped = idMarkerDetector.dewarpLocalRegion(
@@ -488,51 +500,107 @@ OmrResult OmrProcessor::processWithConfig(
             usedIdMarkerIds
         );
 
-        if (!localIdWarped.empty()) {
-            cv::Mat localIdGray;
-            if (localIdWarped.channels() >= 3) {
-                cv::cvtColor(localIdWarped, localIdGray, cv::COLOR_BGR2GRAY);
-            } else {
-                localIdGray = localIdWarped;
-            }
-
-            if (options_.preprocess_post_warp) {
-                localIdGray = preprocessPostWarp(localIdGray);
-            }
-
-            cv::Mat localIdBinary;
-            if (options_.use_adaptive_threshold) {
-                int bs = options_.adaptive_block_size | 1;
-                bs = std::max(3, std::min(255, bs));
-
-                cv::adaptiveThreshold(localIdGray, localIdBinary, 255,
-                    cv::ADAPTIVE_THRESH_GAUSSIAN_C,
-                    cv::THRESH_BINARY,
-                    bs,
-                    options_.adaptive_c);
-
-                if (options_.morph_cleanup) {
-                    applyMorphCleanup(localIdBinary);
-                }
-            }
-
-            IdReadResult localIdResult = readIdCandidate(localIdGray, localIdBinary);
-            int currentQuality = idReadQualityScore(result.id_result);
-            int localQuality = idReadQualityScore(localIdResult);
-            if (localQuality > currentQuality && localQuality > 0) {
-                result.id_result = localIdResult;
-                idReadGray = localIdGray;
-                idAlignedDebugGray = localIdGray;
-                result.warnings.push_back("LOCAL_ID_ZONE_READ");
-                LOGI("OMR_ID selected: LOCAL_ZONE_DEWARP markers=%zu quality=%d previous=%d",
-                     usedIdMarkerIds.size(), localQuality, currentQuality);
-            } else {
-                LOGI("OMR_ID local zone read skipped markers=%zu quality=%d previous=%d",
-                     usedIdMarkerIds.size(), localQuality, currentQuality);
-            }
-        } else {
-            LOGI("OMR_ID local zone read skipped: local warp failed");
+        if (localIdWarped.empty()) {
+            LOGI("OMR_ID local zone retry skipped reason=%s: local warp failed", reason);
+            return false;
         }
+
+        cv::Mat localIdGray;
+        if (localIdWarped.channels() >= 3) {
+            cv::cvtColor(localIdWarped, localIdGray, cv::COLOR_BGR2GRAY);
+        } else {
+            localIdGray = localIdWarped;
+        }
+
+        if (options_.preprocess_post_warp) {
+            localIdGray = preprocessPostWarp(localIdGray);
+        }
+
+        cv::Mat localIdBinary;
+        if (options_.use_adaptive_threshold) {
+            int bs = options_.adaptive_block_size | 1;
+            bs = std::max(3, std::min(255, bs));
+
+            cv::adaptiveThreshold(localIdGray, localIdBinary, 255,
+                cv::ADAPTIVE_THRESH_GAUSSIAN_C,
+                cv::THRESH_BINARY,
+                bs,
+                options_.adaptive_c);
+
+            if (options_.morph_cleanup) {
+                applyMorphCleanup(localIdBinary);
+            }
+        }
+
+        IdReadResult localIdResult = readIdCandidate(localIdGray, localIdBinary);
+        int currentQuality = idReadQualityScore(result.id_result);
+        int localQuality = idReadQualityScore(localIdResult);
+        bool localStudentReadable = isReadableOmrCode(localIdResult.student_id);
+        bool shouldSelect = localQuality > currentQuality && localQuality > 0;
+        if (requireReadableStudent) {
+            shouldSelect = shouldSelect && localStudentReadable;
+        }
+
+        if (shouldSelect) {
+            result.id_result = localIdResult;
+            idReadGray = localIdGray;
+            idAlignedDebugGray = localIdGray;
+            result.warnings.push_back("LOCAL_ID_ZONE_READ");
+            LOGI(
+                "OMR_ID selected: LOCAL_ZONE_DEWARP reason=%s markers=%zu quality=%d previous=%d student_id=%s",
+                reason,
+                usedIdMarkerIds.size(),
+                localQuality,
+                currentQuality,
+                result.id_result.student_id.c_str()
+            );
+            if (requireReadableStudent) {
+                LOGI(
+                    "OMR_DEWARP_ID_RETRY executedAlgorithm=LOCAL_HOMOGRAPHY reason=%s markers=%zu"
+                    " quality=%d previous=%d studentId=%s",
+                    reason,
+                    usedIdMarkerIds.size(),
+                    localQuality,
+                    currentQuality,
+                    result.id_result.student_id.c_str()
+                );
+            }
+            return true;
+        }
+
+        LOGI(
+            "OMR_ID local zone retry skipped reason=%s markers=%zu quality=%d previous=%d"
+            " studentReadable=%d student_id=%s",
+            reason,
+            usedIdMarkerIds.size(),
+            localQuality,
+            currentQuality,
+            localStudentReadable,
+            localIdResult.student_id.c_str()
+        );
+        return false;
+    };
+
+    result.id_result = readIdCandidate(idReadGray, warpedBinary_);
+    LOGI("OMR_ID selected: SHARED_MAIN_WARP quality=%d strongDewarp=%d",
+         idReadQualityScore(result.id_result), strongDewarpUsed);
+
+    if (geometryDistortedForRead && !idZone.items.empty()) {
+        LOGI("OMR_ID geometry mode: shared main warp first, then one local ID-zone pass");
+        tryLocalIdZoneRead("geometry_distorted", false);
+    }
+
+    const bool needsStudentId = idZoneRequiresStudentId(idZone);
+    const bool studentIdUnreadable = needsStudentId && !isReadableOmrCode(result.id_result.student_id);
+
+    if (studentIdUnreadable && !idZone.items.empty()) {
+        int previousQuality = idReadQualityScore(result.id_result);
+        LOGI(
+            "OMR_ID result unreadable for student_id; trying local ID-zone retry previousQuality=%d student_id=%s",
+            previousQuality,
+            result.id_result.student_id.c_str()
+        );
+        tryLocalIdZoneRead("id_unreadable", true);
     }
 
     std::vector<AnswerZoneConfig> answerZonesForRead = answerZones;
@@ -1150,32 +1218,45 @@ cv::Mat OmrProcessor::alignImage(
 
     std::vector<cv::Point2f> usedCorners;
     cv::Mat warped;
+    const char* executedAlgorithm = "NONE";
 
     switch (dewarpInfo.method) {
         case DewarpMethod::PERSPECTIVE: {
             LOGI("OMR_DEWARP executing piecewiseMesh method=%s", dewarpMethodName(dewarpInfo.method));
+            executedAlgorithm = "HOMOGRAPHY";
             warped = md.dewarpPerspective(image, markers, anchors, usedCorners);
             break;
         }
         case DewarpMethod::HYBRID: {
-            LOGI("OMR_DEWARP executing perspective section refinement for moderate residual");
-            warped = md.dewarpPerspective(image, markers, anchors, usedCorners);
-            break;
-        }
-        case DewarpMethod::TPS: {
-            LOGI("OMR_DEWARP executing severe automatic piecewise mesh");
+            LOGI("OMR_DEWARP executing hybrid mesh first for moderate residual");
+            executedAlgorithm = "MESH";
             warped = md.dewarpPiecewiseMesh(image, markers, anchors);
             if (warped.empty()) {
-                LOGI("OMR_DEWARP piecewise mesh fallback: full TPS");
-                warped = md.dewarpTps(image, markers, anchors, 0.25);
-                if (!warped.empty()) {
-                    result.warnings.push_back("TPS_DEWARP");
-                }
+                LOGI("OMR_DEWARP hybrid mesh fallback: perspective section refinement");
+                executedAlgorithm = "HOMOGRAPHY_SECTION_REFINE_FALLBACK";
+                warped = md.dewarpPerspective(image, markers, anchors, usedCorners);
             } else {
                 result.warnings.push_back("PIECEWISE_MESH_DEWARP");
             }
+            break;
+        }
+        case DewarpMethod::TPS: {
+            LOGI(
+                "OMR_DEWARP executing severe full TPS smoothness=%.2f",
+                TPS_STABLE_SMOOTHNESS
+            );
+            executedAlgorithm = "TPS";
+            warped = md.dewarpTps(image, markers, anchors, TPS_STABLE_SMOOTHNESS);
             if (warped.empty()) {
-                LOGI("OMR_DEWARP TPS fallback: perspective");
+                LOGI("OMR_DEWARP TPS fallback: piecewise mesh");
+                executedAlgorithm = "MESH_FALLBACK";
+                warped = md.dewarpPiecewiseMesh(image, markers, anchors);
+            } else {
+                result.warnings.push_back("TPS_DEWARP");
+            }
+            if (warped.empty()) {
+                LOGI("OMR_DEWARP mesh fallback: perspective");
+                executedAlgorithm = "HOMOGRAPHY_FALLBACK";
                 warped = md.dewarpPerspective(image, markers, anchors, usedCorners);
             }
             break;
@@ -1185,6 +1266,16 @@ cv::Mat OmrProcessor::alignImage(
             break;
     }
 
+    LOGI(
+        "OMR_DEWARP_METRIC euclideanCase=%s selectedMethod=%s executedAlgorithm=%s avgEuclidPx=%.2f maxEuclidPx=%.2f markerCount=%zu outputEmpty=%d",
+        euclideanCaseName(dewarpInfo.max_euclidean_error),
+        dewarpMethodName(dewarpInfo.method),
+        executedAlgorithm,
+        dewarpInfo.avg_euclidean_error,
+        dewarpInfo.max_euclidean_error,
+        markers.size(),
+        warped.empty()
+    );
     LOGI("OMR_DEWARP completed outputEmpty=%d output=%dx%d", warped.empty(), warped.cols, warped.rows);
     return warped;
 }
@@ -2320,7 +2411,18 @@ void OmrProcessor::autoConfigurePipeline(float laplacianVar, float meanBrightnes
     // Decision matrix for teacher-facing auto mode.
     // Teacher just shoots — the app silently decides.
 
-    if (laplacianVar > LAPLACIAN_GOOD && meanBrightness > BRIGHTNESS_GOOD) {
+    if (meanBrightness > BRIGHTNESS_VERY_BRIGHT) {
+        // Very bright/glare: avoid raw grayscale reading because pencil marks
+        // may be lifted above the fixed dark-pixel cutoff.
+        options_.use_adaptive_threshold = true;
+        options_.adaptive_block_size    = ADAPTIVE_BLOCK_LARGE;
+        options_.adaptive_c             = 5.0f;
+        options_.preprocess_markers     = false;
+        options_.preprocess_post_warp   = false;
+        options_.morph_cleanup          = false;
+        LOGI("Auto-adaptive: VERY BRIGHT/GLARE (%.0f) -> adaptive(large, sensitive)", meanBrightness);
+
+    } else if (laplacianVar > LAPLACIAN_GOOD && meanBrightness > BRIGHTNESS_GOOD) {
         // ── Good quality scan: no preprocessing needed ──────
         options_.use_adaptive_threshold = false;
         options_.preprocess_markers     = false;

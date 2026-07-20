@@ -6,6 +6,7 @@ import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.examhub.student.R
+import com.examhub.student.data.local.model.SubmissionSyncStatus
 import com.examhub.student.data.model.Exam
 import com.examhub.student.databinding.ItemExamBinding
 import com.examhub.student.util.extension.toLocalDisplayDateTime
@@ -29,7 +30,11 @@ class RecentExamAdapter(
             binding.tvExamUpdated.text = exam.date.toLocalDisplayDateTime().ifBlank {
                 context.getString(R.string.dashboard_exam_updated)
             }
-            if (exam.hasSubmitted || exam.resultOnly) {
+            if (exam.hasPendingLocalSubmission()) {
+                binding.tvOfflineBadge.setText(R.string.dashboard_status_sync_pending)
+                binding.tvOfflineBadge.setBackgroundResource(R.drawable.bg_badge_processing)
+                binding.tvOfflineBadge.setTextColor(context.getColor(R.color.status_processing_text))
+            } else if (exam.hasSubmitted || exam.resultOnly) {
                 if (exam.canViewResult && !exam.resultSheetId.isNullOrBlank()) {
                     binding.tvOfflineBadge.setText(R.string.dashboard_status_view_result)
                     binding.tvOfflineBadge.setBackgroundResource(R.drawable.bg_badge_online)
@@ -73,6 +78,11 @@ class RecentExamAdapter(
                 normalized == "ENDED" ||
                 normalized == "EXPIRED" ||
                 normalized == "CLOSED"
+        }
+
+        private fun Exam.hasPendingLocalSubmission(): Boolean {
+            val status = localSubmissionStatus ?: return false
+            return status != SubmissionSyncStatus.SYNCED.name || resultSheetId.isNullOrBlank()
         }
     }
 

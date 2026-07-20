@@ -68,8 +68,6 @@ class RegisterFragment : Fragment() {
 
     private fun setupGoogleRegistrationMode() {
         val isGoogleRegistration = googleIdToken.isNotBlank()
-        binding.tilPassword.isVisible = !isGoogleRegistration
-        binding.tilConfirmPassword.isVisible = !isGoogleRegistration
         binding.etEmail.isEnabled = !isGoogleRegistration || binding.etEmail.text.isNullOrBlank()
     }
 
@@ -208,7 +206,6 @@ class RegisterFragment : Fragment() {
     }
 
     private fun validateForm(showErrors: Boolean): Boolean {
-        val isGoogleRegistration = googleIdToken.isNotBlank()
         val fullName = binding.etFullName.text?.toString().orEmpty().trim()
         val email = binding.etEmail.text?.toString().orEmpty().trim()
         val studentCode = binding.etStudentCode.text?.toString().orEmpty().trim()
@@ -228,11 +225,17 @@ class RegisterFragment : Fragment() {
             valid = false
             if (showErrors) binding.tilStudentCode.error = getString(R.string.register_validation_student_code_digits)
         }
-        if (!isGoogleRegistration && password.length < 6) {
+        if (password.isBlank()) {
+            valid = false
+            if (showErrors) binding.tilPassword.error = getString(R.string.register_validation_password_required)
+        } else if (password.length < 6) {
             valid = false
             if (showErrors) binding.tilPassword.error = getString(R.string.register_validation_password_short)
         }
-        if (!isGoogleRegistration && confirmPassword != password) {
+        if (confirmPassword.isBlank()) {
+            valid = false
+            if (showErrors) binding.tilConfirmPassword.error = getString(R.string.register_validation_confirm_password_required)
+        } else if (confirmPassword != password) {
             valid = false
             if (showErrors) binding.tilConfirmPassword.error = getString(R.string.register_validation_password_mismatch)
         }

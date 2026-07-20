@@ -33,6 +33,8 @@ class ClassDetailViewModel(
 
     private val _classExams = MutableStateFlow<List<Exam>>(emptyList())
     val classExams: StateFlow<List<Exam>> = _classExams.asStateFlow()
+    private val _classExamCount = MutableStateFlow(0)
+    val classExamCount: StateFlow<Int> = _classExamCount.asStateFlow()
     private var allClassExams: List<Exam> = emptyList()
     private var examSearchQuery: String = ""
 
@@ -99,6 +101,7 @@ class ClassDetailViewModel(
                             .filter { it.belongsToClass(classDetail) }
                             .map { it.toExam(resultByExamId) }
                             .sortedByDescending { it.date }
+                        _classExamCount.value = allClassExams.size
                         applyExamSearch()
                     }
                     is ApiResult.Error -> {

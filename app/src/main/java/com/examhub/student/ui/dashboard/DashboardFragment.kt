@@ -58,7 +58,9 @@ class DashboardFragment : Fragment() {
 
     private fun setupRecyclerView() {
         recentExamsAdapter = RecentExamAdapter { exam ->
-            if (exam.canViewResult && !exam.resultSheetId.isNullOrBlank()) {
+            if (!exam.localSubmissionId.isNullOrBlank() && !exam.canViewResult) {
+                openLocalSubmission(exam)
+            } else if (exam.canViewResult && !exam.resultSheetId.isNullOrBlank()) {
                 openSubmittedExam(exam)
             } else if (exam.hasSubmitted || exam.resultOnly) {
                 findNavController().navigate(R.id.action_dashboard_to_results)
@@ -149,6 +151,17 @@ class DashboardFragment : Fragment() {
                 }
             )
         }
+    }
+
+    private fun openLocalSubmission(exam: com.examhub.student.data.model.Exam) {
+        findNavController().navigate(
+            R.id.submissionEndFragment,
+            Bundle().apply {
+                putString("examId", exam.id)
+                putString("clientSubmissionId", exam.localSubmissionId)
+                putString("sheetId", exam.resultSheetId.orEmpty())
+            }
+        )
     }
 
     private fun updateRecentExamLoadingState(loading: Boolean) {

@@ -130,13 +130,32 @@ private fun parseApiException(gson: Gson, response: Response<*>): ApiException {
     val message = parsed?.message
         ?: nestedError?.get("message")?.takeIf { it.isJsonPrimitive }?.asString
         ?: fallbackObject?.get("message")?.takeIf { it.isJsonPrimitive }?.asString
+    val details = parsed?.details
+        ?: nestedError?.get("details").toStringListOrNull()
+        ?: fallbackObject?.get("details").toStringListOrNull()
 
     return ApiException(
         code = code ?: response.code().toString(),
         message = message ?: response.message(),
         httpCode = response.code(),
-        details = parsed?.details.orEmpty()
+        details = details.orEmpty()
     )
+}
+
+private fun JsonElement?.toStringListOrNull(): List<String>? {
+    if (this == null || isJsonNull) return null
+    return when {
+        isJsonArray -> asJsonArray.mapNotNull { element ->
+            when {
+                element.isJsonPrimitive -> element.asString
+                element.isJsonObject -> element.toString()
+                else -> null
+            }
+        }
+        isJsonPrimitive -> listOf(asString)
+        isJsonObject -> listOf(toString())
+        else -> null
+    }
 }
 
 private fun Throwable.toApiException(): ApiException {

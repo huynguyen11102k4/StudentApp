@@ -335,7 +335,12 @@ class CameraARFragment : Fragment() {
 
     private fun startSessionTimeout() {
         val seconds = remainingSeconds()
-        if (seconds <= 0) return
+        if (seconds <= 0) {
+            if (!arguments?.getString("sessionId").isNullOrBlank()) {
+                finishExpiredSession()
+            }
+            return
+        }
         sessionTimeoutJob?.cancel()
         sessionTimeoutJob = viewLifecycleOwner.lifecycleScope.launch {
             delay(seconds * 1_000L)
@@ -371,9 +376,7 @@ class CameraARFragment : Fragment() {
     private fun remainingSeconds(): Int {
         val initial = arguments?.getInt("remainingSeconds") ?: 0
         val startedAt = arguments?.getLong("timerStartedAt") ?: 0L
-        if (startedAt <= 0L) return initial
-        val elapsed = ((System.currentTimeMillis() - startedAt) / 1_000L).toInt()
-        return (initial - elapsed).coerceAtLeast(0)
+        return viewModel.currentRemainingSeconds(initial, startedAt)
     }
 
     private fun finishExpiredSession() {

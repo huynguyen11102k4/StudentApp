@@ -10,7 +10,6 @@ import com.examhub.student.model.ApiResult
 import com.examhub.student.model.request.lock.LockHeartbeatRequest
 import com.examhub.student.model.request.lock.LockViolationRequest
 import com.examhub.student.model.request.submission.IdZoneResultRequest
-import com.examhub.student.model.request.submission.StudentAnswerRequest
 import com.examhub.student.model.request.submission.StudentSubmitRequest
 import com.examhub.student.model.response.profile.UserResponse
 import com.examhub.student.repository.LockModeRepository
@@ -77,17 +76,24 @@ class LockModeViewModel(
         questionCount: Int,
         argCodes: LockModeOmrCodes = LockModeOmrCodes()
     ) {
-        val activeSession = activeSessionStore.get(examId)
+        val activeSession = activeSessionStore.getIncludingExpired(examId)
         this.sessionId = sessionId.ifBlank { activeSession?.sessionId.orEmpty() }
         _currentSessionId.value = this.sessionId
         this.examId = examId
         this.questionCount = questionCount.takeIf { it > 0 } ?: activeSession?.questionCount ?: 0
         _currentQuestionCount.value = this.questionCount
         stopped = false
-        val resolvedInitialSeconds = initialSeconds.takeIf { it > 0 } ?: activeSession?.currentRemainingSeconds() ?: 0
-        if (_remainingSeconds.value <= 0) _remainingSeconds.value = resolvedInitialSeconds.coerceAtLeast(0)
+        val activeRemainingSeconds = activeSession
+            ?.takeIf { this.sessionId.isBlank() || it.sessionId == this.sessionId }
+            ?.currentRemainingSeconds()
+        val resolvedInitialSeconds = activeRemainingSeconds ?: initialSeconds.takeIf { it > 0 } ?: 0
+        _remainingSeconds.value = resolvedInitialSeconds.coerceAtLeast(0)
         loadOmrCodes(examId, argCodes)
-        if (_remainingSeconds.value > 0) startTimer()
+        if (_remainingSeconds.value > 0) {
+            startTimer()
+        } else if (this.sessionId.isNotBlank()) {
+            _timeExpired.tryEmit(Unit)
+        }
         startHeartbeat()
     }
 
@@ -168,6 +174,7 @@ class LockModeViewModel(
                 ).collect { result ->
                     if (result is ApiResult.Success) {
                         _remainingSeconds.value = result.data.remainingSeconds
+                        saveCurrentSessionRemaining(result.data.remainingSeconds)
                         offlineEventOpen = false
                         flushViolations()
                     } else if (result is ApiResult.Error) {
@@ -199,6 +206,17 @@ class LockModeViewModel(
     private fun stopHeartbeat() {
         heartbeatJob?.cancel()
         heartbeatJob = null
+    }
+
+    private fun saveCurrentSessionRemaining(remainingSeconds: Int) {
+        val active = activeSessionStore.getIncludingExpired(examId) ?: return
+        if (active.sessionId != sessionId) return
+        activeSessionStore.save(
+            active.copy(
+                remainingSeconds = remainingSeconds,
+                savedAtMillis = System.currentTimeMillis()
+            )
+        )
     }
 
     private fun ApiException.isTerminalSessionStatusError(): Boolean {
@@ -238,9 +256,7 @@ class LockModeViewModel(
                         idOk = codes.studentCode.isNotBlank() || codes.classCode.isNotBlank(),
                         idError = "time_expired_no_scan"
                     ),
-                    studentAnswers = (1..count).map { questionNo ->
-                        StudentAnswerRequest(questionNumber = questionNo, answer = null)
-                    },
+                    studentAnswers = emptyList(),
                     capturedAt = capturedAt,
                     imageQualityScore = 0,
                     qualityFeedback = mapOf(

@@ -73,7 +73,7 @@ class OmrProcessor(
             error(localizedOmrError(output.errorMessage, output.errorCode))
         }
 
-        validateIdZone(output.idResult, enabledIdFields, studentIdentifierMode, examId)
+        validateIdZone(output.idResult, enabledIdFields, studentIdentifierMode, examId, templateJson)
         val studentName = resolveStudentNameForReview(output.idResult, enabledIdFields)
 
         val answers = output.answers.map { answer ->
@@ -142,7 +142,8 @@ class OmrProcessor(
         idResult: IdResult,
         enabledFields: EnabledIdFields,
         studentIdentifierMode: StudentIdentifierMode,
-        examId: String
+        examId: String,
+        templateJson: String
     ) {
         if (!enabledFields.anyEnabled()) return
 
@@ -166,17 +167,49 @@ class OmrProcessor(
         }
 
         if (enabledFields.classCode) {
-            val classCodes = buildList {
+            val examClassCodes = buildList {
+                addAll(readExpectedClassCodes(templateJson))
                 offlineCacheManager.getExamClassCode(examId)?.let(::add)
-                addAll(offlineCacheManager.getCachedClassBasics().map { it.classCode })
             }
                 .filter { it.isNotBlank() }
                 .distinctBy { it.trim().uppercase() }
+            val classCodes = if (examClassCodes.isNotEmpty()) {
+                examClassCodes
+            } else {
+                buildList {
+                    addAll(offlineCacheManager.getCachedClassBasics().map { it.classCode })
+                }
+                    .filter { it.isNotBlank() }
+                    .distinctBy { it.trim().uppercase() }
+            }
             if (classCodes.isNotEmpty() && classCodes.none { sameClassCode(it, scannedClassCode) }) {
                 error(context.getString(R.string.omr_class_code_mismatch_format, scannedClassCode))
             }
         }
 
+    }
+
+    private fun readExpectedClassCodes(rawTemplateJson: String): List<String> {
+        return runCatching {
+            val root = JSONObject(rawTemplateJson)
+            val data = root.optJSONObject("data")
+            val templateRoot = data ?: root
+            val grid = templateRoot.optJSONObject("gridConfig")
+                ?: templateRoot.optJSONObject("grid_config")
+                ?: templateRoot
+            buildList {
+                add(templateRoot.optString("class_code"))
+                add(templateRoot.optString("classCode"))
+                add(templateRoot.optJSONObject("class")?.optString("class_code").orEmpty())
+                add(templateRoot.optJSONObject("class")?.optString("classCode").orEmpty())
+                add(templateRoot.optJSONObject("student_identifier")?.optString("class_code").orEmpty())
+                add(templateRoot.optJSONObject("studentIdentifier")?.optString("classCode").orEmpty())
+                add(grid.optString("class_code"))
+                add(grid.optString("classCode"))
+            }
+                .filter { it.isNotBlank() }
+                .distinctBy { it.trim().uppercase() }
+        }.getOrDefault(emptyList())
     }
 
     private fun isEnabledIdResultReadable(

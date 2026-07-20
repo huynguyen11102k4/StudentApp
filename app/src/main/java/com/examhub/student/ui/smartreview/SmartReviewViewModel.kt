@@ -173,11 +173,14 @@ class SmartReviewViewModel(
                     scannedClassCode = if (currentClassCodeEnabled) currentClassCode else null,
                     scannedExamCode = if (currentExamCodeEnabled) currentExamCode else null,
                     idResult = buildIdResultRequest(),
-                    studentAnswers = allAnswers.map {
-                        StudentAnswerRequest(
-                            questionNumber = it.questionNo,
-                            answer = it.studentAnswer?.ifBlank { null }
-                        )
+                    studentAnswers = allAnswers.mapNotNull {
+                        val answer = it.studentAnswer?.trim()?.takeIf(String::isNotBlank)
+                        answer?.let { value ->
+                            StudentAnswerRequest(
+                                questionNumber = it.questionNo,
+                                answer = value
+                            )
+                        }
                     },
                     capturedAt = capturedAt,
                     imageQualityScore = calculateImageQualityScore(),
@@ -262,6 +265,21 @@ class SmartReviewViewModel(
         updateReviewState()
     }
 
+    fun currentRemainingSeconds(
+        examId: String,
+        fallbackInitial: Int,
+        fallbackStartedAt: Long
+    ): Int {
+        val resolvedExamId = currentExamId.ifBlank { examId }
+        activeSessionStore.getIncludingExpired(resolvedExamId)
+            ?.takeIf { currentSessionId.isBlank() || it.sessionId == currentSessionId }
+            ?.currentRemainingSeconds()
+            ?.let { return it }
+        if (fallbackStartedAt <= 0L) return fallbackInitial.coerceAtLeast(0)
+        val elapsed = ((System.currentTimeMillis() - fallbackStartedAt) / 1_000L).toInt()
+        return (fallbackInitial - elapsed).coerceAtLeast(0)
+    }
+
     private fun applyFilter() {
         _filteredAnswers.value = when (currentFilter) {
             "empty" -> allAnswers.filter { it.status == "empty" }
@@ -315,9 +333,7 @@ class SmartReviewViewModel(
                         idOk = false,
                         idError = "time_expired_no_scan"
                     ),
-                    studentAnswers = (1..questionCount.coerceAtLeast(0)).map { questionNo ->
-                        StudentAnswerRequest(questionNumber = questionNo, answer = null)
-                    },
+                    studentAnswers = emptyList(),
                     capturedAt = capturedAt,
                     imageQualityScore = 0,
                     qualityFeedback = mapOf(

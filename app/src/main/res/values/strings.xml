@@ -38,6 +38,7 @@
     <string name="register_full_name_hint">Họ và tên</string>
     <string name="register_email_hint">Email</string>
     <string name="register_student_code_hint">Mã số học sinh/sinh viên (tùy chọn)</string>
+    <string name="register_student_code_once_warning">Mã học sinh chỉ có thể đặt khi đăng ký và không thể tự thay đổi trong hồ sơ sau này.</string>
     <string name="register_otp_title">Nhập mã OTP</string>
     <string name="register_otp_subtitle">Chúng tôi đã gửi mã OTP đến email đăng ký của bạn</string>
     <string name="register_verify_otp">Xác nhận đăng ký</string>
@@ -50,6 +51,8 @@
     <string name="register_photo_hint">Tải ảnh đại diện (tùy chọn)</string>
     <string name="register_validation_name_required">Vui lòng nhập họ tên</string>
     <string name="register_validation_email_required">Vui lòng nhập email</string>
+    <string name="register_validation_password_required">Vui lòng nhập mật khẩu</string>
+    <string name="register_validation_confirm_password_required">Vui lòng xác nhận mật khẩu</string>
     <string name="register_validation_password_short">Mật khẩu phải có ít nhất 6 ký tự</string>
     <string name="register_validation_password_mismatch">Mật khẩu không khớp</string>
     <string name="register_validation_student_code_digits">Mã học sinh chỉ được chứa chữ số</string>
@@ -106,6 +109,7 @@
     <string name="dashboard_status_in_progress">Đang diễn ra</string>
     <string name="dashboard_status_offline">Offline</string>
     <string name="dashboard_status_processing">Đang xử lý bài nộp</string>
+    <string name="dashboard_status_sync_pending">Chờ đồng bộ</string>
     <string name="dashboard_status_ended">Đã hết giờ làm bài</string>
     <string name="dashboard_status_waiting_result">Chờ điểm</string>
     <string name="dashboard_status_view_result">Xem điểm</string>
@@ -492,7 +496,7 @@
     <string name="omr_unreadable_class_code">Không đọc được mã lớp trên phiếu. Vui lòng chụp lại.</string>
     <string name="omr_unreadable_exam_code">Không đọc được mã đề trên phiếu. Vui lòng chụp lại.</string>
     <string name="omr_student_code_mismatch_format">Mã học sinh trên phiếu (%1$s) không trùng với tài khoản đăng nhập.</string>
-    <string name="omr_class_code_mismatch_format">Mã lớp trên phiếu (%1$s) không trùng với lớp của học sinh.</string>
+    <string name="omr_class_code_mismatch_format">Mã lớp trên phiếu (%1$s) không đúng với kỳ thi này.</string>
     <string name="splash_starting">Đang khởi động...</string>
     <string name="splash_not_logged_in">Chưa đăng nhập</string>
     <string name="splash_checking_session">Đang kiểm tra phiên...</string>

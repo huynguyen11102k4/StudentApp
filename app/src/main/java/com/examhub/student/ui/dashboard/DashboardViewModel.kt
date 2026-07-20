@@ -4,6 +4,9 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.examhub.student.R
+import com.examhub.student.data.local.model.SubmissionSyncStatus
+import com.examhub.student.data.local.submission.QueuedSubmissionDao
+import com.examhub.student.data.local.submission.QueuedSubmissionEntity
 import com.examhub.student.data.model.Exam
 import com.examhub.student.model.ApiResult
 import com.examhub.student.model.response.exam.MobileExamSummaryResponse
@@ -28,6 +31,7 @@ class DashboardViewModel(
     private val classRepository: ClassRepository,
     private val resultsRepository: ResultsRepository,
     private val offlineCacheManager: OfflineCacheManager,
+    private val queuedSubmissionDao: QueuedSubmissionDao,
     private val context: Context
 ) : ViewModel() {
 
@@ -88,10 +92,16 @@ class DashboardViewModel(
                         result.data.data.forEach { exam ->
                             offlineCacheManager.saveExamClassCode(exam.id, exam.classInfo?.classCode)
                         }
+                        val localSubmissionByExamId = loadLocalSubmissionByExamId(
+                            result.data.data.map { it.id }
+                        )
                         val exams = result.data.data.map { exam ->
                             val resultSummary = resultByExamId[exam.id]
+                            val localSubmission = localSubmissionByExamId[exam.id]
                             val resultSheetId = exam.resultId?.takeIf { it.isNotBlank() }
                                 ?: resultSummary?.id
+                                ?: localSubmission?.resultId?.takeIf { it.isNotBlank() }
+                            val hasLocalSubmission = localSubmission != null
                             Exam(
                                 id = exam.id,
                                 name = exam.name,
@@ -105,14 +115,19 @@ class DashboardViewModel(
                                 isOfflineReady = offlineCacheManager.isOfflineReady(exam.id),
                                 date = exam.displayTime,
                                 resultSheetId = resultSheetId,
-                                hasSubmitted = resultSheetId != null || exam.hasSubmittedStatus(),
+                                hasSubmitted = hasLocalSubmission || resultSheetId != null || exam.hasSubmittedStatus(),
                                 gradingType = exam.gradingType.orEmpty(),
-                                canStartSession = exam.canStartSession == true && exam.gradingType.isStudentSubmission(),
+                                canStartSession = exam.canStartSession == true &&
+                                    exam.gradingType.isStudentSubmission() &&
+                                    !hasLocalSubmission,
                                 canSubmit = exam.canSubmit == true && exam.gradingType.isStudentSubmission(),
                                 canViewResult = exam.canViewResult == true &&
                                     resultSheetId != null &&
-                                    resultSummary?.isPendingResult() != true,
-                                resultOnly = exam.resultOnly == true || exam.gradingType.isTeacherGrading()
+                                    resultSummary?.isPendingResult() != true &&
+                                    localSubmission?.isPendingOrFailed() != true,
+                                resultOnly = exam.resultOnly == true || exam.gradingType.isTeacherGrading(),
+                                localSubmissionId = localSubmission?.clientSubmissionId,
+                                localSubmissionStatus = localSubmission?.status
                             )
                         }
                         val missingSubmittedExams = resultSummaries
@@ -145,6 +160,13 @@ class DashboardViewModel(
             is ApiResult.Success -> result.data.data
             else -> emptyList()
         }
+    }
+
+    private suspend fun loadLocalSubmissionByExamId(examIds: List<String>): Map<String, QueuedSubmissionEntity> {
+        if (examIds.isEmpty()) return emptyMap()
+        return queuedSubmissionDao.getByExamIdsAndStatuses(examIds, LOCAL_SUBMISSION_STATUSES)
+            .distinctBy { it.examId }
+            .associateBy { it.examId }
     }
 
     private fun com.examhub.student.model.response.result.StudentResultSummaryResponse.toSubmittedExam(): Exam? {
@@ -182,9 +204,23 @@ class DashboardViewModel(
         return normalized.contains("PENDING") || normalized.contains("PROCESSING")
     }
 
+    private fun QueuedSubmissionEntity.isPendingOrFailed(): Boolean =
+        status != SubmissionSyncStatus.SYNCED.name
+
     private fun String?.isStudentSubmission(): Boolean =
         equals("STUDENT_SUBMISSION", ignoreCase = true)
 
     private fun String?.isTeacherGrading(): Boolean =
         equals("TEACHER_GRADING", ignoreCase = true)
+
+    private companion object {
+        val LOCAL_SUBMISSION_STATUSES = listOf(
+            SubmissionSyncStatus.PENDING_SYNC.name,
+            SubmissionSyncStatus.UPLOADING_IMAGES.name,
+            SubmissionSyncStatus.SYNCING.name,
+            SubmissionSyncStatus.SYNCED.name,
+            SubmissionSyncStatus.FAILED_CAPTURE_AFTER_DEADLINE.name,
+            SubmissionSyncStatus.FAILED_TERMINAL.name
+        )
+    }
 }

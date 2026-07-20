@@ -9,12 +9,15 @@ import androidx.navigation.fragment.findNavController
 import com.examhub.student.MainActivity
 import com.examhub.student.R
 import com.examhub.student.databinding.FragmentManualCropBinding
+import com.examhub.student.service.ActiveExamSessionStore
 import com.examhub.student.util.helper.protectScreenFromCapture
+import org.koin.android.ext.android.inject
 
 class ManualCropFragment : Fragment() {
 
     private var _binding: FragmentManualCropBinding? = null
     private val binding get() = _binding!!
+    private val activeSessionStore: ActiveExamSessionStore by inject()
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentManualCropBinding.inflate(inflater, container, false)
@@ -52,9 +55,15 @@ class ManualCropFragment : Fragment() {
     }
 
     private fun remainingSeconds(): Int {
+        val examId = arguments?.getString("examId").orEmpty()
+        val sessionId = arguments?.getString("sessionId").orEmpty()
+        activeSessionStore.getIncludingExpired(examId)
+            ?.takeIf { sessionId.isBlank() || it.sessionId == sessionId }
+            ?.currentRemainingSeconds()
+            ?.let { return it }
         val initial = arguments?.getInt("remainingSeconds") ?: 0
         val startedAt = arguments?.getLong("timerStartedAt") ?: 0L
-        if (startedAt <= 0L) return initial
+        if (startedAt <= 0L) return initial.coerceAtLeast(0)
         val elapsed = ((System.currentTimeMillis() - startedAt) / 1_000L).toInt()
         return (initial - elapsed).coerceAtLeast(0)
     }

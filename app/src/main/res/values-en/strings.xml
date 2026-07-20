@@ -22,6 +22,7 @@
     <string name="dashboard_status_online">Online</string>
     <string name="dashboard_status_in_progress">In progress</string>
     <string name="dashboard_status_processing">Processing</string>
+    <string name="dashboard_status_sync_pending">Waiting to sync</string>
     <string name="dashboard_status_ended">Ended</string>
     <string name="dashboard_status_waiting_result">Waiting for score</string>
     <string name="dashboard_status_view_result">View score</string>
@@ -148,6 +149,10 @@
     <string name="settings_default_student_name">Student</string>
     <string name="settings_default_student_role">STUDENT</string>
     <string name="settings_session_zero">0 devices signed in</string>
+    <plurals name="settings_session_count">
+        <item quantity="one">%d device signed in</item>
+        <item quantity="other">%d devices signed in</item>
+    </plurals>
     <string name="settings_email_placeholder">email@example.com</string>
     <string name="student_initials_placeholder">ST</string>
     <string name="answer_preview_placeholder">Student: D -> Key: D</string>
@@ -160,7 +165,7 @@
     <string name="omr_unreadable_class_code">Unable to read the class code on the paper. Please capture again.</string>
     <string name="omr_unreadable_exam_code">Unable to read the exam code on the paper. Please capture again.</string>
     <string name="omr_student_code_mismatch_format">The student code on the paper (%1$s) does not match the logged-in account.</string>
-    <string name="omr_class_code_mismatch_format">The class code on the paper (%1$s) does not match the student class.</string>
+    <string name="omr_class_code_mismatch_format">The class code on the paper (%1$s) does not match this exam.</string>
     <string name="splash_starting">Starting...</string>
     <string name="splash_not_logged_in">Not logged in</string>
     <string name="splash_checking_session">Checking session...</string>
@@ -271,6 +276,7 @@
     <string name="register_full_name_hint">Full name</string>
     <string name="register_email_hint">Email</string>
     <string name="register_student_code_hint">Student ID (optional)</string>
+    <string name="register_student_code_once_warning">Student ID can only be set during registration and cannot be changed later in Profile.</string>
     <string name="register_otp_title">Enter verification code</string>
     <string name="register_otp_subtitle">We sent a verification code to your registration email</string>
     <string name="register_verify_otp">Verify registration</string>
@@ -283,6 +289,8 @@
     <string name="register_photo_hint">Upload profile picture (optional)</string>
     <string name="register_validation_name_required">Enter your full name</string>
     <string name="register_validation_email_required">Enter your email address</string>
+    <string name="register_validation_password_required">Enter your password</string>
+    <string name="register_validation_confirm_password_required">Confirm your password</string>
     <string name="register_validation_password_short">Password must contain at least 6 characters</string>
     <string name="register_validation_password_mismatch">Passwords do not match</string>
     <string name="register_validation_student_code_digits">Student code can contain digits only</string>

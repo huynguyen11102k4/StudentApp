@@ -18,6 +18,7 @@ class SubmissionSyncWorker(
             when (manager.syncPending(id)) {
                 WorkerSyncResult.SUCCESS -> Result.success()
                 WorkerSyncResult.RETRY -> Result.retry()
+                WorkerSyncResult.FAILURE -> Result.failure()
             }
         }.getOrElse {
             Result.retry()

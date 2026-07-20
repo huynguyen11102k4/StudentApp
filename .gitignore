@@ -24,9 +24,17 @@ local.properties
 /app/.cxx/
 /app/.externalNativeBuild/
 
-# Local OpenCV module
-/opencv/
+# OpenCV generated output
+/opencv/build/
+/opencv/.cxx/
+/opencv/.externalNativeBuild/
 
 /docs
 
 *.drawio
+
+# Keep project-level setup guides trackable even if markdown docs stay ignored.
+!/README.md
+!/readme.md
+!/INSTALL.md
+!/SETUP.md

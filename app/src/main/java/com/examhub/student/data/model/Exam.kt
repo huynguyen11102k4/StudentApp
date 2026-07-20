@@ -20,5 +20,7 @@ data class Exam(
     val canStartSession: Boolean = false,
     val canSubmit: Boolean = false,
     val canViewResult: Boolean = false,
-    val resultOnly: Boolean = false
+    val resultOnly: Boolean = false,
+    val localSubmissionId: String? = null,
+    val localSubmissionStatus: String? = null
 ) : Serializable

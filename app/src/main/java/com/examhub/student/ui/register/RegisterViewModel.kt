@@ -75,11 +75,19 @@ class RegisterViewModel(
             _errorMessage.tryEmit(resources.getString(R.string.register_validation_email_required))
             return
         }
-        if (!isGoogleRegistration && password.length < 6) {
+        if (password.isBlank()) {
+            _errorMessage.tryEmit(resources.getString(R.string.register_validation_password_required))
+            return
+        }
+        if (password.length < 6) {
             _errorMessage.tryEmit(resources.getString(R.string.register_validation_password_short))
             return
         }
-        if (!isGoogleRegistration && password != confirmPassword) {
+        if (confirmPassword.isBlank()) {
+            _errorMessage.tryEmit(resources.getString(R.string.register_validation_confirm_password_required))
+            return
+        }
+        if (password != confirmPassword) {
             _errorMessage.tryEmit(resources.getString(R.string.register_validation_password_mismatch))
             return
         }
@@ -93,7 +101,7 @@ class RegisterViewModel(
                 StudentRegisterRequest(
                     email = trimmedEmail,
                     fullName = fullName.trim(),
-                    password = password.takeIf { !isGoogleRegistration },
+                    password = password,
                     googleIdToken = googleIdToken.takeIf { isGoogleRegistration },
                     studentCode = trimmedStudentCode.takeIf { it.isNotBlank() },
                     dateOfBirth = dateOfBirth?.trim()?.takeIf { it.isNotBlank() }
