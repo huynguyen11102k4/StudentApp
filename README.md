@@ -33,12 +33,12 @@ git submodule update --init --recursive
 ## Cấu Trúc Quan Trọng
 
 - `app/`: module Android chính.
-- `opencv/`: module OpenCV Android SDK được Gradle include bằng `include(":opencv")`.
+- `opencv/`: module OpenCV Android SDK đặt cục bộ trên máy dev. Thư mục này không commit lên GitHub và cần được cài thủ công trước khi build.
 - `app/src/main/cpp/`: native OMR pipeline dùng C++/OpenCV.
 - `gradle/libs.versions.toml`: khai báo phiên bản dependency.
 - `app/google-services.json`: cấu hình Firebase cho Firebase Cloud Messaging và Google services.
 
-## OpenCV Module
+## Cài Thêm Thư Viện OpenCV
 
 Project đang phụ thuộc vào module local:
 
@@ -46,11 +46,27 @@ Project đang phụ thuộc vào module local:
 implementation(project(":opencv"))
 ```
 
-Vì vậy thư mục `opencv/` cần có trong repo hoặc phải được bổ sung trước khi build. Nếu clone về mà thiếu `opencv/`, tải OpenCV Android SDK cùng phiên bản đang dùng trong project, giải nén và copy SDK module vào:
+Thư mục `opencv/` được ignore trong Git vì đây là SDK thư viện bên ngoài, dung lượng lớn. Sau khi clone repo, cần tự cài OpenCV Android SDK trước khi build.
+
+### Bước 1: Tải OpenCV Android SDK
+
+1. Truy cập trang phát hành OpenCV: `https://opencv.org/releases/`.
+2. Tải gói **OpenCV Android**. Project hiện đang dùng OpenCV `4.12.0`, nên ưu tiên dùng cùng phiên bản này.
+3. Giải nén file tải về. Bên trong thường có thư mục dạng:
+
+```text
+OpenCV-android-sdk/sdk
+```
+
+### Bước 2: Copy SDK Vào Project
+
+Copy thư mục `sdk` đã giải nén vào root của StudentApp và đổi tên thành `opencv`:
 
 ```text
 StudentApp/opencv
 ```
+
+Sau khi copy, cấu trúc nên có dạng:
 
 Thư mục hợp lệ tối thiểu cần có:
 
@@ -61,9 +77,50 @@ opencv/java/src
 opencv/native
 ```
 
-Không commit các output sinh ra bởi Gradle/CMake như:
+Ví dụ trên Windows, nếu SDK được giải nén ở `D:\Downloads\OpenCV-android-sdk\sdk`, có thể copy thành:
+
+```powershell
+Copy-Item -Recurse "D:\Downloads\OpenCV-android-sdk\sdk" ".\opencv"
+```
+
+Nếu thư mục `opencv` đã tồn tại nhưng muốn cài lại từ đầu:
+
+```powershell
+Remove-Item -Recurse -Force ".\opencv"
+Copy-Item -Recurse "D:\Downloads\OpenCV-android-sdk\sdk" ".\opencv"
+```
+
+### Bước 3: Kiểm Tra Gradle Sync
+
+Đảm bảo `settings.gradle.kts` có:
+
+```kotlin
+include(":opencv")
+```
+
+Và `app/build.gradle.kts` có:
+
+```kotlin
+implementation(project(":opencv"))
+```
+
+Sau đó sync Gradle trong Android Studio hoặc chạy:
+
+```powershell
+.\gradlew.bat :app:assembleDebug
+```
+
+Nếu build log có dòng tương tự sau là Gradle đã nhận module OpenCV:
 
 ```text
+Configure project :opencv
+OpenCV: 4.12.0
+```
+
+Không commit thư mục OpenCV hoặc output sinh ra bởi Gradle/CMake:
+
+```text
+opencv/
 opencv/build/
 opencv/.cxx/
 opencv/.externalNativeBuild/
@@ -260,6 +317,7 @@ Không commit:
 
 - Build output: `build/`, `app/build/`, `.gradle/`, `.cxx/`.
 - File local: `local.properties`, `.venv/`, `.idea/workspace.xml`.
+- Thư viện OpenCV cài cục bộ: `opencv/`.
 - Tài liệu và sơ đồ nội bộ: `docs/`, `*.drawio`.
 
 Có thể commit:
@@ -267,5 +325,4 @@ Có thể commit:
 - Source Android/Kotlin/C++.
 - Gradle config.
 - Room schema trong `app/schemas`.
-- OpenCV module source/prebuilt SDK cần thiết để project build.
 - `README.md` và các file hướng dẫn cài đặt như `INSTALL.md` nếu có.
